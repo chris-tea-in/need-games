@@ -1,0 +1,17 @@
+# Agent-local working files
+.agents/
+.claude/
+.codex/
+skill-observations/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+
+# Documentation
+AGENTS.md
