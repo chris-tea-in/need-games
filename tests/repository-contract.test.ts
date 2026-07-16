@@ -17,6 +17,9 @@ const packageManifest = JSON.parse(
 ) as PackageManifest
 
 const ciWorkflowUrl = new URL('../.github/workflows/ci.yml', import.meta.url)
+const contributingGuideUrl = new URL('../CONTRIBUTING.md', import.meta.url)
+const dependabotUrl = new URL('../.github/dependabot.yml', import.meta.url)
+const pullRequestTemplateUrl = new URL('../.github/pull_request_template.md', import.meta.url)
 const setupActionUrl = new URL('../.github/actions/setup/action.yml', import.meta.url)
 
 function readAutomationFile(fileUrl: URL): string {
@@ -53,6 +56,20 @@ describe('repository automation contract', () => {
   test('provides the CI workflow and shared setup action', () => {
     expect(existsSync(ciWorkflowUrl)).toBe(true)
     expect(existsSync(setupActionUrl)).toBe(true)
+  })
+
+  test('provides dependency automation and contribution guidance', () => {
+    expect(existsSync(dependabotUrl)).toBe(true)
+    expect(existsSync(pullRequestTemplateUrl)).toBe(true)
+    expect(existsSync(contributingGuideUrl)).toBe(true)
+  })
+
+  test('checks pnpm and GitHub Actions dependencies every week', () => {
+    const dependabotConfig = readAutomationFile(dependabotUrl)
+
+    expect(dependabotConfig).toContain('package-ecosystem: npm')
+    expect(dependabotConfig).toContain('package-ecosystem: github-actions')
+    expect(dependabotConfig.match(/interval: weekly/g)).toHaveLength(2)
   })
 
   test('runs protected validation for pull requests and main', () => {
