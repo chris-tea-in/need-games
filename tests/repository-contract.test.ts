@@ -34,7 +34,7 @@ describe('repository package contract', () => {
 
   test('pins the supported Node and pnpm versions', () => {
     expect(packageManifest.engines?.node).toBe('>=24.18.0 <25')
-    expect(packageManifest.packageManager).toBe('pnpm@11.13.0')
+    expect(packageManifest.packageManager).toBe('pnpm@10.34.5')
   })
 
   test('exposes the stable local and CI scripts', () => {
