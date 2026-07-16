@@ -15,3 +15,10 @@ Thumbs.db
 
 # Documentation
 AGENTS.md
+
+# JavaScript tooling
+node_modules/
+.pnpm-store/
+.eslintcache
+coverage/
+dist/
