@@ -69,6 +69,9 @@ describe('repository automation contract', () => {
 
     expect(dependabotConfig).toContain('package-ecosystem: npm')
     expect(dependabotConfig).toContain('package-ecosystem: github-actions')
+    expect(dependabotConfig).toMatch(
+      /package-ecosystem: github-actions[\s\S]*directories:\s*\n\s+- \/\s*\n\s+- \/\.github\/actions\/setup/,
+    )
     expect(dependabotConfig.match(/interval: weekly/g)).toHaveLength(2)
   })
 
