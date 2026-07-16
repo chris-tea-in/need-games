@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 
 import { describe, expect, test } from 'vitest'
 
@@ -15,6 +15,13 @@ interface PackageManifest {
 const packageManifest = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
 ) as PackageManifest
+
+const ciWorkflowUrl = new URL('../.github/workflows/ci.yml', import.meta.url)
+const setupActionUrl = new URL('../.github/actions/setup/action.yml', import.meta.url)
+
+function readAutomationFile(fileUrl: URL): string {
+  return existsSync(fileUrl) ? readFileSync(fileUrl, 'utf8') : ''
+}
 
 describe('repository package contract', () => {
   test('prevents publishing the workspace package', () => {
@@ -39,5 +46,46 @@ describe('repository package contract', () => {
       'test:coverage': 'vitest run --coverage',
       typecheck: 'tsc --noEmit',
     })
+  })
+})
+
+describe('repository automation contract', () => {
+  test('provides the CI workflow and shared setup action', () => {
+    expect(existsSync(ciWorkflowUrl)).toBe(true)
+    expect(existsSync(setupActionUrl)).toBe(true)
+  })
+
+  test('runs protected validation for pull requests and main', () => {
+    const workflow = readAutomationFile(ciWorkflowUrl)
+
+    expect(workflow).toContain('pull_request:')
+    expect(workflow).toContain('push:')
+    expect(workflow).toMatch(/branches:\s*\[main\]/g)
+    expect(workflow).toContain('contents: read')
+    expect(workflow).toContain('cancel-in-progress: true')
+  })
+
+  test('exposes stable validation and aggregate job names', () => {
+    const workflow = readAutomationFile(ciWorkflowUrl)
+
+    expect(workflow).toContain('name: Quality')
+    expect(workflow).toContain('name: Typecheck')
+    expect(workflow).toContain('name: Tests')
+    expect(workflow).toContain('name: CI')
+    expect(workflow).toContain('if: ${{ always() }}')
+  })
+
+  test('pins every external action to an immutable commit', () => {
+    const automation = [readAutomationFile(ciWorkflowUrl), readAutomationFile(setupActionUrl)].join(
+      '\n',
+    )
+    const externalActionLines = automation
+      .split('\n')
+      .filter((line) => line.trimStart().startsWith('uses:') && !line.includes('uses: ./'))
+
+    expect(externalActionLines.length).toBeGreaterThan(0)
+    for (const actionLine of externalActionLines) {
+      expect(actionLine).toMatch(/uses: [^\s@]+@[0-9a-f]{40}(?:\s+#\s+v\d+\.\d+\.\d+)?$/)
+    }
   })
 })
