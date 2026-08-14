@@ -48,11 +48,7 @@
 body {
   margin: 0;
   min-width: 20rem;
-  background: radial-gradient(
-    circle at top,
-    color-mix(in srgb, var(--color-accent-red) 14%, var(--color-bg)) 0,
-    var(--color-bg) 44rem
-  );
+  background: var(--color-bg);
 }
 
 a {

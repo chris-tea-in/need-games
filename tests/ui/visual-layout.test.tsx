@@ -107,6 +107,7 @@ function createVisualFixture(markup: string): string {
         const cardStyle = getComputedStyle(card)
         const badgeStyle = getComputedStyle(badge)
         const rootStyle = getComputedStyle(document.documentElement)
+        const bodyStyle = getComputedStyle(document.body)
 
         document.body.dataset.detailColumns = detailStyle.gridTemplateColumns
           .split(/\\s+/)
@@ -125,6 +126,8 @@ function createVisualFixture(markup: string): string {
         document.body.dataset.colorText = rootStyle.getPropertyValue('--color-text').trim()
         document.body.dataset.colorMuted = rootStyle.getPropertyValue('--color-text-muted').trim()
         document.body.dataset.colorBorder = rootStyle.getPropertyValue('--color-border-raw').trim()
+        document.body.dataset.pageBackground = bodyStyle.backgroundImage
+        document.body.dataset.pageBackgroundColor = bodyStyle.backgroundColor
       })
     </script>
   </body>
@@ -185,6 +188,14 @@ describe('visual layout in Chromium', () => {
     expect(desktopView).toContain('data-color-text="#eaeaea"')
     expect(desktopView).toContain('data-color-muted="#9a9a9a"')
     expect(desktopView).toContain('data-color-border="#3a3a3a"')
+  })
+
+  test('keeps the page background solid charcoal', () => {
+    const chromiumPath = requireChromiumExecutable()
+    const desktopView = renderVisualSnapshot(chromiumPath, 1040)
+
+    expect(desktopView).toContain('data-page-background="none"')
+    expect(desktopView).toContain('data-page-background-color="rgb(28, 28, 28)"')
   })
 
   test('renders card and badge treatments and changes the detail grid at 64rem', () => {
