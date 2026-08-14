@@ -39,18 +39,19 @@ function errorResponse(
 }
 
 async function routeApiRequest(request: Request, env: Env, url: URL): Promise<Response> {
-  const version = metadataVersion(await getCatalogReleaseMetadata(env.NEED_GAMES_DB))
   const path = url.pathname
 
   if (!allowedMethods.has(request.method)) {
     return errorResponse(
-      version,
+      unavailableVersion(),
       'invalid_query',
       'Only GET and HEAD are supported for this API.',
       405,
       { Allow: 'GET, HEAD' },
     )
   }
+
+  const version = metadataVersion(await getCatalogReleaseMetadata(env.NEED_GAMES_DB))
 
   if (path === '/api/catalog') {
     const query = parseCatalogQuery(url)

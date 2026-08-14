@@ -45,6 +45,39 @@ describe('catalog API fallback', () => {
     expect(result.kind === 'data' && result.data.games).toHaveLength(catalogSnapshot.games.length)
   })
 
+  test.each([
+    [
+      'a non-HTTPS provenance URL',
+      (game: Record<string, unknown>) => {
+        ;(game.provenance as Record<string, unknown>).storePageUrl = 'not a URL'
+      },
+    ],
+    [
+      'a fractional review count',
+      (game: Record<string, unknown>) => {
+        ;(game.review as Record<string, unknown>).count = 1.5
+      },
+    ],
+    [
+      'an invalid provenance timestamp',
+      (game: Record<string, unknown>) => {
+        ;(game.provenance as Record<string, unknown>).fetchedAt = 'not a timestamp'
+      },
+    ],
+  ])('uses the snapshot when the API returns %s', async (_description, mutate) => {
+    const game = structuredClone(catalogSnapshot.games[0]) as unknown as Record<string, unknown>
+    mutate(game)
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        jsonResponse({ datasetVersion: 'catalog-release-v1', schemaVersion: 1, game }),
+      )
+
+    const result = await loadGameDetail('counter-strike-2', { fetcher })
+
+    expect(result).toMatchObject({ kind: 'data', source: 'snapshot' })
+  })
+
   test('keeps a valid empty catalog response instead of treating it as an outage', async () => {
     const fetcher = vi
       .fn<typeof fetch>()

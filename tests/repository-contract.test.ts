@@ -59,6 +59,7 @@ describe('repository package contract', () => {
       typecheck: 'tsc --noEmit',
       'typecheck:worker': 'wrangler types --check',
       'check:local': 'node scripts/check-local.mjs',
+      'catalog:check': 'node scripts/generate-catalog-artifacts.mts',
       'release:check': 'node scripts/assert-release-d1-id.mjs',
       predeploy: 'pnpm release:check',
     })
@@ -140,6 +141,13 @@ describe('repository automation contract', () => {
     expect(workflow).toContain('name: Tests')
     expect(workflow).toContain('name: CI')
     expect(workflow).toContain('if: ${{ always() }}')
+  })
+
+  test('requires generated catalog artifacts and Worker tests in CI', () => {
+    const workflow = readAutomationFile(ciWorkflowUrl)
+
+    expect(workflow).toContain('pnpm catalog:check')
+    expect(workflow).toContain('pnpm test:worker')
   })
 
   test('pins every external action to an immutable commit', () => {

@@ -3,6 +3,30 @@ import { describe, expect, test, vi } from 'vitest'
 import worker from '../../src/worker/index.js'
 
 describe('Worker API error handling', () => {
+  test('rejects unsupported methods before reading D1 metadata', async () => {
+    const prepare = vi.fn(() => {
+      throw new Error('D1 should not run for a rejected method')
+    })
+    const database = {
+      prepare,
+    } as unknown as D1Database
+    const assets = { fetch: vi.fn() } as unknown as Fetcher
+
+    const response = await worker.fetch(
+      new Request('https://need-games.test/api/catalog', {
+        method: 'POST',
+      }) as unknown as Parameters<typeof worker.fetch>[0],
+      { ASSETS: assets, NEED_GAMES_DB: database },
+    )
+
+    expect(response.status).toBe(405)
+    expect(response.headers.get('allow')).toBe('GET, HEAD')
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'invalid_query' },
+    })
+    expect(prepare).not.toHaveBeenCalled()
+  })
+
   test('redacts D1 failures into a stable unavailable response and safe log event', async () => {
     const error = new Error('database password=very-secret query=select * from users')
     const database = {

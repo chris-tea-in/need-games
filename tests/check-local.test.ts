@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process'
+import { EventEmitter } from 'node:events'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 const repositoryUrl = new URL('../', import.meta.url)
 const scriptUrl = new URL('../scripts/check-local.mjs', import.meta.url)
@@ -75,5 +76,37 @@ describe('check:local wrapper', () => {
     expect(source.indexOf("'Worker-runtime tests'")).toBeLessThan(
       source.indexOf("'Local D1 migrations'"),
     )
+  })
+
+  test('checks generated catalog artifacts before coverage tests', () => {
+    const source = readFileSync(scriptUrl, 'utf8')
+
+    expect(source.indexOf("'Generated catalog artifacts'")).toBeGreaterThan(-1)
+    expect(source.indexOf("'Generated catalog artifacts'")).toBeLessThan(
+      source.indexOf("'Coverage tests'"),
+    )
+  })
+
+  test('force-kills an unresponsive Worker after graceful shutdown times out', async () => {
+    const checkLocalUrl = new URL('../scripts/check-local.mjs?stop-worker-test', import.meta.url)
+    const checkLocal = (await import(checkLocalUrl.href)) as {
+      stopWorker?: (
+        child: { exitCode: number | null; kill: (signal: NodeJS.Signals) => boolean },
+        timeouts?: { forceTimeoutMilliseconds: number; gracefulTimeoutMilliseconds: number },
+      ) => Promise<void>
+    }
+    expect(checkLocal.stopWorker).toBeTypeOf('function')
+
+    const child = Object.assign(new EventEmitter(), {
+      exitCode: null as number | null,
+      kill: vi.fn(() => true),
+    })
+    await checkLocal.stopWorker?.(child, {
+      forceTimeoutMilliseconds: 1,
+      gracefulTimeoutMilliseconds: 1,
+    })
+
+    expect(child.kill).toHaveBeenNthCalledWith(1, 'SIGTERM')
+    expect(child.kill).toHaveBeenNthCalledWith(2, 'SIGKILL')
   })
 })

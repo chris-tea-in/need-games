@@ -16,7 +16,15 @@ type ScreenState<T> = { kind: 'loading' } | T
 
 function currentGameSlug(pathname: string): string | undefined {
   const match = /^\/games\/([^/]+)\/?$/.exec(pathname)
-  return match === null ? undefined : decodeURIComponent(match[1])
+  if (match === null) {
+    return undefined
+  }
+
+  try {
+    return decodeURIComponent(match[1])
+  } catch {
+    return undefined
+  }
 }
 
 function LoadingState() {

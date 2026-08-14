@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 /* global AbortSignal, clearTimeout, console, fetch, process, setTimeout */
 
@@ -61,6 +62,7 @@ const defaultCommands = [
   pnpmCommand('Format check', ['format:check']),
   pnpmCommand('Lint', ['lint']),
   pnpmCommand('Type check', ['typecheck']),
+  pnpmCommand('Generated catalog artifacts', ['catalog:check']),
   pnpmCommand('Coverage tests', ['test:coverage']),
   pnpmCommand('Production build', ['build']),
   pnpmCommand('Worker type check', ['typecheck:worker']),
@@ -160,26 +162,34 @@ async function assertJsonResponse(url, expectedStatus, expectedErrorCode) {
   }
 }
 
+/** @param {import('node:child_process').ChildProcess} child @param {number} timeoutMilliseconds */
 function waitForClose(child, timeoutMilliseconds) {
   return new Promise((resolve) => {
-    const timeout = setTimeout(resolve, timeoutMilliseconds)
+    const timeout = setTimeout(() => resolve(false), timeoutMilliseconds)
     child.once('close', () => {
       clearTimeout(timeout)
-      resolve()
+      resolve(true)
     })
   })
 }
 
-async function stopWorker(child) {
-  if (child.exitCode !== null || child.killed) {
+/**
+ * @param {import('node:child_process').ChildProcess} child
+ * @param {{ forceTimeoutMilliseconds?: number, gracefulTimeoutMilliseconds?: number }} options
+ */
+export async function stopWorker(
+  child,
+  { forceTimeoutMilliseconds = 5_000, gracefulTimeoutMilliseconds = 5_000 } = {},
+) {
+  if (child.exitCode !== null) {
     return
   }
 
   child.kill('SIGTERM')
-  await waitForClose(child, 5_000)
-  if (child.exitCode === null && !child.killed) {
+  const closedGracefully = await waitForClose(child, gracefulTimeoutMilliseconds)
+  if (!closedGracefully && child.exitCode === null) {
     child.kill('SIGKILL')
-    await waitForClose(child, 5_000)
+    await waitForClose(child, forceTimeoutMilliseconds)
   }
 }
 
@@ -232,7 +242,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error)
-  process.exitCode = typeof error?.exitCode === 'number' ? error.exitCode : 1
-})
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error)
+    process.exitCode = typeof error?.exitCode === 'number' ? error.exitCode : 1
+  })
+}

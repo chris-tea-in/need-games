@@ -99,8 +99,38 @@ function isVersioned(value: Record<string, unknown>): boolean {
   )
 }
 
+function isHttpsUrl(value: unknown): boolean {
+  if (typeof value !== 'string') {
+    return false
+  }
+
+  try {
+    return new URL(value).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function isIsoTimestamp(value: unknown): boolean {
+  if (
+    typeof value !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
+  ) {
+    return false
+  }
+
+  const timestamp = new Date(value)
+  if (Number.isNaN(timestamp.valueOf())) {
+    return false
+  }
+
+  return (
+    timestamp.toISOString() === value || timestamp.toISOString().replace('.000Z', 'Z') === value
+  )
+}
+
 export function isCatalogSnapshot(value: unknown): value is CatalogSnapshot {
-  if (!isRecord(value) || !isVersioned(value) || typeof value.generatedAt !== 'string') {
+  if (!isRecord(value) || !isVersioned(value) || !isIsoTimestamp(value.generatedAt)) {
     return false
   }
 
@@ -139,11 +169,15 @@ function isCatalogCard(value: unknown): value is CatalogCard {
     typeof value.id === 'string' &&
     typeof value.slug === 'string' &&
     typeof value.steamAppId === 'number' &&
+    Number.isSafeInteger(value.steamAppId) &&
+    value.steamAppId > 0 &&
     typeof value.title === 'string' &&
     Array.isArray(value.tags) &&
     value.tags.every((tag) => typeof tag === 'string') &&
     typeof value.review.category === 'string' &&
     typeof value.review.count === 'number' &&
+    Number.isSafeInteger(value.review.count) &&
+    value.review.count >= 0 &&
     value.review.scope === 'All Reviews: English Reviews'
   )
 }
@@ -153,18 +187,17 @@ function isGameDetail(value: unknown): value is GameDetail {
     return false
   }
 
-  const detail = value as unknown as Record<string, unknown>
-  const provenance = detail.provenance
+  const provenance = value.provenance
   if (!isRecord(provenance)) {
     return false
   }
 
   return (
-    detail.authoritativeScore === null &&
-    typeof detail.shortDescription === 'string' &&
-    typeof provenance.appDetailsUrl === 'string' &&
-    typeof provenance.fetchedAt === 'string' &&
+    value.authoritativeScore === null &&
+    typeof value.shortDescription === 'string' &&
+    isHttpsUrl(provenance.appDetailsUrl) &&
+    isIsoTimestamp(provenance.fetchedAt) &&
     typeof provenance.officialTitle === 'string' &&
-    typeof provenance.storePageUrl === 'string'
+    isHttpsUrl(provenance.storePageUrl)
   )
 }

@@ -65,6 +65,12 @@ jobs:
       - name: Run unit tests with coverage
         run: pnpm test:coverage
 
+      - name: Check generated catalog artifacts
+        run: pnpm catalog:check
+
+      - name: Run Worker and D1 tests
+        run: pnpm test:worker
+
   build:
     name: Build
     runs-on: ubuntu-24.04

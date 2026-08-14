@@ -9,6 +9,7 @@
   "packageManager": "pnpm@10.34.5",
   "scripts": {
     "build": "vite build",
+    "catalog:check": "node scripts/generate-catalog-artifacts.mts",
     "check:local": "node scripts/check-local.mjs",
     "dev": "vite",
     "deploy": "wrangler deploy",
@@ -36,6 +37,7 @@
     "@vitest/coverage-v8": "4.1.10",
     "eslint": "10.7.0",
     "eslint-config-prettier": "10.1.8",
+    "jsdom": "30.0.1",
     "prettier": "3.9.5",
     "typescript": "6.0.3",
     "typescript-eslint": "8.64.0",
