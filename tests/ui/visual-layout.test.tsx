@@ -12,12 +12,79 @@ import { CatalogPage } from '../../src/ui/catalog-page.js'
 import { catalogSnapshot } from '../../src/ui/generated/catalog-snapshot.js'
 import { GameDetailPage } from '../../src/ui/game-detail-page.js'
 
-const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-
 const catalog: CatalogResponse = {
   datasetVersion: 'catalog-release-v1',
   schemaVersion: 1,
   games: [catalogSnapshot.games[0]],
+}
+
+function findExecutable(command: string): string | undefined {
+  const locator = process.platform === 'win32' ? 'where.exe' : 'which'
+
+  try {
+    return execFileSync(locator, [command], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+    })
+      .split(/\r?\n/)
+      .map((candidate) => candidate.trim())
+      .find((candidate) => candidate.length > 0 && existsSync(candidate))
+  } catch {
+    return undefined
+  }
+}
+
+function discoverChromiumExecutable(): string | undefined {
+  const configuredPaths = [
+    process.env.CHROME_BIN,
+    process.env.CHROME_PATH,
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+  ]
+  const knownPaths = [
+    join(
+      process.env.PROGRAMFILES ?? 'C:\\Program Files',
+      'Google',
+      'Chrome',
+      'Application',
+      'chrome.exe',
+    ),
+    join(
+      process.env['PROGRAMFILES(X86)'] ?? 'C:\\Program Files (x86)',
+      'Microsoft',
+      'Edge',
+      'Application',
+      'msedge.exe',
+    ),
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/snap/bin/chromium',
+  ]
+
+  return (
+    [...configuredPaths, ...knownPaths].find(
+      (candidate): candidate is string => candidate !== undefined && existsSync(candidate),
+    ) ??
+    ['google-chrome-stable', 'google-chrome', 'chromium', 'chromium-browser', 'msedge']
+      .map(findExecutable)
+      .find((candidate) => candidate !== undefined)
+  )
+}
+
+function requireChromiumExecutable(): string {
+  const executable = discoverChromiumExecutable()
+
+  if (executable === undefined) {
+    throw new Error(
+      'Browser-level UI regression coverage requires Chrome or Chromium. Install one or set CHROME_BIN to its executable path.',
+    )
+  }
+
+  return executable
 }
 
 function createVisualFixture(markup: string): string {
@@ -55,7 +122,7 @@ function createVisualFixture(markup: string): string {
 </html>`
 }
 
-function renderVisualSnapshot(windowWidth: number): string {
+function renderVisualSnapshot(chromiumPath: string, windowWidth: number): string {
   const fixtureDirectory = mkdtempSync(join(tmpdir(), 'need-games-visual-'))
   const fixturePath = join(fixtureDirectory, 'fixture.html')
   const profilePath = join(fixtureDirectory, 'chrome-profile')
@@ -74,7 +141,7 @@ function renderVisualSnapshot(windowWidth: number): string {
 
   try {
     return execFileSync(
-      chromePath,
+      chromiumPath,
       [
         '--headless=new',
         '--disable-gpu',
@@ -96,12 +163,11 @@ function renderVisualSnapshot(windowWidth: number): string {
   }
 }
 
-const chromeAvailable = existsSync(chromePath)
-
-describe.runIf(chromeAvailable)('visual layout in Chrome', () => {
+describe('visual layout in Chromium', () => {
   test('renders card and badge treatments and changes the detail grid at 64rem', () => {
-    const compactView = renderVisualSnapshot(1039)
-    const desktopView = renderVisualSnapshot(1040)
+    const chromiumPath = requireChromiumExecutable()
+    const compactView = renderVisualSnapshot(chromiumPath, 1039)
+    const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
     expect(compactView).toContain('data-viewport-width="1023"')
     expect(compactView).toContain('data-detail-columns="1"')
