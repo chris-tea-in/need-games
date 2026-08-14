@@ -21,8 +21,8 @@ export function GameDetailPage({ game }: GameDetailPageProps) {
       <a className="back-link" href="/">
         Back to catalog
       </a>
-      <article className="detail-layout">
-        <header className="game-identity">
+      <article className="dashboard-grid detail-layout">
+        <header className="page-header game-identity">
           <p className="eyebrow">Steam App {game.steamAppId}</p>
           <h1>{game.title}</h1>
           <ul className="tag-list" aria-label={`${game.title} tags`}>
@@ -32,8 +32,8 @@ export function GameDetailPage({ game }: GameDetailPageProps) {
           </ul>
         </header>
 
-        <section className="game-content" aria-labelledby="game-summary-heading">
-          <p className="review-category">{game.review.category}</p>
+        <section className="card game-content" aria-labelledby="game-summary-heading">
+          <p className="badge review-category">{game.review.category}</p>
           <p className="review-count">
             {formatReviewCount(game.review.count)} Steam reviews <span>· {game.review.scope}</span>
           </p>
@@ -53,7 +53,7 @@ export function GameDetailPage({ game }: GameDetailPageProps) {
           </dl>
         </section>
 
-        <aside className="unscored-panel" aria-labelledby="score-status-heading">
+        <aside className="card unscored-panel" aria-labelledby="score-status-heading">
           <p className="eyebrow">Catalog status</p>
           <h2 id="score-status-heading">Score unavailable</h2>
           <p>

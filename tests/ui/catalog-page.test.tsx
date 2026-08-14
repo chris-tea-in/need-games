@@ -66,6 +66,23 @@ describe('CatalogPage', () => {
     expect(markup).toContain('href="/games/counter-strike-2"')
   })
 
+  test('uses the PageHeader, DashboardGrid, Card, and Badge UI patterns', () => {
+    const markup = renderToStaticMarkup(
+      <CatalogPage
+        catalog={catalog}
+        query=""
+        sort="title"
+        onQueryChange={() => {}}
+        onSortChange={() => {}}
+      />,
+    )
+
+    expect(markup).toContain('class="page-header"')
+    expect(markup).toContain('class="dashboard-grid catalog-grid"')
+    expect(markup).toContain('class="card game-card"')
+    expect(markup).toContain('class="badge review-category"')
+  })
+
   test('renders a visible empty state for a valid empty catalog', () => {
     const markup = renderToStaticMarkup(
       <CatalogPage

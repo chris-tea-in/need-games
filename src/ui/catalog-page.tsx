@@ -24,7 +24,7 @@ export function CatalogPage({
 
   return (
     <main className="catalog-page">
-      <header className="page-intro">
+      <header className="page-header">
         <p className="eyebrow">Closed beta</p>
         <h1>Find your next game</h1>
         <p>
@@ -61,10 +61,10 @@ export function CatalogPage({
       {games.length === 0 ? (
         <p className="empty-state">No games match this catalog view.</p>
       ) : (
-        <section className="catalog-grid" aria-label="Games">
+        <section className="dashboard-grid catalog-grid" aria-label="Games">
           {games.map((game) => (
-            <article className="game-card" key={game.id}>
-              <p className="review-category">{game.review.category}</p>
+            <article className="card game-card" key={game.id}>
+              <p className="badge review-category">{game.review.category}</p>
               <h2>
                 <a href={`/games/${game.slug}`}>{game.title}</a>
               </h2>
