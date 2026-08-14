@@ -124,6 +124,14 @@ describe('repository automation contract', () => {
     expect(workflow).toContain('cancel-in-progress: true')
   })
 
+  test('requires a real production build before CI can succeed', () => {
+    const workflow = readAutomationFile(ciWorkflowUrl)
+
+    expect(workflow).toContain('name: Build')
+    expect(workflow).toContain('run: pnpm build')
+    expect(workflow).toMatch(/needs: \[quality, typecheck, tests, build\]/)
+  })
+
   test('exposes stable validation and aggregate job names', () => {
     const workflow = readAutomationFile(ciWorkflowUrl)
 
