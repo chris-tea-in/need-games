@@ -1,35 +1,44 @@
 :root {
   color-scheme: dark;
-  --ui-surface: #10131a;
-  --ui-text: #f6f8fc;
-  --ui-border: #3a455a;
-  --ui-accent: #7dd3fc;
-  --ui-danger: #ff8d9a;
-  --ui-success: #82d19d;
+  --color-bg: #1c1c1c;
+  --color-surface: #242424;
+  --color-surface-2: #2e2e2e;
+  --color-accent-red: #e94560;
+  --color-accent-gold: #c4a35a;
+  --color-text: #eaeaea;
+  --color-text-muted: #9a9a9a;
+  --color-border-raw: #3a3a3a;
+  --radius: 6px;
+  --font-body: system-ui, -apple-system, sans-serif;
+  --ui-surface: var(--color-bg);
+  --ui-text: var(--color-text);
+  --ui-border: var(--color-border-raw);
+  --ui-accent: var(--color-accent-red);
+  --ui-danger: var(--color-accent-red);
+  --ui-success: var(--color-accent-gold);
   --ui-space-4: 1rem;
-  --ui-radius-md: 0.75rem;
-  --ui-shadow-md: 0 1.25rem 3rem rgb(0 0 0 / 25%);
+  --ui-radius-md: var(--radius);
+  --ui-shadow-md: 0 1.25rem 3rem rgb(0 0 0 / 35%);
   --surface-base: var(--ui-surface);
-  --surface-raised: #191e29;
-  --surface-muted: #232a38;
+  --surface-raised: var(--color-surface);
+  --surface-muted: var(--color-surface-2);
   --text-primary: var(--ui-text);
-  --text-secondary: #b6c0d1;
+  --text-secondary: var(--color-text-muted);
   --border-subtle: var(--ui-border);
   --accent: var(--ui-accent);
-  --accent-strong: #38bdf8;
+  --accent-strong: color-mix(in srgb, var(--color-accent-red) 80%, white);
   --status-positive: var(--ui-success);
-  --status-warning: #f9cf73;
+  --status-warning: var(--color-accent-gold);
   --status-danger: var(--ui-danger);
   --space-1: 0.5rem;
   --space-2: 0.75rem;
   --space-3: var(--ui-space-4);
   --space-4: 1.5rem;
   --space-5: 2.25rem;
-  --radius: var(--ui-radius-md);
   --shadow: var(--ui-shadow-md);
   background: var(--surface-base);
   color: var(--text-primary);
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-body);
 }
 
 * {
@@ -39,7 +48,11 @@
 body {
   margin: 0;
   min-width: 20rem;
-  background: radial-gradient(circle at top, #1a2638 0, var(--surface-base) 44rem);
+  background: radial-gradient(
+    circle at top,
+    color-mix(in srgb, var(--color-accent-red) 14%, var(--color-bg)) 0,
+    var(--color-bg) 44rem
+  );
 }
 
 a {
@@ -272,13 +285,13 @@ select {
   margin-top: var(--space-3);
   border: 1px solid color-mix(in srgb, var(--status-warning) 60%, var(--border-subtle));
   border-radius: var(--radius);
-  background: #352c1b;
-  color: #ffecbf;
+  background: color-mix(in srgb, var(--color-accent-gold) 12%, var(--color-surface));
+  color: var(--color-text);
   padding: var(--space-3);
 }
 
 .offline-notice span {
-  color: #f8deb2;
+  color: var(--color-accent-gold);
 }
 
 .status-message {

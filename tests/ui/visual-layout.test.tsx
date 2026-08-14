@@ -106,6 +106,7 @@ function createVisualFixture(markup: string): string {
         const detailStyle = getComputedStyle(detailLayout)
         const cardStyle = getComputedStyle(card)
         const badgeStyle = getComputedStyle(badge)
+        const rootStyle = getComputedStyle(document.documentElement)
 
         document.body.dataset.detailColumns = detailStyle.gridTemplateColumns
           .split(/\\s+/)
@@ -116,6 +117,14 @@ function createVisualFixture(markup: string): string {
         document.body.dataset.cardShadow = cardStyle.boxShadow === 'none' ? 'none' : 'raised'
         document.body.dataset.badgeBorder = badgeStyle.borderTopStyle
         document.body.dataset.badgeRadius = badgeStyle.borderTopLeftRadius
+        document.body.dataset.colorBackground = rootStyle.getPropertyValue('--color-bg').trim()
+        document.body.dataset.colorSurface = rootStyle.getPropertyValue('--color-surface').trim()
+        document.body.dataset.colorSurface2 = rootStyle.getPropertyValue('--color-surface-2').trim()
+        document.body.dataset.colorAccentRed = rootStyle.getPropertyValue('--color-accent-red').trim()
+        document.body.dataset.colorAccentGold = rootStyle.getPropertyValue('--color-accent-gold').trim()
+        document.body.dataset.colorText = rootStyle.getPropertyValue('--color-text').trim()
+        document.body.dataset.colorMuted = rootStyle.getPropertyValue('--color-text-muted').trim()
+        document.body.dataset.colorBorder = rootStyle.getPropertyValue('--color-border-raw').trim()
       })
     </script>
   </body>
@@ -164,6 +173,20 @@ function renderVisualSnapshot(chromiumPath: string, windowWidth: number): string
 }
 
 describe('visual layout in Chromium', () => {
+  test('uses the supplied charcoal, red, and gold palette', () => {
+    const chromiumPath = requireChromiumExecutable()
+    const desktopView = renderVisualSnapshot(chromiumPath, 1040)
+
+    expect(desktopView).toContain('data-color-background="#1c1c1c"')
+    expect(desktopView).toContain('data-color-surface="#242424"')
+    expect(desktopView).toContain('data-color-surface2="#2e2e2e"')
+    expect(desktopView).toContain('data-color-accent-red="#e94560"')
+    expect(desktopView).toContain('data-color-accent-gold="#c4a35a"')
+    expect(desktopView).toContain('data-color-text="#eaeaea"')
+    expect(desktopView).toContain('data-color-muted="#9a9a9a"')
+    expect(desktopView).toContain('data-color-border="#3a3a3a"')
+  })
+
   test('renders card and badge treatments and changes the detail grid at 64rem', () => {
     const chromiumPath = requireChromiumExecutable()
     const compactView = renderVisualSnapshot(chromiumPath, 1039)
