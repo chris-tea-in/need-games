@@ -8,22 +8,43 @@
   },
   "packageManager": "pnpm@10.34.5",
   "scripts": {
+    "build": "vite build",
+    "check:local": "node scripts/check-local.mjs",
+    "dev": "vite",
+    "deploy": "wrangler deploy",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
+    "predeploy": "pnpm release:check",
+    "release:check": "node scripts/assert-release-d1-id.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit"
+    "test:node": "vitest run --config vitest.config.ts",
+    "test:worker": "vitest run --config vitest.worker.config.ts",
+    "typecheck": "tsc --noEmit",
+    "typecheck:worker": "wrangler types --check"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "1.52.1",
+    "@cloudflare/vitest-pool-workers": "0.21.3",
+    "@cloudflare/workers-types": "5.20260813.1",
     "@eslint/js": "10.0.1",
     "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
     "@vitest/coverage-v8": "4.1.10",
     "eslint": "10.7.0",
     "eslint-config-prettier": "10.1.8",
     "prettier": "3.9.5",
     "typescript": "6.0.3",
     "typescript-eslint": "8.64.0",
-    "vitest": "4.1.10"
+    "vite": "8.2.1",
+    "vitest": "4.1.10",
+    "wrangler": "4.123.0"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   }
 }
