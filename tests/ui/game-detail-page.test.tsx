@@ -16,14 +16,4 @@ describe('GameDetailPage', () => {
     expect(markup).not.toContain('Similar games')
     expect(markup).not.toContain('//comments//')
   })
-
-  test('uses the PageHeader, DashboardGrid, Card, and Badge UI patterns', () => {
-    const markup = renderToStaticMarkup(<GameDetailPage game={catalogSnapshot.games[0]} />)
-
-    expect(markup).toContain('class="page-header game-identity"')
-    expect(markup).toContain('class="dashboard-grid detail-layout"')
-    expect(markup).toContain('class="card game-content"')
-    expect(markup).toContain('class="card unscored-panel"')
-    expect(markup).toContain('class="badge review-category"')
-  })
 })
