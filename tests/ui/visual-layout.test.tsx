@@ -103,9 +103,13 @@ function createVisualFixture(markup: string): string {
         const detailLayout = document.querySelector('.detail-layout')
         const card = document.querySelector('.card')
         const badge = document.querySelector('.badge')
+        const gameTitleLink = document.querySelector('.game-card h2 a')
+        const storePageLink = document.querySelector('.provenance-list a')
         const detailStyle = getComputedStyle(detailLayout)
         const cardStyle = getComputedStyle(card)
         const badgeStyle = getComputedStyle(badge)
+        const gameTitleStyle = getComputedStyle(gameTitleLink)
+        const storePageStyle = getComputedStyle(storePageLink)
         const rootStyle = getComputedStyle(document.documentElement)
         const bodyStyle = getComputedStyle(document.body)
 
@@ -128,6 +132,8 @@ function createVisualFixture(markup: string): string {
         document.body.dataset.colorBorder = rootStyle.getPropertyValue('--color-border-raw').trim()
         document.body.dataset.pageBackground = bodyStyle.backgroundImage
         document.body.dataset.pageBackgroundColor = bodyStyle.backgroundColor
+        document.body.dataset.gameTitleColor = gameTitleStyle.color
+        document.body.dataset.storePageColor = storePageStyle.color
       })
     </script>
   </body>
@@ -196,6 +202,14 @@ describe('visual layout in Chromium', () => {
 
     expect(desktopView).toContain('data-page-background="none"')
     expect(desktopView).toContain('data-page-background-color="rgb(28, 28, 28)"')
+  })
+
+  test('renders game titles and Steam store links in gold', () => {
+    const chromiumPath = requireChromiumExecutable()
+    const desktopView = renderVisualSnapshot(chromiumPath, 1040)
+
+    expect(desktopView).toContain('data-game-title-color="rgb(196, 163, 90)"')
+    expect(desktopView).toContain('data-store-page-color="rgb(196, 163, 90)"')
   })
 
   test('renders card and badge treatments and changes the detail grid at 64rem', () => {

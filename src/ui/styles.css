@@ -185,6 +185,11 @@ select {
   line-height: 1.15;
 }
 
+.game-card h2 a,
+.provenance-list a {
+  color: var(--color-accent-gold);
+}
+
 .review-count {
   margin: 0;
   color: var(--text-secondary);
