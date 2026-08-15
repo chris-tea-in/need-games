@@ -47,6 +47,7 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test:coverage
+pnpm build
 ```
 
 - Prettier checks formatting.
@@ -54,9 +55,21 @@ pnpm test:coverage
 - TypeScript checks type compatibility.
 - Vitest checks behavior and reports executed code paths.
 
-GitHub Actions runs those responsibilities as `Quality`, `Typecheck`, and `Tests`. The aggregate
-`CI` check fails unless every required job succeeds, and a failed `CI` check blocks the PR from
-merging.
+GitHub Actions runs those responsibilities as `Quality`, `Typecheck`, `Tests`, and `Build`. The
+aggregate `CI` check fails unless every required job succeeds, and a failed `CI` check blocks the
+PR from merging.
+
+## Full local verification
+
+After Corepack enables pnpm `10.34.5` and dependencies are installed, run the reusable local gate:
+
+```powershell
+corepack pnpm check:local
+```
+
+The wrapper runs formatting, linting, TypeScript, coverage, a production build, Worker types,
+local D1 migrations, and a bounded local Worker smoke test. It uses only local Worker and D1
+state. It does not change Cloudflare resources.
 
 ## Pull-request review
 
@@ -64,9 +77,9 @@ Complete the pull-request template with the problem, changes, verification evide
 security implications, and rollback path. Resolve review conversations and rerun checks after
 each substantive correction.
 
-The application has no production artifact yet, so CI deliberately has no build job. Add a
-required production-build check when application scaffolding introduces a real build command;
-do not add a placeholder or no-op build.
+The closed beta has a production build, so the required `Build` job runs it on every pull request
+and push to `main`.
 
-Continuous deployment is a separate future workflow. Deployment credentials must never be added
-to the ordinary CI workflow.
+Release is separate from local verification. The owner must explicitly approve creating a D1
+database, binding it, applying remote migrations, or replacing the existing Worker. Deployment
+credentials must never be added to the ordinary CI workflow.

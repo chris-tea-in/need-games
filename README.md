@@ -1,6 +1,6 @@
 # Need Games
 
-Need Games is a game discovery project that categorizes games by a MiMMa score to help players find games with similar gameplay.
+Need Games is a game discovery project that uses MiMMa profiles to explain how games play and, later, help players find similar games.
 
 ## What is a MiMMa score?
 
@@ -16,6 +16,12 @@ A game can be high in multiple categories. For example, a game can have 100% Mic
 
 This makes MiMMa useful for finding games with overlapping gameplay traits, such as games that require both strong execution and deep strategy.
 
+## Closed beta
+
+The current closed beta is a read-only catalog of ten curated Steam games. You can browse, search, sort, and inspect source metadata. Each game is intentionally unscored, so the beta does not provide MiMMa comparisons or similar-game results yet.
+
+The application bundles a reviewed catalog snapshot. It keeps browsing available when the same-origin catalog API is temporarily unavailable, and labels that degraded state with its dataset version and freshness.
+
 ## Roadmap
 
 - Build a curated, review-gated game catalog.
@@ -25,4 +31,4 @@ This makes MiMMa useful for finding games with overlapping gameplay traits, such
 
 ## Status
 
-Early development. The roadmap may change as the project is tested and refined.
+Closed beta foundation. The roadmap may change as the project is tested and refined.
