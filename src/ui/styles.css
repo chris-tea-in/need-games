@@ -185,7 +185,10 @@ select {
   line-height: 1.15;
 }
 
-.game-card h2 a,
+.game-card h2 a {
+  color: var(--color-text);
+}
+
 .provenance-list a {
   color: var(--color-accent-gold);
 }

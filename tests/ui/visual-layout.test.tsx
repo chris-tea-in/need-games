@@ -204,11 +204,11 @@ describe('visual layout in Chromium', () => {
     expect(desktopView).toContain('data-page-background-color="rgb(28, 28, 28)"')
   })
 
-  test('renders game titles and Steam store links in gold', () => {
+  test('renders game titles in white and Steam store links in gold', () => {
     const chromiumPath = requireChromiumExecutable()
     const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
-    expect(desktopView).toContain('data-game-title-color="rgb(196, 163, 90)"')
+    expect(desktopView).toContain('data-game-title-color="rgb(234, 234, 234)"')
     expect(desktopView).toContain('data-store-page-color="rgb(196, 163, 90)"')
   })
 
