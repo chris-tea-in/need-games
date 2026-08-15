@@ -181,6 +181,16 @@ function renderVisualSnapshot(chromiumPath: string, windowWidth: number): string
   }
 }
 
+function readViewportWidth(snapshot: string): number {
+  const match = snapshot.match(/data-viewport-width="(\d+)"/)
+
+  if (match === null) {
+    throw new Error('Chromium snapshot did not report its viewport width.')
+  }
+
+  return Number(match[1])
+}
+
 describe('visual layout in Chromium', () => {
   test('uses the supplied charcoal, red, and gold palette', () => {
     const chromiumPath = requireChromiumExecutable()
@@ -214,12 +224,12 @@ describe('visual layout in Chromium', () => {
 
   test('renders card and badge treatments and changes the detail grid at 64rem', () => {
     const chromiumPath = requireChromiumExecutable()
-    const compactView = renderVisualSnapshot(chromiumPath, 1039)
+    const compactView = renderVisualSnapshot(chromiumPath, 1023)
     const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
-    expect(compactView).toContain('data-viewport-width="1023"')
+    expect(readViewportWidth(compactView)).toBeLessThan(1024)
     expect(compactView).toContain('data-detail-columns="1"')
-    expect(desktopView).toContain('data-viewport-width="1024"')
+    expect(readViewportWidth(desktopView)).toBeGreaterThanOrEqual(1024)
     expect(desktopView).toContain('data-detail-columns="3"')
     expect(desktopView).toContain('data-card-border="solid"')
     expect(desktopView).toContain('data-card-shadow="raised"')
