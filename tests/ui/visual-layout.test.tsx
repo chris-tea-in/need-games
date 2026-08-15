@@ -18,6 +18,8 @@ const catalog: CatalogResponse = {
   games: [catalogSnapshot.games[0]],
 }
 
+const visualTestTimeout = 20_000
+
 function findExecutable(command: string): string | undefined {
   const locator = process.platform === 'win32' ? 'where.exe' : 'which'
 
@@ -192,48 +194,64 @@ function readViewportWidth(snapshot: string): number {
 }
 
 describe('visual layout in Chromium', () => {
-  test('uses the supplied charcoal, red, and gold palette', () => {
-    const chromiumPath = requireChromiumExecutable()
-    const desktopView = renderVisualSnapshot(chromiumPath, 1040)
+  test(
+    'uses the supplied charcoal, red, and gold palette',
+    () => {
+      const chromiumPath = requireChromiumExecutable()
+      const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
-    expect(desktopView).toContain('data-color-background="#1c1c1c"')
-    expect(desktopView).toContain('data-color-surface="#242424"')
-    expect(desktopView).toContain('data-color-surface2="#2e2e2e"')
-    expect(desktopView).toContain('data-color-accent-red="#e94560"')
-    expect(desktopView).toContain('data-color-accent-gold="#c4a35a"')
-    expect(desktopView).toContain('data-color-text="#eaeaea"')
-    expect(desktopView).toContain('data-color-muted="#9a9a9a"')
-    expect(desktopView).toContain('data-color-border="#3a3a3a"')
-  })
+      expect(desktopView).toContain('data-color-background="#1c1c1c"')
+      expect(desktopView).toContain('data-color-surface="#242424"')
+      expect(desktopView).toContain('data-color-surface2="#2e2e2e"')
+      expect(desktopView).toContain('data-color-accent-red="#e94560"')
+      expect(desktopView).toContain('data-color-accent-gold="#c4a35a"')
+      expect(desktopView).toContain('data-color-text="#eaeaea"')
+      expect(desktopView).toContain('data-color-muted="#9a9a9a"')
+      expect(desktopView).toContain('data-color-border="#3a3a3a"')
+    },
+    visualTestTimeout,
+  )
 
-  test('keeps the page background solid charcoal', () => {
-    const chromiumPath = requireChromiumExecutable()
-    const desktopView = renderVisualSnapshot(chromiumPath, 1040)
+  test(
+    'keeps the page background solid charcoal',
+    () => {
+      const chromiumPath = requireChromiumExecutable()
+      const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
-    expect(desktopView).toContain('data-page-background="none"')
-    expect(desktopView).toContain('data-page-background-color="rgb(28, 28, 28)"')
-  })
+      expect(desktopView).toContain('data-page-background="none"')
+      expect(desktopView).toContain('data-page-background-color="rgb(28, 28, 28)"')
+    },
+    visualTestTimeout,
+  )
 
-  test('renders game titles in white and Steam store links in gold', () => {
-    const chromiumPath = requireChromiumExecutable()
-    const desktopView = renderVisualSnapshot(chromiumPath, 1040)
+  test(
+    'renders game titles in white and Steam store links in gold',
+    () => {
+      const chromiumPath = requireChromiumExecutable()
+      const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
-    expect(desktopView).toContain('data-game-title-color="rgb(234, 234, 234)"')
-    expect(desktopView).toContain('data-store-page-color="rgb(196, 163, 90)"')
-  })
+      expect(desktopView).toContain('data-game-title-color="rgb(234, 234, 234)"')
+      expect(desktopView).toContain('data-store-page-color="rgb(196, 163, 90)"')
+    },
+    visualTestTimeout,
+  )
 
-  test('renders card and badge treatments and changes the detail grid at 64rem', () => {
-    const chromiumPath = requireChromiumExecutable()
-    const compactView = renderVisualSnapshot(chromiumPath, 1023)
-    const desktopView = renderVisualSnapshot(chromiumPath, 1040)
+  test(
+    'renders card and badge treatments and changes the detail grid at 64rem',
+    () => {
+      const chromiumPath = requireChromiumExecutable()
+      const compactView = renderVisualSnapshot(chromiumPath, 1023)
+      const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
-    expect(readViewportWidth(compactView)).toBeLessThan(1024)
-    expect(compactView).toContain('data-detail-columns="1"')
-    expect(readViewportWidth(desktopView)).toBeGreaterThanOrEqual(1024)
-    expect(desktopView).toContain('data-detail-columns="3"')
-    expect(desktopView).toContain('data-card-border="solid"')
-    expect(desktopView).toContain('data-card-shadow="raised"')
-    expect(desktopView).toContain('data-badge-border="solid"')
-    expect(desktopView).toContain('data-badge-radius="999px"')
-  })
+      expect(readViewportWidth(compactView)).toBeLessThan(1024)
+      expect(compactView).toContain('data-detail-columns="1"')
+      expect(readViewportWidth(desktopView)).toBeGreaterThanOrEqual(1024)
+      expect(desktopView).toContain('data-detail-columns="3"')
+      expect(desktopView).toContain('data-card-border="solid"')
+      expect(desktopView).toContain('data-card-shadow="raised"')
+      expect(desktopView).toContain('data-badge-border="solid"')
+      expect(desktopView).toContain('data-badge-radius="999px"')
+    },
+    visualTestTimeout,
+  )
 })
