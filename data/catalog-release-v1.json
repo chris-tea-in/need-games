@@ -1,0 +1,249 @@
+{
+  "datasetVersion": "catalog-release-v1",
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-14T19:17:05Z",
+  "games": [
+    {
+      "id": "steam-730",
+      "slug": "counter-strike-2",
+      "steamAppId": 730,
+      "title": "Counter-Strike 2",
+      "steamTitle": "Counter-Strike 2",
+      "shortDescription": "For over two decades, Counter-Strike has offered an elite competitive experience, shaped by millions of players worldwide. This is Counter-Strike 2.",
+      "tags": ["FPS", "Shooter", "Multiplayer", "Competitive", "Action", "Team-Based"],
+      "review": {
+        "category": "Very Positive",
+        "count": 2594111,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "Counter-Strike 2",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=730&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/730/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:16:46Z"
+      }
+    },
+    {
+      "id": "steam-1623730",
+      "slug": "palworld",
+      "steamAppId": 1623730,
+      "title": "Palworld",
+      "steamTitle": "Palworld",
+      "shortDescription": "Fight, farm, build, and work alongside mysterious creatures called “Pals” in this multiplayer open-world survival-crafting game.",
+      "tags": [
+        "Open World",
+        "Survival",
+        "Creature Collector",
+        "Multiplayer",
+        "Open World Survival Craft",
+        "Online Co-Op"
+      ],
+      "review": {
+        "category": "Overwhelmingly Positive",
+        "count": 176742,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "Palworld",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=1623730&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/1623730/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:16:48Z"
+      }
+    },
+    {
+      "id": "steam-2767030",
+      "slug": "marvel-rivals",
+      "steamAppId": 2767030,
+      "title": "Marvel Rivals",
+      "steamTitle": "Marvel Rivals",
+      "shortDescription": "A Super Hero team-based PvP shooter with team-up powers and destructible, evolving battlefields across the Marvel universe.",
+      "tags": [
+        "Free to Play",
+        "Multiplayer",
+        "Hero Shooter",
+        "Third-Person Shooter",
+        "Superhero",
+        "PvP"
+      ],
+      "review": {
+        "category": "Mostly Positive",
+        "count": 295725,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "Marvel Rivals",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=2767030&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/2767030/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:16:50Z"
+      }
+    },
+    {
+      "id": "steam-1172470",
+      "slug": "apex-legends",
+      "steamAppId": 1172470,
+      "title": "Apex Legends",
+      "steamTitle": "Apex Legends™",
+      "titleMapping": {
+        "kind": "owner_approved_display_title",
+        "explanation": "The approved catalog title omits Steam's trademark symbol while preserving the official Steam title in provenance."
+      },
+      "shortDescription": "A free-to-play Hero Shooter with a growing roster of characters, strategic squad play, and Battle Royale gameplay.",
+      "tags": ["Free to Play", "Multiplayer", "Battle Royale", "FPS", "Shooter", "First-Person"],
+      "review": {
+        "category": "Mostly Positive",
+        "count": 448348,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "Apex Legends™",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=1172470&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/1172470/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:16:52Z"
+      }
+    },
+    {
+      "id": "steam-359550",
+      "slug": "tom-clancys-rainbow-six-siege",
+      "steamAppId": 359550,
+      "title": "Tom Clancy's Rainbow Six Siege",
+      "steamTitle": "Tom Clancy's Rainbow Six Siege",
+      "shortDescription": "An elite tactical team-based shooter where superior planning and execution triumph.",
+      "tags": ["FPS", "PvP", "Multiplayer", "Shooter", "Tactical", "eSports"],
+      "review": {
+        "category": "Very Positive",
+        "count": 802213,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "Tom Clancy's Rainbow Six Siege",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=359550&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/359550/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:16:54Z"
+      }
+    },
+    {
+      "id": "steam-1086940",
+      "slug": "baldurs-gate-3",
+      "steamAppId": 1086940,
+      "title": "Baldur's Gate 3",
+      "steamTitle": "Baldur's Gate 3",
+      "shortDescription": "A story-rich party RPG in the Dungeons & Dragons universe, where choices shape a tale of fellowship, survival, sacrifice, and power.",
+      "tags": [
+        "RPG",
+        "Character Customization",
+        "Choices Matter",
+        "Turn-Based Combat",
+        "Story Rich",
+        "Sexual Content"
+      ],
+      "review": {
+        "category": "Overwhelmingly Positive",
+        "count": 447101,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "Baldur's Gate 3",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=1086940&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/1086940/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:16:56Z"
+      }
+    },
+    {
+      "id": "steam-1085660",
+      "slug": "destiny-2",
+      "steamAppId": 1085660,
+      "title": "Destiny 2",
+      "steamTitle": "Destiny 2",
+      "shortDescription": "Explore Sol in a first-person shooter. Unlock abilities and collect gear across story missions, co-op, and PvP modes.",
+      "tags": ["Free to Play", "Open World", "Looter Shooter", "Multiplayer", "MMORPG", "FPS"],
+      "review": {
+        "category": "Mostly Positive",
+        "count": 389021,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "Destiny 2",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=1085660&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/1085660/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:16:58Z"
+      }
+    },
+    {
+      "id": "steam-2246340",
+      "slug": "monster-hunter-wilds",
+      "steamAppId": 2246340,
+      "title": "Monster Hunter Wilds",
+      "steamTitle": "Monster Hunter Wilds",
+      "shortDescription": "A story of monsters and humans struggling to live in harmony as natural environments transform drastically.",
+      "tags": [
+        "Hunting",
+        "Action",
+        "Multiplayer",
+        "Online Co-Op",
+        "Co-op",
+        "Character Customization"
+      ],
+      "review": {
+        "category": "Mostly Positive",
+        "count": 84369,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "Monster Hunter Wilds",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=2246340&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/2246340/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:17:01Z"
+      }
+    },
+    {
+      "id": "steam-1245620",
+      "slug": "elden-ring",
+      "steamAppId": 1245620,
+      "title": "ELDEN RING",
+      "steamTitle": "ELDEN RING",
+      "shortDescription": "A critically acclaimed fantasy action RPG. Rise, Tarnished, and become an Elden Lord in the Lands Between.",
+      "tags": ["Souls-like", "Open World", "Dark Fantasy", "RPG", "Difficult", "Action RPG"],
+      "review": {
+        "category": "Very Positive",
+        "count": 433049,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "ELDEN RING",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=1245620&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/1245620/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:17:03Z"
+      }
+    },
+    {
+      "id": "steam-284160",
+      "slug": "beamng-drive",
+      "steamAppId": 284160,
+      "title": "BeamNG.drive",
+      "steamTitle": "BeamNG.drive",
+      "shortDescription": "A dynamic soft-body physics vehicle simulator capable of doing just about anything.",
+      "tags": ["Simulation", "Driving", "Physics", "Realistic", "Destruction", "Automobile Sim"],
+      "review": {
+        "category": "Overwhelmingly Positive",
+        "count": 207775,
+        "scope": "All Reviews: English Reviews"
+      },
+      "admission": { "criteriaVersion": "v1-steam-catalog-2026-07-26", "path": "main_catalog" },
+      "provenance": {
+        "officialTitle": "BeamNG.drive",
+        "appDetailsUrl": "https://store.steampowered.com/api/appdetails?appids=284160&l=english&cc=us",
+        "storePageUrl": "https://store.steampowered.com/app/284160/?l=english&cc=us",
+        "fetchedAt": "2026-08-14T19:17:05Z"
+      }
+    }
+  ]
+}

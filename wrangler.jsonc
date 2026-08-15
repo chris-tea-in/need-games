@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "myplayprint-preview",
+  "main": "./src/worker/index.ts",
+  "compatibility_date": "2026-08-14",
+  "compatibility_flags": ["nodejs_compat", "assets_navigation_has_no_effect"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api", "/api/*"],
+  },
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
+  "d1_databases": [
+    {
+      "binding": "NEED_GAMES_DB",
+      "database_name": "need-games-local-preview",
+      "database_id": "00000000-0000-4000-8000-000000000001",
+      "preview_database_id": "00000000-0000-4000-8000-000000000001",
+      "migrations_dir": "./migrations",
+    },
+  ],
+}

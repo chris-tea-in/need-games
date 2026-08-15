@@ -1,5 +1,7 @@
 node_modules/
+.superpowers/
 .pnpm-store/
 coverage/
 dist/
+worker-configuration.d.ts
 pnpm-lock.yaml
