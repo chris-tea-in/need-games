@@ -33,6 +33,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Check tracked release configuration
+        run: pnpm release:check
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-24.04

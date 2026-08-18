@@ -23,5 +23,6 @@ node_modules/
 .pnpm-store/
 .eslintcache
 .wrangler/
+.wrangler.production.jsonc
 coverage/
 dist/
