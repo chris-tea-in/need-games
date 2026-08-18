@@ -71,6 +71,9 @@ jobs:
       - name: Check generated catalog artifacts
         run: pnpm catalog:check
 
+      - name: Check generated MiMMa seed artifact
+        run: pnpm mimma-seed:check
+
       - name: Run Worker and D1 tests
         run: pnpm test:worker
 
