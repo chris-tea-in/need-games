@@ -78,7 +78,11 @@ describe('authoritative MiMMa seed generator', () => {
     expect(sql).toContain('CREATE TABLE authoritative_mimma_seeds')
     expect(sql).toContain('authoritative_mimma_seeds_prevent_update')
     expect(sql).toContain('authoritative_mimma_seeds_prevent_delete')
+    expect(sql).toContain('authoritative_mimma_seeds_prevent_insert')
     expect(sql.match(/INSERT INTO authoritative_mimma_seeds/g)).toHaveLength(62)
+    expect(sql.indexOf('CREATE TRIGGER authoritative_mimma_seeds_prevent_insert')).toBeGreaterThan(
+      sql.lastIndexOf('INSERT INTO authoritative_mimma_seeds'),
+    )
     expect(sql).not.toContain('steam_app_id')
     expect(sql).not.toContain('zone TEXT')
     expect(sql).not.toContain('label TEXT')

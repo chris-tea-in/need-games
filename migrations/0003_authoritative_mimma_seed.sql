@@ -157,3 +157,10 @@ INSERT INTO authoritative_mimma_seeds (id, conceptual_name, micro_score, meso_sc
 --> statement-breakpoint
 INSERT INTO authoritative_mimma_seeds (id, conceptual_name, micro_score, meso_score, macro_score, provenance, dataset_version, created_at) VALUES ('authoritative-mimma-seed-v1-victoria-3', 'Victoria 3', 0, 0, 100, 'authoritative_sample_seed', 'authoritative-mimma-seed-v1', '2026-08-18T20:02:44Z');
 --> statement-breakpoint
+
+CREATE TRIGGER authoritative_mimma_seeds_prevent_insert
+BEFORE INSERT ON authoritative_mimma_seeds
+BEGIN
+  SELECT RAISE(ABORT, 'authoritative MiMMa seed set is immutable');
+END;
+--> statement-breakpoint

@@ -217,6 +217,13 @@ END;
 --> statement-breakpoint
 
 ${inserts.join('\n')}
+
+CREATE TRIGGER authoritative_mimma_seeds_prevent_insert
+BEFORE INSERT ON authoritative_mimma_seeds
+BEGIN
+  SELECT RAISE(ABORT, 'authoritative MiMMa seed set is immutable');
+END;
+--> statement-breakpoint
 `
 }
 

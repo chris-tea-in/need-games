@@ -93,6 +93,26 @@ describe('closed beta D1 schema', () => {
 
     await expect(
       env.NEED_GAMES_DB.prepare(
+        `INSERT INTO authoritative_mimma_seeds (
+          id, conceptual_name, micro_score, meso_score, macro_score,
+          provenance, dataset_version, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(
+          'unexpected-authoritative-seed',
+          'Unexpected Seed',
+          100,
+          0,
+          0,
+          'authoritative_sample_seed',
+          'authoritative-mimma-seed-v1',
+          '2026-08-18T20:02:44Z',
+        )
+        .run(),
+    ).rejects.toThrow()
+
+    await expect(
+      env.NEED_GAMES_DB.prepare(
         'UPDATE authoritative_mimma_seeds SET conceptual_name = ? WHERE id = ?',
       )
         .bind('Changed', 'authoritative-mimma-seed-v1-aimlabs')
