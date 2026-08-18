@@ -5,6 +5,9 @@
   --color-surface-2: #2e2e2e;
   --color-accent-red: #e94560;
   --color-accent-gold: #c4a35a;
+  --color-mimma-micro: #2d9cdb;
+  --color-mimma-meso: #9b51e0;
+  --color-mimma-macro: #27ae60;
   --color-text: #eaeaea;
   --color-text-muted: #9a9a9a;
   --color-border-raw: #3a3a3a;
@@ -304,6 +307,69 @@ select {
 
 .error-state {
   color: var(--status-danger);
+}
+
+.mimma-graph {
+  --mimma-bar-width: 2.875rem;
+  --mimma-track-height: 10rem;
+  display: grid;
+  width: fit-content;
+  grid-template-columns: repeat(3, max-content);
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.mimma-graph--expanded {
+  --mimma-bar-width: 3.5rem;
+  --mimma-track-height: 14rem;
+  gap: var(--space-4);
+}
+
+.mimma-axis {
+  display: grid;
+  grid-template-rows: 2rem var(--mimma-track-height) 2rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.mimma-axis-label,
+.mimma-axis-name {
+  align-self: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.mimma-axis-name {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.mimma-axis-track,
+.mimma-axis-bar {
+  width: var(--mimma-bar-width);
+}
+
+.mimma-axis-track {
+  display: flex;
+  height: var(--mimma-track-height);
+  align-items: end;
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.mimma-axis-bar {
+  height: var(--mimma-value);
+}
+
+.mimma-axis--micro .mimma-axis-bar {
+  background: var(--color-mimma-micro);
+}
+
+.mimma-axis--meso .mimma-axis-bar {
+  background: var(--color-mimma-meso);
+}
+
+.mimma-axis--macro .mimma-axis-bar {
+  background: var(--color-mimma-macro);
 }
 
 @media (min-width: 42rem) {

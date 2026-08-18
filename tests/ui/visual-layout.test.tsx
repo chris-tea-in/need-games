@@ -11,6 +11,7 @@ import type { CatalogResponse } from '../../src/shared/catalog-contract.js'
 import { CatalogPage } from '../../src/ui/catalog-page.js'
 import { catalogSnapshot } from '../../src/ui/generated/catalog-snapshot.js'
 import { GameDetailPage } from '../../src/ui/game-detail-page.js'
+import { MimmaGraph } from '../../src/ui/mimma-graph.js'
 
 const catalog: CatalogResponse = {
   datasetVersion: 'catalog-release-v1',
@@ -136,6 +137,23 @@ function createVisualFixture(markup: string): string {
         document.body.dataset.pageBackgroundColor = bodyStyle.backgroundColor
         document.body.dataset.gameTitleColor = gameTitleStyle.color
         document.body.dataset.storePageColor = storePageStyle.color
+
+        const mimmaFixture = document.querySelector('[data-mimma-fixture]')
+        const mimmaGraph = document.querySelector('.mimma-graph')
+        const mimmaTrack = document.querySelector('.mimma-axis-track')
+        const mimmaBar = document.querySelector('.mimma-axis-bar')
+        const microBar = document.querySelector('.mimma-axis--micro .mimma-axis-bar')
+        const mesoBar = document.querySelector('.mimma-axis--meso .mimma-axis-bar')
+        const macroBar = document.querySelector('.mimma-axis--macro .mimma-axis-bar')
+
+        document.body.dataset.mimmaFits = String(
+          mimmaGraph.getBoundingClientRect().width <= mimmaFixture.getBoundingClientRect().width,
+        )
+        document.body.dataset.mimmaTrackWidth = getComputedStyle(mimmaTrack).width
+        document.body.dataset.mimmaBarWidth = getComputedStyle(mimmaBar).width
+        document.body.dataset.mimmaMicroColor = getComputedStyle(microBar).backgroundColor
+        document.body.dataset.mimmaMesoColor = getComputedStyle(mesoBar).backgroundColor
+        document.body.dataset.mimmaMacroColor = getComputedStyle(macroBar).backgroundColor
       })
     </script>
   </body>
@@ -155,7 +173,13 @@ function renderVisualSnapshot(chromiumPath: string, windowWidth: number): string
         onQueryChange={() => {}}
         onSortChange={() => {}}
       />,
-    ) + renderToStaticMarkup(<GameDetailPage game={catalogSnapshot.games[0]} />)
+    ) +
+    renderToStaticMarkup(<GameDetailPage game={catalogSnapshot.games[0]} />) +
+    renderToStaticMarkup(
+      <div data-mimma-fixture style={{ width: '20rem' }}>
+        <MimmaGraph score={{ macro: 0, meso: 50, micro: 100 }} />
+      </div>,
+    )
 
   writeFileSync(fixturePath, createVisualFixture(markup), 'utf8')
 
@@ -164,6 +188,7 @@ function renderVisualSnapshot(chromiumPath: string, windowWidth: number): string
       chromiumPath,
       [
         '--headless=new',
+        '--no-sandbox',
         '--disable-gpu',
         '--disable-software-rasterizer',
         '--disable-features=Vulkan',
@@ -191,6 +216,13 @@ function readViewportWidth(snapshot: string): number {
   }
 
   return Number(match[1])
+}
+
+function readDataAttribute(snapshot: string, name: string): string {
+  const match = snapshot.match(new RegExp(`data-${name}="([^"]+)"`))
+
+  if (match === null) throw new Error(`Chromium snapshot did not report data-${name}.`)
+  return match[1]
 }
 
 describe('visual layout in Chromium', () => {
@@ -251,6 +283,23 @@ describe('visual layout in Chromium', () => {
       expect(desktopView).toContain('data-card-shadow="raised"')
       expect(desktopView).toContain('data-badge-border="solid"')
       expect(desktopView).toContain('data-badge-radius="999px"')
+    },
+    visualTestTimeout,
+  )
+
+  test(
+    'keeps the compact MiMMa graph contained with equal colored tracks',
+    () => {
+      const chromiumPath = requireChromiumExecutable()
+      const compactView = renderVisualSnapshot(chromiumPath, 1023)
+
+      expect(compactView).toContain('data-mimma-fits="true"')
+      expect(readDataAttribute(compactView, 'mimma-track-width')).toBe(
+        readDataAttribute(compactView, 'mimma-bar-width'),
+      )
+      expect(compactView).toContain('data-mimma-micro-color="rgb(45, 156, 219)"')
+      expect(compactView).toContain('data-mimma-meso-color="rgb(155, 81, 224)"')
+      expect(compactView).toContain('data-mimma-macro-color="rgb(39, 174, 96)"')
     },
     visualTestTimeout,
   )
