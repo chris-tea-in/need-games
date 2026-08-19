@@ -107,11 +107,17 @@ GitHub-only branch/ref and concurrency controls are intentionally non-applicable
 authority is the owner’s reviewed commit and authenticated local session.
 
 `release:production` runs the full local gate, checks tracked sentinel IDs, creates the ignored
-`.wrangler.production.jsonc` from the transient `PRODUCTION_D1_DATABASE_ID`, verifies the target
-D1 identity/schema/catalog state and the copied `0001`/`0002` migration state in memory, and only
-then deploys `myplayprint` without applying migrations. It forces `STEAM_SIGN_IN_ENABLED=false`.
-A real D1 ID must never be committed, added to GitHub, or written to a release report. The
-generated configuration is ignored and is the only release file that may contain the ID.
+`.wrangler.production.jsonc` from the transient `PRODUCTION_D1_DATABASE_ID`, and builds the
+production Cloudflare environment with `CLOUDFLARE_ENV=production`,
+`CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=.wrangler.production.jsonc`, and
+`CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false`. It verifies the Vite-generated Worker output
+configuration and fails closed unless its static asset directory is exactly `dist/client` and
+contains no `.dev.vars`, `.env`, Worker output, or paths outside that directory. Wrangler then
+deploys that generated output configuration, never the input config, without applying migrations.
+The release verifies the target D1 identity/schema/catalog state and the copied `0001`/`0002`
+migration state in memory, and forces `STEAM_SIGN_IN_ENABLED=false`. A real D1 ID must never be
+committed, added to GitHub, or written to a release report. The generated configuration is
+ignored and is the only release file that may contain the ID.
 
 Before a release, retain the recoverable preview export and confirm the target database name and ID
 with the owner. If preflight verification or upload fails, keep the database and recovery artifacts

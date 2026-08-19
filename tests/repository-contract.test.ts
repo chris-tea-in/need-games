@@ -126,6 +126,7 @@ describe('repository automation contract', () => {
 
   test('documents the owner-run production sequence and keeps it out of CI', () => {
     const releaseScript = readAutomationFile(productionReleaseUrl)
+    const contributing = readAutomationFile(contributingGuideUrl)
     const automation = [
       readAutomationFile(ciWorkflowUrl),
       ...Array.from({ length: 1 }, () => readAutomationFile(productionDeploymentUrl)),
@@ -140,10 +141,22 @@ describe('repository automation contract', () => {
     expect(releaseScript).toContain('check:local')
     expect(releaseScript).toContain('release:check')
     expect(releaseScript).toContain('create-production-wrangler-config.mts')
+    expect(releaseScript).toContain('CLOUDFLARE_ENV')
+    expect(releaseScript).toContain('CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH')
+    expect(releaseScript).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV')
+    expect(releaseScript).toContain('findGeneratedProductionWorkerConfig')
+    expect(releaseScript).toContain('assertProductionAssetBoundary')
     expect(releaseScript).toContain("'d1', 'info'")
     expect(releaseScript).toContain('verify-production-d1.mjs')
     expect(releaseScript).not.toMatch(/'d1',\s*'migrations'/)
-    expect(releaseScript).toContain("'deploy', '--env', 'production'")
+    expect(releaseScript).toContain("['deploy', '--config', generatedWorkerConfigPath]")
+    expect(releaseScript).not.toContain("'deploy', '--env', 'production'")
+    expect(contributing).toContain('CLOUDFLARE_ENV=production')
+    expect(contributing).toContain(
+      'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=.wrangler.production.jsonc',
+    )
+    expect(contributing).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false')
+    expect(contributing).toContain('contains no `.dev.vars`, `.env`, Worker output')
     expect(releaseScript).toContain('/api/catalog')
     expect(releaseScript).toContain('/api/games/counter-strike-2')
     expect(releaseScript).toContain('/api/not-a-route')
@@ -155,6 +168,10 @@ describe('repository automation contract', () => {
     const localChecks = releaseScript.indexOf('check:local')
     const trackedGuard = releaseScript.indexOf('release:check')
     const config = releaseScript.indexOf('create-production-wrangler-config.mts')
+    const productionBuild = releaseScript.indexOf('Build production Vite Worker output')
+    const assetBoundary = releaseScript.lastIndexOf(
+      'const assetBoundary = await assertProductionAssetBoundary',
+    )
     const verification = releaseScript.indexOf('await verifyProductionDatabase(databaseId, env)')
     const deployment = releaseScript.lastIndexOf(
       'Deploy read-only production Worker with Steam sign-in disabled',
@@ -164,7 +181,10 @@ describe('repository automation contract', () => {
     expect(localChecks).toBeGreaterThan(-1)
     expect(trackedGuard).toBeGreaterThan(localChecks)
     expect(config).toBeGreaterThan(trackedGuard)
+    expect(productionBuild).toBeGreaterThan(config)
+    expect(assetBoundary).toBeGreaterThan(productionBuild)
     expect(verification).toBeGreaterThan(-1)
+    expect(deployment).toBeGreaterThan(assetBoundary)
     expect(deployment).toBeGreaterThan(verification)
     expect(smoke).toBeGreaterThan(deployment)
   })

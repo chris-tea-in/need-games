@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { mkdir, open, unlink } from 'node:fs/promises'
+import { mkdir, open, readFile, readdir, realpath, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
@@ -8,10 +8,16 @@ import { assertProductionD1Verification, productionDatabaseName } from './verify
 
 const execFileAsync = promisify(execFile)
 const productionConfigPath = '.wrangler.production.jsonc'
+const productionBuildEnvironmentName = 'production'
+const productionWorkerName = 'myplayprint'
+const productionClientDirectory = path.resolve('dist', 'client')
 const productionReleaseLockPath = path.resolve('.wrangler', 'production-release.lock')
 const releaseIdEnvironmentVariable = 'PRODUCTION_D1_DATABASE_ID'
 const steamSignInEnvironmentVariable = 'STEAM_SIGN_IN_ENABLED'
 const productionOriginEnvironmentVariable = 'PRODUCTION_ORIGIN'
+const cloudflareEnvironmentVariable = 'CLOUDFLARE_ENV'
+const cloudflareViteConfigPathVariable = 'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH'
+const cloudflareLoadDotEnvVariable = 'CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV'
 const knownGamePath = '/api/games/counter-strike-2'
 const expectedCatalogVersion = 'catalog-release-v1'
 const expectedCatalogSize = 10
@@ -19,6 +25,205 @@ const expectedCatalogSize = 10
 interface Command {
   command: string
   args: string[]
+}
+
+interface ProductionAssetBoundaryCandidate {
+  outputConfigPath: string
+  clientDirectory: string
+}
+
+interface ProductionAssetBoundaryResult {
+  assetFiles: string[]
+}
+
+interface GeneratedWorkerConfig {
+  assets?: {
+    directory?: unknown
+  }
+  d1_databases?: unknown
+  main?: unknown
+  name?: unknown
+  targetEnvironment?: unknown
+}
+
+function isPathInside(childPath: string, parentPath: string): boolean {
+  const relativePath = path.relative(parentPath, childPath)
+  return (
+    relativePath.length === 0 || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
+  )
+}
+
+async function walkFiles(directoryPath: string): Promise<string[]> {
+  const entries = await readdir(directoryPath, { withFileTypes: true })
+  const files: string[] = []
+
+  for (const entry of entries) {
+    const entryPath = path.join(directoryPath, entry.name)
+    if (entry.isDirectory()) {
+      files.push(...(await walkFiles(entryPath)))
+    } else {
+      files.push(entryPath)
+    }
+  }
+
+  return files
+}
+
+function isEnvironmentFile(relativePath: string): boolean {
+  const fileName = path.basename(relativePath)
+  return /^\.dev\.vars(?:\..*)?$|^\.env(?:\..*)?$/i.test(fileName)
+}
+
+function hasDatabaseName(value: unknown): value is { database_name?: unknown } {
+  return typeof value === 'object' && value !== null && 'database_name' in value
+}
+
+export async function assertProductionAssetBoundary({
+  outputConfigPath,
+  clientDirectory,
+}: ProductionAssetBoundaryCandidate): Promise<ProductionAssetBoundaryResult> {
+  let outputConfig: GeneratedWorkerConfig
+  try {
+    outputConfig = JSON.parse(await readFile(outputConfigPath, 'utf8')) as GeneratedWorkerConfig
+  } catch (error: unknown) {
+    throw new Error('Production release blocked: generated Vite Worker config is invalid.', {
+      cause: error,
+    })
+  }
+
+  if (typeof outputConfig.assets?.directory !== 'string') {
+    throw new Error('Production release blocked: generated config has no assets directory.')
+  }
+
+  const configuredClientDirectory = path.resolve(
+    path.dirname(outputConfigPath),
+    outputConfig.assets.directory,
+  )
+  const expectedClientDirectory = path.resolve(clientDirectory)
+  let configuredClientRealPath: string
+  let expectedClientRealPath: string
+  try {
+    ;[configuredClientRealPath, expectedClientRealPath] = await Promise.all([
+      realpath(configuredClientDirectory),
+      realpath(expectedClientDirectory),
+    ])
+  } catch (error: unknown) {
+    throw new Error(
+      'Production release blocked: generated client asset directory is unavailable.',
+      {
+        cause: error,
+      },
+    )
+  }
+  if (configuredClientRealPath !== expectedClientRealPath) {
+    throw new Error(
+      'Production release blocked: generated assets directory is outside the client asset directory.',
+    )
+  }
+
+  if (typeof outputConfig.main !== 'string' || outputConfig.main.trim().length === 0) {
+    throw new Error('Production release blocked: generated config has no Worker output entrypoint.')
+  }
+
+  const workerEntrypoint = path.resolve(path.dirname(outputConfigPath), outputConfig.main)
+  let workerEntrypointRealPath: string
+  try {
+    workerEntrypointRealPath = await realpath(workerEntrypoint)
+  } catch (error: unknown) {
+    throw new Error(
+      'Production release blocked: generated Worker output entrypoint is unavailable.',
+      {
+        cause: error,
+      },
+    )
+  }
+  if (
+    isPathInside(workerEntrypoint, expectedClientDirectory) ||
+    isPathInside(workerEntrypointRealPath, expectedClientRealPath)
+  ) {
+    throw new Error(
+      'Production release blocked: generated Worker output would be included in client assets.',
+    )
+  }
+
+  let assetFiles: string[]
+  try {
+    assetFiles = await walkFiles(expectedClientDirectory)
+  } catch (error: unknown) {
+    throw new Error(
+      'Production release blocked: generated client asset directory is unavailable.',
+      {
+        cause: error,
+      },
+    )
+  }
+
+  const relativeAssetFiles = await Promise.all(
+    assetFiles.map(async (assetPath) => {
+      let resolvedAssetPath: string
+      try {
+        resolvedAssetPath = await realpath(assetPath)
+      } catch (error: unknown) {
+        throw new Error('Production release blocked: generated asset path cannot be resolved.', {
+          cause: error,
+        })
+      }
+      if (!isPathInside(resolvedAssetPath, expectedClientRealPath)) {
+        throw new Error(
+          'Production release blocked: generated asset manifest contains a path outside the client asset directory.',
+        )
+      }
+
+      return path.relative(expectedClientRealPath, resolvedAssetPath).split(path.sep).join('/')
+    }),
+  )
+
+  const unsafeAsset = relativeAssetFiles.find(isEnvironmentFile)
+  if (unsafeAsset !== undefined) {
+    throw new Error(
+      `Production release blocked: generated asset manifest contains an environment file (${unsafeAsset}).`,
+    )
+  }
+
+  return { assetFiles: relativeAssetFiles.sort() }
+}
+
+async function findGeneratedProductionWorkerConfig(): Promise<string> {
+  const candidatePaths = (await walkFiles(path.resolve('dist'))).filter(
+    (filePath) => path.basename(filePath) === 'wrangler.json',
+  )
+  const matchingPaths: string[] = []
+
+  for (const candidatePath of candidatePaths) {
+    let candidate: GeneratedWorkerConfig
+    try {
+      candidate = JSON.parse(await readFile(candidatePath, 'utf8')) as GeneratedWorkerConfig
+    } catch (error: unknown) {
+      throw new Error('Production release blocked: a generated Worker config is invalid.', {
+        cause: error,
+      })
+    }
+
+    const databases = Array.isArray(candidate.d1_databases) ? candidate.d1_databases : []
+    const targetsProductionDatabase = databases.some(
+      (database) => hasDatabaseName(database) && database.database_name === productionDatabaseName,
+    )
+    if (
+      candidate.name === productionWorkerName &&
+      candidate.targetEnvironment === productionBuildEnvironmentName &&
+      targetsProductionDatabase
+    ) {
+      matchingPaths.push(candidatePath)
+    }
+  }
+
+  if (matchingPaths.length !== 1) {
+    throw new Error(
+      `Production release blocked: expected exactly one generated ${productionWorkerName} Worker config, found ${matchingPaths.length}.`,
+    )
+  }
+
+  return matchingPaths[0]
 }
 
 function pnpmCommand(args: readonly string[]): Command {
@@ -300,10 +505,31 @@ async function main(): Promise<void> {
       env,
     )
 
+    const productionBuildEnvironment = {
+      ...env,
+      [cloudflareEnvironmentVariable]: productionBuildEnvironmentName,
+      [cloudflareViteConfigPathVariable]: productionConfigPath,
+      [cloudflareLoadDotEnvVariable]: 'false',
+    }
+    await runInherited(
+      'Build production Vite Worker output with local dotenv loading disabled',
+      pnpmCommand(['run', 'build']),
+      productionBuildEnvironment,
+    )
+
+    const generatedWorkerConfigPath = await findGeneratedProductionWorkerConfig()
+    const assetBoundary = await assertProductionAssetBoundary({
+      outputConfigPath: generatedWorkerConfigPath,
+      clientDirectory: productionClientDirectory,
+    })
+    console.log(
+      `[release:production] Vite Worker output and client asset boundary verified (${assetBoundary.assetFiles.length} assets).`,
+    )
+
     await verifyProductionDatabase(databaseId, env)
     await runInherited(
       'Deploy read-only production Worker with Steam sign-in disabled',
-      wranglerCommand(['deploy', '--env', 'production', '--config', productionConfigPath]),
+      wranglerCommand(['deploy', '--config', generatedWorkerConfigPath]),
       env,
     )
 
