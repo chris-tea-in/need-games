@@ -11,6 +11,7 @@ const productionDatabaseIdPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const localPreviewDatabaseIdSentinel = '00000000-0000-4000-8000-000000000001'
 const productionDatabaseIdSentinel = '00000000-0000-4000-8000-000000000002'
+const productionDatabaseIdEnvironmentVariable = 'PRODUCTION_D1_DATABASE_ID'
 
 type JsonRecord = Record<string, unknown>
 
@@ -135,7 +136,7 @@ async function main(): Promise<void> {
   ])
 
   assertProductionD1Verification({
-    expectedDatabaseId: process.env.NEED_GAMES_PRODUCTION_D1_DATABASE_ID ?? '',
+    expectedDatabaseId: process.env[productionDatabaseIdEnvironmentVariable] ?? '',
     expectedDatabaseName: productionDatabaseName,
     info,
     queryResults,

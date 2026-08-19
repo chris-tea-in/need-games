@@ -2,6 +2,7 @@ import { chmod, readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 export const productionDatabaseIdSentinel = '00000000-0000-4000-8000-000000000002'
+export const productionDatabaseIdEnvironmentVariable = 'PRODUCTION_D1_DATABASE_ID'
 
 const localDatabaseIdSentinel = '00000000-0000-4000-8000-000000000001'
 const databaseIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -35,7 +36,7 @@ async function main(): Promise<void> {
   const safeConfig = await readFile(sourceConfigPath, 'utf8')
   const generatedConfig = createProductionWranglerConfig(
     safeConfig,
-    process.env.NEED_GAMES_PRODUCTION_D1_DATABASE_ID ?? '',
+    process.env[productionDatabaseIdEnvironmentVariable] ?? '',
   )
 
   await writeFile(outputConfigPath, generatedConfig, { encoding: 'utf8', mode: 0o600 })

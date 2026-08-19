@@ -84,17 +84,48 @@ Release is separate from local verification. The owner must explicitly approve c
 database, binding it, applying remote migrations, or replacing the existing Worker. Deployment
 credentials must never be added to the ordinary CI workflow.
 
-## Production release boundary
+## Owner-run production release boundary
 
-Production release is a manual, owner-approved workflow from `refs/heads/main`. The protected
-`production` environment supplies the Cloudflare credentials and production D1 ID; do not copy
-those values into `wrangler.jsonc`, a tracked file, or a normal CI job. The workflow creates an
-ignored `.wrangler.production.jsonc`, verifies the production database identity and catalog state,
-applies migrations, and only then uploads the Worker. Deployments run serially and an active
-deployment is never cancelled by a later dispatch.
+Production release is an owner-run Wrangler operation. GitHub Actions is CI-only and never holds
+Cloudflare credentials, a production D1 ID, or a production deployment workflow. Run the release
+from the reviewed commit in an authenticated Wrangler session for the intended Cloudflare account:
 
-Before a release, retain a recoverable preview export and confirm the target database name and ID
-with the owner. If a migration or upload fails, keep the database and the recorded recovery
-artifacts intact; do not delete or recreate the target or retry with edited SQL without a reviewed
-recovery decision. A post-deploy smoke check is enabled once the production Worker URL is present
-in the protected environment variables.
+```powershell
+git rev-parse HEAD
+git status --short
+corepack pnpm exec wrangler whoami
+$env:PRODUCTION_D1_DATABASE_ID = Read-Host 'Owner-confirmed need-games-production D1 ID'
+$env:STEAM_SIGN_IN_ENABLED = 'false'
+corepack pnpm release:production
+Remove-Item Env:PRODUCTION_D1_DATABASE_ID
+Remove-Item Env:STEAM_SIGN_IN_ENABLED
+```
+
+The command requires a clean working tree, prints the exact reviewed commit, and creates an
+ignored `.wrangler/production-release.lock` so two owner-run releases cannot overlap. The old
+GitHub-only branch/ref and concurrency controls are intentionally non-applicable: release
+authority is the owner’s reviewed commit and authenticated local session.
+
+`release:production` runs the full local gate, checks tracked sentinel IDs, creates the ignored
+`.wrangler.production.jsonc` from the transient `PRODUCTION_D1_DATABASE_ID`, verifies the target
+D1 identity/schema/catalog state in memory, applies migrations, and only then deploys `myplayprint`.
+It forces `STEAM_SIGN_IN_ENABLED=false`. A real D1 ID must never be committed, added to GitHub, or
+written to a release report. The generated configuration is ignored and is the only release file
+that may contain the ID.
+
+Before a release, retain the recoverable preview export and confirm the target database name and ID
+with the owner. If a migration or upload fails, keep the database and recovery artifacts intact;
+do not delete or recreate the target or retry edited SQL without a reviewed recovery decision.
+After the first read-only deployment reveals the stable HTTPS origin, set `PRODUCTION_ORIGIN` in
+transient process state and run the smoke-only follow-up (which does not redeploy or rerun remote
+migrations):
+
+```powershell
+$env:PRODUCTION_ORIGIN = Read-Host 'Stable production HTTPS origin'
+corepack pnpm release:production -- --smoke-only
+Remove-Item Env:PRODUCTION_ORIGIN
+```
+
+This checks the read-only catalog, detail, unknown-route, unscored-similarity, and anonymous-session
+responses. Never enable Steam sign-in from this release path; that requires its later explicit
+production gate.

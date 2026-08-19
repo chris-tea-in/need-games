@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import {
   createProductionWranglerConfig,
+  productionDatabaseIdEnvironmentVariable,
   productionDatabaseIdSentinel,
 } from '../scripts/create-production-wrangler-config.mjs'
 
@@ -18,6 +19,10 @@ const safeConfig = `{
 }`
 
 describe('production Wrangler configuration', () => {
+  test('reads the owner-run production D1 ID from transient process state', () => {
+    expect(productionDatabaseIdEnvironmentVariable).toBe('PRODUCTION_D1_DATABASE_ID')
+  })
+
   test('injects a valid production D1 ID without changing the safe source', () => {
     const productionDatabaseId = '11111111-1111-4111-8111-111111111111'
 

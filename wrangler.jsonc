@@ -27,6 +27,9 @@
   "env": {
     "production": {
       "name": "myplayprint",
+      "vars": {
+        "STEAM_SIGN_IN_ENABLED": "false",
+      },
       "d1_databases": [
         {
           "binding": "NEED_GAMES_DB",

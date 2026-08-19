@@ -30,6 +30,7 @@ const pullRequestTemplateUrl = new URL('../.github/pull_request_template.md', im
 const setupActionUrl = new URL('../.github/actions/setup/action.yml', import.meta.url)
 const wranglerConfigUrl = new URL('../wrangler.jsonc', import.meta.url)
 const releaseGuardUrl = new URL('../scripts/assert-release-d1-id.mts', import.meta.url)
+const productionReleaseUrl = new URL('../scripts/release-production.mts', import.meta.url)
 const workerTypeCheckUrl = new URL('../scripts/check-worker-types.mjs', import.meta.url)
 const repositoryPath = fileURLToPath(new URL('../', import.meta.url))
 
@@ -68,6 +69,7 @@ describe('repository package contract', () => {
       'catalog:check': 'node scripts/generate-catalog-artifacts.mts',
       'mimma-seed:check': 'node scripts/generate-authoritative-mimma-seed.mts',
       'release:check': 'node scripts/assert-release-d1-id.mts',
+      'release:production': 'node scripts/release-production.mts',
       predeploy: 'pnpm release:check',
     })
   })
@@ -88,6 +90,7 @@ describe('Worker configuration contract', () => {
     expect(config).toContain('00000000-0000-4000-8000-000000000001')
     expect(config).toContain('00000000-0000-4000-8000-000000000002')
     expect(config).toContain('"production"')
+    expect(config).toContain('"STEAM_SIGN_IN_ENABLED": "false"')
     expect(existsSync(releaseGuardUrl)).toBe(true)
   })
 
@@ -114,37 +117,54 @@ describe('repository automation contract', () => {
     expect(existsSync(setupActionUrl)).toBe(true)
   })
 
-  test('keeps production deployment manual and protected', () => {
+  test('keeps production deployment out of GitHub Actions', () => {
     const workflow = readAutomationFile(productionDeploymentUrl)
 
-    expect(workflow).toContain('workflow_dispatch:')
-    expect(workflow).toContain("github.ref != 'refs/heads/main'")
-    expect(workflow).toContain('environment: production')
-    expect(workflow).toContain('permissions:')
-    expect(workflow).toContain('contents: read')
-    expect(workflow).toContain('cancel-in-progress: false')
-    expect(workflow).toContain('secrets.CLOUDFLARE_API_TOKEN')
-    expect(workflow).toContain('secrets.CLOUDFLARE_ACCOUNT_ID')
-    expect(workflow).toContain('secrets.PRODUCTION_D1_DATABASE_ID')
-    expect(workflow).not.toContain('pull_request:')
-    expect(workflow).not.toContain('push:')
+    expect(existsSync(productionDeploymentUrl)).toBe(false)
+    expect(workflow).toBe('')
   })
 
-  test('orders production verification, migrations, deployment, and the optional smoke contract', () => {
-    const workflow = readAutomationFile(productionDeploymentUrl)
+  test('documents the owner-run production sequence and keeps it out of CI', () => {
+    const releaseScript = readAutomationFile(productionReleaseUrl)
+    const automation = [
+      readAutomationFile(ciWorkflowUrl),
+      ...Array.from({ length: 1 }, () => readAutomationFile(productionDeploymentUrl)),
+    ].join('\n')
 
-    expect(workflow).toContain('scripts/verify-production-d1.mts')
-    expect(workflow).toContain('d1 migrations apply need-games-production')
-    expect(workflow).toContain('/api/catalog')
-    expect(workflow).toContain('/api/games/counter-strike-2')
-    expect(workflow).toContain('/api/not-a-route')
-    expect(workflow).toContain('/api/session')
+    expect(releaseScript).toContain('PRODUCTION_D1_DATABASE_ID')
+    expect(releaseScript).toContain('STEAM_SIGN_IN_ENABLED')
+    expect(releaseScript).toContain('--smoke-only')
+    expect(releaseScript).toContain('production-release.lock')
+    expect(releaseScript).toContain("['rev-parse', 'HEAD']")
+    expect(releaseScript).toContain("['status', '--porcelain']")
+    expect(releaseScript).toContain('check:local')
+    expect(releaseScript).toContain('release:check')
+    expect(releaseScript).toContain('create-production-wrangler-config.mts')
+    expect(releaseScript).toContain("'d1', 'info'")
+    expect(releaseScript).toContain('verify-production-d1.mjs')
+    expect(releaseScript).toMatch(/'d1',\s*'migrations'/)
+    expect(releaseScript).toContain("'deploy', '--env', 'production'")
+    expect(releaseScript).toContain('/api/catalog')
+    expect(releaseScript).toContain('/api/games/counter-strike-2')
+    expect(releaseScript).toContain('/api/not-a-route')
+    expect(releaseScript).toContain('/api/session')
+    expect(automation).not.toContain('secrets.CLOUDFLARE_API_TOKEN')
+    expect(automation).not.toContain('secrets.CLOUDFLARE_ACCOUNT_ID')
+    expect(automation).not.toContain('wrangler deploy --env production')
 
-    const verification = workflow.indexOf('scripts/verify-production-d1.mts')
-    const migrations = workflow.indexOf('d1 migrations apply need-games-production')
-    const deployment = workflow.indexOf('wrangler deploy --env production')
-    const smoke = workflow.indexOf('/api/catalog', deployment)
+    const localChecks = releaseScript.indexOf('check:local')
+    const trackedGuard = releaseScript.indexOf('release:check')
+    const config = releaseScript.indexOf('create-production-wrangler-config.mts')
+    const verification = releaseScript.indexOf('await verifyProductionDatabase(databaseId, env)')
+    const migrations = releaseScript.lastIndexOf('Apply production D1 migrations before deployment')
+    const deployment = releaseScript.lastIndexOf(
+      'Deploy read-only production Worker with Steam sign-in disabled',
+    )
+    const smoke = releaseScript.lastIndexOf('readOnlySmokeTest(origin)')
 
+    expect(localChecks).toBeGreaterThan(-1)
+    expect(trackedGuard).toBeGreaterThan(localChecks)
+    expect(config).toBeGreaterThan(trackedGuard)
     expect(verification).toBeGreaterThan(-1)
     expect(migrations).toBeGreaterThan(verification)
     expect(deployment).toBeGreaterThan(migrations)
