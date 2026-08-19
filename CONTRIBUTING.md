@@ -83,3 +83,18 @@ and push to `main`.
 Release is separate from local verification. The owner must explicitly approve creating a D1
 database, binding it, applying remote migrations, or replacing the existing Worker. Deployment
 credentials must never be added to the ordinary CI workflow.
+
+## Production release boundary
+
+Production release is a manual, owner-approved workflow from `refs/heads/main`. The protected
+`production` environment supplies the Cloudflare credentials and production D1 ID; do not copy
+those values into `wrangler.jsonc`, a tracked file, or a normal CI job. The workflow creates an
+ignored `.wrangler.production.jsonc`, verifies the production database identity and catalog state,
+applies migrations, and only then uploads the Worker. Deployments run serially and an active
+deployment is never cancelled by a later dispatch.
+
+Before a release, retain a recoverable preview export and confirm the target database name and ID
+with the owner. If a migration or upload fails, keep the database and the recorded recovery
+artifacts intact; do not delete or recreate the target or retry with edited SQL without a reviewed
+recovery decision. A post-deploy smoke check is enabled once the production Worker URL is present
+in the protected environment variables.

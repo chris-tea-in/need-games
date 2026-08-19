@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { chmod, readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 export const productionDatabaseIdSentinel = '00000000-0000-4000-8000-000000000002'
@@ -39,6 +39,7 @@ async function main(): Promise<void> {
   )
 
   await writeFile(outputConfigPath, generatedConfig, { encoding: 'utf8', mode: 0o600 })
+  await chmod(outputConfigPath, 0o600)
   console.log(`Created temporary production configuration at ${outputConfigPath}.`)
 }
 

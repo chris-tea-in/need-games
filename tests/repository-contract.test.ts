@@ -25,6 +25,7 @@ const productionDeploymentUrl = new URL(
   '../.github/workflows/deploy-production.yml',
   import.meta.url,
 )
+const gitignoreUrl = new URL('../.gitignore', import.meta.url)
 const pullRequestTemplateUrl = new URL('../.github/pull_request_template.md', import.meta.url)
 const setupActionUrl = new URL('../.github/actions/setup/action.yml', import.meta.url)
 const wranglerConfigUrl = new URL('../wrangler.jsonc', import.meta.url)
@@ -117,14 +118,41 @@ describe('repository automation contract', () => {
     const workflow = readAutomationFile(productionDeploymentUrl)
 
     expect(workflow).toContain('workflow_dispatch:')
+    expect(workflow).toContain("github.ref != 'refs/heads/main'")
     expect(workflow).toContain('environment: production')
     expect(workflow).toContain('permissions:')
     expect(workflow).toContain('contents: read')
+    expect(workflow).toContain('cancel-in-progress: false')
     expect(workflow).toContain('secrets.CLOUDFLARE_API_TOKEN')
     expect(workflow).toContain('secrets.CLOUDFLARE_ACCOUNT_ID')
     expect(workflow).toContain('secrets.PRODUCTION_D1_DATABASE_ID')
     expect(workflow).not.toContain('pull_request:')
     expect(workflow).not.toContain('push:')
+  })
+
+  test('orders production verification, migrations, deployment, and the optional smoke contract', () => {
+    const workflow = readAutomationFile(productionDeploymentUrl)
+
+    expect(workflow).toContain('scripts/verify-production-d1.mts')
+    expect(workflow).toContain('d1 migrations apply need-games-production')
+    expect(workflow).toContain('/api/catalog')
+    expect(workflow).toContain('/api/games/counter-strike-2')
+    expect(workflow).toContain('/api/not-a-route')
+    expect(workflow).toContain('/api/session')
+
+    const verification = workflow.indexOf('scripts/verify-production-d1.mts')
+    const migrations = workflow.indexOf('d1 migrations apply need-games-production')
+    const deployment = workflow.indexOf('wrangler deploy --env production')
+    const smoke = workflow.indexOf('/api/catalog', deployment)
+
+    expect(verification).toBeGreaterThan(-1)
+    expect(migrations).toBeGreaterThan(verification)
+    expect(deployment).toBeGreaterThan(migrations)
+    expect(smoke).toBeGreaterThan(deployment)
+  })
+
+  test('keeps the generated production config ignored', () => {
+    expect(readAutomationFile(gitignoreUrl)).toContain('.wrangler.production.jsonc')
   })
 
   test('provides dependency automation and contribution guidance', () => {
