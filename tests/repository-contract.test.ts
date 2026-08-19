@@ -135,6 +135,7 @@ describe('repository automation contract', () => {
     expect(releaseScript).toContain('PRODUCTION_D1_DATABASE_ID')
     expect(releaseScript).toContain('STEAM_SIGN_IN_ENABLED')
     expect(releaseScript).toContain('--smoke-only')
+    expect(releaseScript).not.toContain('Smoke test skipped')
     expect(releaseScript).toContain('production-release.lock')
     expect(releaseScript).toContain("['rev-parse', 'HEAD']")
     expect(releaseScript).toContain("['status', '--porcelain']")
@@ -146,6 +147,10 @@ describe('repository automation contract', () => {
     expect(releaseScript).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV')
     expect(releaseScript).toContain('findGeneratedProductionWorkerConfig')
     expect(releaseScript).toContain('assertProductionAssetBoundary')
+    expect(releaseScript).toContain("'deployments',")
+    expect(releaseScript).toContain("'status',")
+    expect(releaseScript).toContain('createProductionRollbackBaseline')
+    expect(releaseScript).toContain('Rollback baseline saved in ignored operator state')
     expect(releaseScript).toContain("'d1', 'info'")
     expect(releaseScript).toContain('verify-production-d1.mjs')
     expect(releaseScript).not.toMatch(/'d1',\s*'migrations'/)
@@ -157,6 +162,13 @@ describe('repository automation contract', () => {
     )
     expect(contributing).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false')
     expect(contributing).toContain('contains no `.dev.vars`, `.env`, Worker output')
+    expect(contributing).toMatch(/exactly `0001_schema\.sql` and\s+`0002_seed_beta_catalog\.sql`/)
+    expect(contributing).toMatch(
+      /first production deployment has no recoverable\s+pre-deploy baseline/i,
+    )
+    expect(contributing).toMatch(/rollback\s+baseline/i)
+    expect(contributing).toContain('https://myplayprint.e9k.workers.dev')
+    expect(contributing).toContain("$env:PRODUCTION_ORIGIN = 'https://myplayprint.e9k.workers.dev'")
     expect(releaseScript).toContain('/api/catalog')
     expect(releaseScript).toContain('/api/games/counter-strike-2')
     expect(releaseScript).toContain('/api/not-a-route')
@@ -173,6 +185,9 @@ describe('repository automation contract', () => {
       'const assetBoundary = await assertProductionAssetBoundary',
     )
     const verification = releaseScript.indexOf('await verifyProductionDatabase(databaseId, env)')
+    const rollbackBaseline = releaseScript.indexOf(
+      'Capture current production Worker rollback baseline',
+    )
     const deployment = releaseScript.lastIndexOf(
       'Deploy read-only production Worker with Steam sign-in disabled',
     )
@@ -186,6 +201,8 @@ describe('repository automation contract', () => {
     expect(verification).toBeGreaterThan(-1)
     expect(deployment).toBeGreaterThan(assetBoundary)
     expect(deployment).toBeGreaterThan(verification)
+    expect(rollbackBaseline).toBeGreaterThan(verification)
+    expect(deployment).toBeGreaterThan(rollbackBaseline)
     expect(smoke).toBeGreaterThan(deployment)
   })
 

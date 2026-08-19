@@ -10,8 +10,10 @@ const execFileAsync = promisify(execFile)
 const productionConfigPath = '.wrangler.production.jsonc'
 const productionBuildEnvironmentName = 'production'
 const productionWorkerName = 'myplayprint'
+const productionWorkerOrigin = 'https://myplayprint.e9k.workers.dev'
 const productionClientDirectory = path.resolve('dist', 'client')
 const productionReleaseLockPath = path.resolve('.wrangler', 'production-release.lock')
+const productionRollbackDirectory = path.resolve('.wrangler', 'production-release')
 const releaseIdEnvironmentVariable = 'PRODUCTION_D1_DATABASE_ID'
 const steamSignInEnvironmentVariable = 'STEAM_SIGN_IN_ENABLED'
 const productionOriginEnvironmentVariable = 'PRODUCTION_ORIGIN'
@@ -21,6 +23,7 @@ const cloudflareLoadDotEnvVariable = 'CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV'
 const knownGamePath = '/api/games/counter-strike-2'
 const expectedCatalogVersion = 'catalog-release-v1'
 const expectedCatalogSize = 10
+const wranglerTrafficPercentageEpsilon = 1e-3
 
 interface Command {
   command: string
@@ -30,6 +33,7 @@ interface Command {
 interface ProductionAssetBoundaryCandidate {
   outputConfigPath: string
   clientDirectory: string
+  expectedDatabaseId: string
 }
 
 interface ProductionAssetBoundaryResult {
@@ -44,7 +48,20 @@ interface GeneratedWorkerConfig {
   main?: unknown
   name?: unknown
   targetEnvironment?: unknown
+  vars?: unknown
 }
+
+interface ProductionRollbackBaseline {
+  capturedAt: string
+  deploymentCreatedOn: string
+  reviewedCommit: string
+  versions: Array<{
+    percentage: number
+    versionId: string
+  }>
+}
+
+type ProductionFetcher = (input: URL | RequestInfo, init?: RequestInit) => Promise<Response>
 
 function isPathInside(childPath: string, parentPath: string): boolean {
   const relativePath = path.relative(parentPath, childPath)
@@ -74,13 +91,79 @@ function isEnvironmentFile(relativePath: string): boolean {
   return /^\.dev\.vars(?:\..*)?$|^\.env(?:\..*)?$/i.test(fileName)
 }
 
-function hasDatabaseName(value: unknown): value is { database_name?: unknown } {
-  return typeof value === 'object' && value !== null && 'database_name' in value
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function createProductionRollbackBaseline(
+  deploymentStatus: unknown,
+  capturedAt: string,
+  reviewedCommit: string,
+): ProductionRollbackBaseline {
+  if (
+    !isRecord(deploymentStatus) ||
+    typeof deploymentStatus.created_on !== 'string' ||
+    !Array.isArray(deploymentStatus.versions) ||
+    deploymentStatus.versions.length === 0 ||
+    !/^[0-9a-f]{40}$/i.test(reviewedCommit)
+  ) {
+    throw new Error('Production release blocked: rollback baseline is incomplete.')
+  }
+
+  const versions = deploymentStatus.versions.map((version) => {
+    if (
+      !isRecord(version) ||
+      typeof version.version_id !== 'string' ||
+      version.version_id.trim().length === 0 ||
+      typeof version.percentage !== 'number' ||
+      !Number.isFinite(version.percentage) ||
+      version.percentage <= 0 ||
+      version.percentage > 100
+    ) {
+      throw new Error('Production release blocked: rollback baseline has an invalid version.')
+    }
+
+    return {
+      percentage: version.percentage,
+      versionId: version.version_id,
+    }
+  })
+
+  const totalPercentage = versions.reduce((total, version) => total + version.percentage, 0)
+  if (Math.abs(totalPercentage - 100) > wranglerTrafficPercentageEpsilon) {
+    throw new Error('Production release blocked: rollback baseline traffic must total 100%.')
+  }
+
+  return {
+    capturedAt,
+    deploymentCreatedOn: deploymentStatus.created_on,
+    reviewedCommit,
+    versions,
+  }
+}
+
+async function persistProductionRollbackBaseline(
+  baseline: ProductionRollbackBaseline,
+): Promise<string> {
+  await mkdir(productionRollbackDirectory, { recursive: true })
+  const timestamp = baseline.capturedAt.replace(/[^0-9A-Za-z]/g, '-')
+  const baselinePath = path.join(
+    productionRollbackDirectory,
+    `rollback-${timestamp}-${baseline.reviewedCommit.slice(0, 12)}.json`,
+  )
+  const baselineHandle = await open(baselinePath, 'wx', 0o600)
+  try {
+    await baselineHandle.writeFile(`${JSON.stringify(baseline, null, 2)}\n`)
+  } finally {
+    await baselineHandle.close()
+  }
+  return baselinePath
 }
 
 export async function assertProductionAssetBoundary({
   outputConfigPath,
   clientDirectory,
+  expectedDatabaseId,
 }: ProductionAssetBoundaryCandidate): Promise<ProductionAssetBoundaryResult> {
   let outputConfig: GeneratedWorkerConfig
   try {
@@ -89,6 +172,35 @@ export async function assertProductionAssetBoundary({
     throw new Error('Production release blocked: generated Vite Worker config is invalid.', {
       cause: error,
     })
+  }
+
+  if (
+    outputConfig.name !== productionWorkerName ||
+    outputConfig.targetEnvironment !== productionBuildEnvironmentName
+  ) {
+    throw new Error('Production release blocked: generated config targets the wrong Worker.')
+  }
+
+  const databases: unknown[] = Array.isArray(outputConfig.d1_databases)
+    ? outputConfig.d1_databases
+    : []
+  const productionBindings = databases.filter(
+    (database): database is Record<string, unknown> =>
+      isRecord(database) && database.binding === 'NEED_GAMES_DB',
+  )
+  if (
+    productionBindings.length !== 1 ||
+    productionBindings[0].database_name !== productionDatabaseName ||
+    productionBindings[0].database_id !== expectedDatabaseId
+  ) {
+    throw new Error('Production release blocked: generated config has the wrong database ID.')
+  }
+
+  if (
+    !isRecord(outputConfig.vars) ||
+    outputConfig.vars[steamSignInEnvironmentVariable] !== 'false'
+  ) {
+    throw new Error('Production release blocked: generated config must disable Steam sign-in.')
   }
 
   if (typeof outputConfig.assets?.directory !== 'string') {
@@ -206,7 +318,7 @@ async function findGeneratedProductionWorkerConfig(): Promise<string> {
 
     const databases = Array.isArray(candidate.d1_databases) ? candidate.d1_databases : []
     const targetsProductionDatabase = databases.some(
-      (database) => hasDatabaseName(database) && database.database_name === productionDatabaseName,
+      (database) => isRecord(database) && database.database_name === productionDatabaseName,
     )
     if (
       candidate.name === productionWorkerName &&
@@ -282,7 +394,7 @@ function releaseEnvironment(databaseId: string): NodeJS.ProcessEnv {
   }
 }
 
-async function assertReviewedReleaseCommit(): Promise<void> {
+async function assertReviewedReleaseCommit(): Promise<string> {
   const { stdout: commit } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
     cwd: process.cwd(),
     shell: false,
@@ -305,6 +417,7 @@ async function assertReviewedReleaseCommit(): Promise<void> {
   }
 
   console.log(`[release:production] Reviewed release commit: ${normalizedCommit}`)
+  return normalizedCommit
 }
 
 async function acquireReleaseLock(): Promise<() => Promise<void>> {
@@ -404,19 +517,55 @@ async function verifyProductionDatabase(databaseId: string, env: NodeJS.ProcessE
   console.log('[release:production] Production D1 identity and release state verified.')
 }
 
-async function readOnlySmokeTest(origin: string): Promise<void> {
+export function assertProductionSmokeOrigin(origin: string): URL {
   const normalizedOrigin = new URL(origin)
-  if (normalizedOrigin.protocol !== 'https:') {
-    throw new Error('Production release blocked: PRODUCTION_ORIGIN must use HTTPS.')
+  if (normalizedOrigin.href !== `${productionWorkerOrigin}/`) {
+    throw new Error(
+      `Production release blocked: PRODUCTION_ORIGIN must be the stable production Worker origin (${productionWorkerOrigin}).`,
+    )
   }
+  return normalizedOrigin
+}
 
-  async function request(pathname: string): Promise<{ status: number; body: unknown }> {
-    const response = await fetch(new URL(pathname, normalizedOrigin), {
-      signal: AbortSignal.timeout(5_000),
-    })
-    const body = await response.json().catch(() => undefined)
-    return { status: response.status, body }
+function requireProductionOrigin(): string {
+  const origin = process.env[productionOriginEnvironmentVariable]?.trim()
+  if (origin === undefined || origin.length === 0) {
+    throw new Error(
+      `Production smoke test blocked: set ${productionOriginEnvironmentVariable} in transient process state.`,
+    )
   }
+  assertProductionSmokeOrigin(origin)
+  return origin
+}
+
+export async function requestProductionJson(
+  pathname: string,
+  normalizedOrigin: URL,
+  requester: ProductionFetcher = fetch,
+): Promise<{ status: number; body: unknown }> {
+  const response = await requester(new URL(pathname, normalizedOrigin), {
+    redirect: 'manual',
+    signal: AbortSignal.timeout(5_000),
+  })
+  if (new URL(response.url).origin !== normalizedOrigin.origin) {
+    throw new Error('Production smoke test failed: received a cross-origin response.')
+  }
+  const body = await response.json().catch(() => undefined)
+  return { status: response.status, body }
+}
+
+export function assertAnonymousSessionResponse(status: number, body: unknown): void {
+  if (status === 404) {
+    return
+  }
+  if (status !== 200 || !isRecord(body) || body.authenticated !== false) {
+    throw new Error('Production smoke test failed: anonymous session status is invalid.')
+  }
+}
+
+async function readOnlySmokeTest(origin: string): Promise<void> {
+  const normalizedOrigin = assertProductionSmokeOrigin(origin)
+  const request = (pathname: string) => requestProductionJson(pathname, normalizedOrigin)
 
   console.log('[release:production] Read-only production smoke test')
   const catalog = await request('/api/catalog')
@@ -454,28 +603,12 @@ async function readOnlySmokeTest(origin: string): Promise<void> {
   }
 
   const session = await request('/api/session')
-  if (session.status !== 404 && session.status !== 200) {
-    throw new Error('Production smoke test failed: anonymous session status is unavailable.')
-  }
-  if (
-    session.status === 200 &&
-    typeof session.body === 'object' &&
-    session.body !== null &&
-    'authenticated' in session.body &&
-    session.body.authenticated !== false
-  ) {
-    throw new Error('Production smoke test failed: the first release must remain anonymous.')
-  }
+  assertAnonymousSessionResponse(session.status, session.body)
 }
 
 async function main(): Promise<void> {
   if (process.argv.includes('--smoke-only')) {
-    const origin = process.env[productionOriginEnvironmentVariable]?.trim()
-    if (origin === undefined || origin.length === 0) {
-      throw new Error(
-        `Production smoke test blocked: set ${productionOriginEnvironmentVariable} in transient process state.`,
-      )
-    }
+    const origin = requireProductionOrigin()
 
     const releaseLockCleanup = await acquireReleaseLock()
     try {
@@ -487,11 +620,12 @@ async function main(): Promise<void> {
   }
 
   const databaseId = requireProductionDatabaseId()
+  const origin = requireProductionOrigin()
   const env = releaseEnvironment(databaseId)
   const releaseLockCleanup = await acquireReleaseLock()
 
   try {
-    await assertReviewedReleaseCommit()
+    const reviewedCommit = await assertReviewedReleaseCommit()
     await runInherited('Full local verification', pnpmCommand(['check:local']), env)
     await runInherited('Tracked release guard', pnpmCommand(['release:check']), env)
     await runInherited(
@@ -521,25 +655,32 @@ async function main(): Promise<void> {
     const assetBoundary = await assertProductionAssetBoundary({
       outputConfigPath: generatedWorkerConfigPath,
       clientDirectory: productionClientDirectory,
+      expectedDatabaseId: databaseId,
     })
     console.log(
       `[release:production] Vite Worker output and client asset boundary verified (${assetBoundary.assetFiles.length} assets).`,
     )
 
     await verifyProductionDatabase(databaseId, env)
+    const deploymentStatus = await captureJson(
+      'Capture current production Worker rollback baseline',
+      wranglerCommand(['deployments', 'status', '--config', generatedWorkerConfigPath, '--json']),
+      env,
+    )
+    const rollbackBaseline = createProductionRollbackBaseline(
+      deploymentStatus,
+      new Date().toISOString(),
+      reviewedCommit,
+    )
+    const rollbackBaselinePath = await persistProductionRollbackBaseline(rollbackBaseline)
+    console.log(
+      `[release:production] Rollback baseline saved in ignored operator state: ${path.relative(process.cwd(), rollbackBaselinePath)}`,
+    )
     await runInherited(
       'Deploy read-only production Worker with Steam sign-in disabled',
       wranglerCommand(['deploy', '--config', generatedWorkerConfigPath]),
       env,
     )
-
-    const origin = process.env[productionOriginEnvironmentVariable]?.trim()
-    if (origin === undefined || origin.length === 0) {
-      console.log(
-        `[release:production] Smoke test skipped; set ${productionOriginEnvironmentVariable} after the stable HTTPS origin is confirmed.`,
-      )
-      return
-    }
 
     await readOnlySmokeTest(origin)
   } finally {

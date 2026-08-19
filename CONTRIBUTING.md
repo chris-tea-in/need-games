@@ -96,15 +96,19 @@ git status --short
 corepack pnpm exec wrangler whoami
 $env:PRODUCTION_D1_DATABASE_ID = Read-Host 'Owner-confirmed need-games-production D1 ID'
 $env:STEAM_SIGN_IN_ENABLED = 'false'
+$env:PRODUCTION_ORIGIN = 'https://myplayprint.e9k.workers.dev'
 corepack pnpm release:production
 Remove-Item Env:PRODUCTION_D1_DATABASE_ID
 Remove-Item Env:STEAM_SIGN_IN_ENABLED
+Remove-Item Env:PRODUCTION_ORIGIN
 ```
 
 The command requires a clean working tree, prints the exact reviewed commit, and creates an
 ignored `.wrangler/production-release.lock` so two owner-run releases cannot overlap. The old
 GitHub-only branch/ref and concurrency controls are intentionally non-applicable: release
 authority is the owner’s reviewed commit and authenticated local session.
+The known production origin is mandatory. A full release stops before local checks or upload when
+`PRODUCTION_ORIGIN` is absent or different.
 
 `release:production` runs the full local gate, checks tracked sentinel IDs, creates the ignored
 `.wrangler.production.jsonc` from the transient `PRODUCTION_D1_DATABASE_ID`, and builds the
@@ -114,17 +118,25 @@ production Cloudflare environment with `CLOUDFLARE_ENV=production`,
 configuration and fails closed unless its static asset directory is exactly `dist/client` and
 contains no `.dev.vars`, `.env`, Worker output, or paths outside that directory. Wrangler then
 deploys that generated output configuration, never the input config, without applying migrations.
-The release verifies the target D1 identity/schema/catalog state and the copied `0001`/`0002`
-migration state in memory, and forces `STEAM_SIGN_IN_ENABLED=false`. A real D1 ID must never be
-committed, added to GitHub, or written to a release report. The generated configuration is
-ignored and is the only release file that may contain the ID.
+The final generated config must contain the transient D1 ID and `STEAM_SIGN_IN_ENABLED=false`.
+The release verifies the target D1 identity, catalog state, and exactly `0001_schema.sql` and
+`0002_seed_beta_catalog.sql` in its migration history. A later migration blocks this Phase 1
+release. A real D1 ID must never be committed, added to GitHub, or written to a release report.
+The generated configuration is ignored and is the only release file that may contain the ID.
+
+Before each upload, the release reads the current production deployment and stores a rollback
+baseline under the ignored `.wrangler/production-release/` directory. Keep that file until the
+new release is accepted. It contains the active version ID and traffic percentage needed for
+`wrangler rollback` or a version deployment. The first production deployment has no recoverable
+pre-deploy baseline because that evidence was not captured before its upload. This limitation
+cannot be reconstructed. Each later release must capture its baseline or stop before deployment.
 
 Before a release, retain the recoverable preview export and confirm the target database name and ID
 with the owner. If preflight verification or upload fails, keep the database and recovery artifacts
 intact; do not delete or recreate the target or retry edited SQL without a reviewed recovery decision.
-After the first read-only deployment reveals the stable HTTPS origin, set `PRODUCTION_ORIGIN` in
-transient process state and run the smoke-only follow-up (which does not redeploy or rerun remote
-migrations):
+Set `PRODUCTION_ORIGIN` to the exact stable origin
+`https://myplayprint.e9k.workers.dev`. Then run the smoke-only follow-up. It does not redeploy or
+rerun remote migrations:
 
 ```powershell
 $env:PRODUCTION_ORIGIN = Read-Host 'Stable production HTTPS origin'
@@ -132,6 +144,6 @@ corepack pnpm release:production -- --smoke-only
 Remove-Item Env:PRODUCTION_ORIGIN
 ```
 
-This checks the read-only catalog, detail, unknown-route, unscored-similarity, and anonymous-session
-responses. Never enable Steam sign-in from this release path; that requires its later explicit
-production gate.
+This check rejects a different origin and cross-origin redirects. It then checks the read-only
+catalog, detail, unknown-route, unscored-similarity, and anonymous-session responses. Never enable
+Steam sign-in from this release path; that requires its later explicit production gate.

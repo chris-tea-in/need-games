@@ -95,22 +95,24 @@ export function assertProductionD1Verification({
     )
   }
 
-  const migrationNames = migrationRows.map((row, rowIndex) => {
-    if (typeof row.name !== 'string') {
+  const migrations = migrationRows.map((row, rowIndex) => {
+    if (typeof row.id !== 'number' || typeof row.name !== 'string') {
       throw new Error(
-        `Production D1 verification failed: migration history row ${rowIndex + 1} has no name.`,
+        `Production D1 verification failed: migration history row ${rowIndex + 1} is invalid.`,
       )
     }
-    return row.name
+    return { id: row.id, name: row.name }
   })
 
-  const actualPrefix = migrationNames.slice(0, expectedProductionMigrationPrefix.length)
   if (
-    actualPrefix.length !== expectedProductionMigrationPrefix.length ||
-    actualPrefix.some((name, index) => name !== expectedProductionMigrationPrefix[index])
+    migrations.length !== expectedProductionMigrationPrefix.length ||
+    migrations.some(
+      (migration, index) =>
+        migration.id !== index + 1 || migration.name !== expectedProductionMigrationPrefix[index],
+    )
   ) {
     throw new Error(
-      'Production D1 verification failed: migration history does not start with the beta prefix.',
+      'Production D1 verification failed: migration history does not exactly match the copied beta state.',
     )
   }
 }
@@ -141,7 +143,9 @@ async function main(): Promise<void> {
     info,
     queryResults,
   })
-  console.log('Production D1 identity, schema, migration prefix, and catalog release verified.')
+  console.log(
+    'Production D1 identity, schema, exact migration state, and catalog release verified.',
+  )
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

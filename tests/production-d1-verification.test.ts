@@ -46,6 +46,35 @@ describe('production D1 verification', () => {
         ],
       },
     ],
+    [
+      'an additional migration after the copied beta state',
+      {
+        queryResults: [
+          { results: [{ dataset_version: 'catalog-release-v1', schema_version: 1 }] },
+          {
+            results: [
+              { id: 1, name: '0001_schema.sql' },
+              { id: 2, name: '0002_seed_beta_catalog.sql' },
+              { id: 3, name: '0003_authoritative_mimma_seed.sql' },
+            ],
+          },
+        ],
+      },
+    ],
+    [
+      'unexpected migration IDs with the expected names',
+      {
+        queryResults: [
+          { results: [{ dataset_version: 'catalog-release-v1', schema_version: 1 }] },
+          {
+            results: [
+              { id: 7, name: '0001_schema.sql' },
+              { id: 8, name: '0002_seed_beta_catalog.sql' },
+            ],
+          },
+        ],
+      },
+    ],
   ])('rejects %s before release', (_description, overrides) => {
     expect(() => assertProductionD1Verification({ ...validVerification(), ...overrides })).toThrow(
       /production D1 verification failed/i,
