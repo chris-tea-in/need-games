@@ -227,16 +227,20 @@ END;
 `
 }
 
-function assertArtifactMatches(expected: string): void {
+function normalizeLineEndings(content: string): string {
+  return content.replace(/\r\n?/g, '\n')
+}
+
+export function assertArtifactMatches(path: string, expected: string): void {
   let actual: string
   try {
-    actual = readFileSync(migrationPath, 'utf8')
+    actual = readFileSync(path, 'utf8')
   } catch {
     throw new Error(
       'Authoritative MiMMa seed artifact drift detected. Run node scripts/generate-authoritative-mimma-seed.mts --write.',
     )
   }
-  if (actual !== expected) {
+  if (normalizeLineEndings(actual) !== normalizeLineEndings(expected)) {
     throw new Error(
       'Authoritative MiMMa seed artifact drift detected. Run node scripts/generate-authoritative-mimma-seed.mts --write.',
     )
@@ -261,7 +265,7 @@ function main(): void {
     return
   }
 
-  assertArtifactMatches(migration)
+  assertArtifactMatches(migrationPath, migration)
   process.stdout.write('Authoritative MiMMa seed artifact matches source.\n')
 }
 
