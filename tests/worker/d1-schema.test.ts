@@ -30,6 +30,102 @@ describe('closed beta D1 schema', () => {
     expect(release).toEqual({ dataset_version: 'catalog-release-v1', schema_version: 1 })
   })
 
+  test('seeds the exact platform-neutral authoritative sample', async () => {
+    const total = await env.NEED_GAMES_DB.prepare(
+      'SELECT COUNT(*) AS count FROM authoritative_mimma_seeds',
+    ).first<{ count: number }>()
+    const pureMicro = await env.NEED_GAMES_DB.prepare(
+      'SELECT COUNT(*) AS count FROM authoritative_mimma_seeds WHERE micro_score = 100',
+    ).first<{ count: number }>()
+    const pureMeso = await env.NEED_GAMES_DB.prepare(
+      'SELECT COUNT(*) AS count FROM authoritative_mimma_seeds WHERE meso_score = 100',
+    ).first<{ count: number }>()
+    const pureMacro = await env.NEED_GAMES_DB.prepare(
+      'SELECT COUNT(*) AS count FROM authoritative_mimma_seeds WHERE macro_score = 100',
+    ).first<{ count: number }>()
+
+    expect(total?.count).toBe(62)
+    expect(pureMicro?.count).toBe(24)
+    expect(pureMeso?.count).toBe(17)
+    expect(pureMacro?.count).toBe(21)
+  })
+
+  test('keeps authoritative seeds separate and immutable', async () => {
+    const columns = await env.NEED_GAMES_DB.prepare(
+      'PRAGMA table_info(authoritative_mimma_seeds)',
+    ).all<{ name: string }>()
+    expect(columns.results.map((column) => column.name)).not.toEqual(
+      expect.arrayContaining(['zone', 'label', 'game_id', 'steam_app_id']),
+    )
+
+    const governance = await env.NEED_GAMES_DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM authoritative_mimma_seeds
+       WHERE provenance <> 'authoritative_sample_seed'
+          OR dataset_version <> 'authoritative-mimma-seed-v1'`,
+    ).first<{ count: number }>()
+    const catalogScores = await env.NEED_GAMES_DB.prepare(
+      'SELECT COUNT(*) AS count FROM authoritative_mimma_scores',
+    ).first<{ count: number }>()
+
+    expect(governance?.count).toBe(0)
+    expect(catalogScores?.count).toBe(0)
+
+    await expect(
+      env.NEED_GAMES_DB.prepare(
+        `INSERT INTO authoritative_mimma_seeds (
+          id, conceptual_name, micro_score, meso_score, macro_score,
+          provenance, dataset_version, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(
+          'invalid-seed',
+          'Invalid Seed',
+          80,
+          0,
+          0,
+          'authoritative_sample_seed',
+          'authoritative-mimma-seed-v1',
+          '2026-08-18T20:02:44Z',
+        )
+        .run(),
+    ).rejects.toThrow()
+
+    await expect(
+      env.NEED_GAMES_DB.prepare(
+        `INSERT INTO authoritative_mimma_seeds (
+          id, conceptual_name, micro_score, meso_score, macro_score,
+          provenance, dataset_version, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(
+          'unexpected-authoritative-seed',
+          'Unexpected Seed',
+          100,
+          0,
+          0,
+          'authoritative_sample_seed',
+          'authoritative-mimma-seed-v1',
+          '2026-08-18T20:02:44Z',
+        )
+        .run(),
+    ).rejects.toThrow()
+
+    await expect(
+      env.NEED_GAMES_DB.prepare(
+        'UPDATE authoritative_mimma_seeds SET conceptual_name = ? WHERE id = ?',
+      )
+        .bind('Changed', 'authoritative-mimma-seed-v1-aimlabs')
+        .run(),
+    ).rejects.toThrow()
+
+    await expect(
+      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_mimma_seeds WHERE id = ?')
+        .bind('authoritative-mimma-seed-v1-aimlabs')
+        .run(),
+    ).rejects.toThrow()
+  })
+
   test('rejects invalid score vectors and immutable score history changes', async () => {
     const gameId = 'steam-730'
 

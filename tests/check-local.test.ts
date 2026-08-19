@@ -87,6 +87,18 @@ describe('check:local wrapper', () => {
     )
   })
 
+  test('checks generated MiMMa seed artifacts after catalog artifacts', () => {
+    const source = readFileSync(scriptUrl, 'utf8')
+
+    expect(source.indexOf("'Generated MiMMa seed artifact'")).toBeGreaterThan(-1)
+    expect(source.indexOf("'Generated catalog artifacts'")).toBeLessThan(
+      source.indexOf("'Generated MiMMa seed artifact'"),
+    )
+    expect(source.indexOf("'Generated MiMMa seed artifact'")).toBeLessThan(
+      source.indexOf("'Coverage tests'"),
+    )
+  })
+
   test('force-kills an unresponsive Worker after graceful shutdown times out', async () => {
     const checkLocalUrl = new URL('../scripts/check-local.mjs?stop-worker-test', import.meta.url)
     const checkLocal = (await import(checkLocalUrl.href)) as {

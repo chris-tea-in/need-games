@@ -65,6 +65,7 @@ describe('repository package contract', () => {
       'typecheck:worker': 'node scripts/check-worker-types.mjs',
       'check:local': 'node scripts/check-local.mjs',
       'catalog:check': 'node scripts/generate-catalog-artifacts.mts',
+      'mimma-seed:check': 'node scripts/generate-authoritative-mimma-seed.mts',
       'release:check': 'node scripts/assert-release-d1-id.mts',
       predeploy: 'pnpm release:check',
     })
@@ -175,6 +176,7 @@ describe('repository automation contract', () => {
     const workflow = readAutomationFile(ciWorkflowUrl)
 
     expect(workflow).toContain('pnpm catalog:check')
+    expect(workflow).toContain('pnpm mimma-seed:check')
     expect(workflow).toContain('pnpm test:worker')
   })
 
