@@ -142,7 +142,7 @@ describe('repository automation contract', () => {
     expect(releaseScript).toContain('create-production-wrangler-config.mts')
     expect(releaseScript).toContain("'d1', 'info'")
     expect(releaseScript).toContain('verify-production-d1.mjs')
-    expect(releaseScript).toMatch(/'d1',\s*'migrations'/)
+    expect(releaseScript).not.toMatch(/'d1',\s*'migrations'/)
     expect(releaseScript).toContain("'deploy', '--env', 'production'")
     expect(releaseScript).toContain('/api/catalog')
     expect(releaseScript).toContain('/api/games/counter-strike-2')
@@ -156,7 +156,6 @@ describe('repository automation contract', () => {
     const trackedGuard = releaseScript.indexOf('release:check')
     const config = releaseScript.indexOf('create-production-wrangler-config.mts')
     const verification = releaseScript.indexOf('await verifyProductionDatabase(databaseId, env)')
-    const migrations = releaseScript.lastIndexOf('Apply production D1 migrations before deployment')
     const deployment = releaseScript.lastIndexOf(
       'Deploy read-only production Worker with Steam sign-in disabled',
     )
@@ -166,8 +165,7 @@ describe('repository automation contract', () => {
     expect(trackedGuard).toBeGreaterThan(localChecks)
     expect(config).toBeGreaterThan(trackedGuard)
     expect(verification).toBeGreaterThan(-1)
-    expect(migrations).toBeGreaterThan(verification)
-    expect(deployment).toBeGreaterThan(migrations)
+    expect(deployment).toBeGreaterThan(verification)
     expect(smoke).toBeGreaterThan(deployment)
   })
 

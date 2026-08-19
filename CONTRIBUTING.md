@@ -108,14 +108,14 @@ authority is the owner’s reviewed commit and authenticated local session.
 
 `release:production` runs the full local gate, checks tracked sentinel IDs, creates the ignored
 `.wrangler.production.jsonc` from the transient `PRODUCTION_D1_DATABASE_ID`, verifies the target
-D1 identity/schema/catalog state in memory, applies migrations, and only then deploys `myplayprint`.
-It forces `STEAM_SIGN_IN_ENABLED=false`. A real D1 ID must never be committed, added to GitHub, or
-written to a release report. The generated configuration is ignored and is the only release file
-that may contain the ID.
+D1 identity/schema/catalog state and the copied `0001`/`0002` migration state in memory, and only
+then deploys `myplayprint` without applying migrations. It forces `STEAM_SIGN_IN_ENABLED=false`.
+A real D1 ID must never be committed, added to GitHub, or written to a release report. The
+generated configuration is ignored and is the only release file that may contain the ID.
 
 Before a release, retain the recoverable preview export and confirm the target database name and ID
-with the owner. If a migration or upload fails, keep the database and recovery artifacts intact;
-do not delete or recreate the target or retry edited SQL without a reviewed recovery decision.
+with the owner. If preflight verification or upload fails, keep the database and recovery artifacts
+intact; do not delete or recreate the target or retry edited SQL without a reviewed recovery decision.
 After the first read-only deployment reveals the stable HTTPS origin, set `PRODUCTION_ORIGIN` in
 transient process state and run the smoke-only follow-up (which does not redeploy or rerun remote
 migrations):

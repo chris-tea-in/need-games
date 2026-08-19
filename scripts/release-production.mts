@@ -302,21 +302,6 @@ async function main(): Promise<void> {
 
     await verifyProductionDatabase(databaseId, env)
     await runInherited(
-      'Apply production D1 migrations before deployment',
-      wranglerCommand([
-        'd1',
-        'migrations',
-        'apply',
-        productionDatabaseName,
-        '--env',
-        'production',
-        '--config',
-        productionConfigPath,
-        '--remote',
-      ]),
-      env,
-    )
-    await runInherited(
       'Deploy read-only production Worker with Steam sign-in disabled',
       wranglerCommand(['deploy', '--env', 'production', '--config', productionConfigPath]),
       env,
