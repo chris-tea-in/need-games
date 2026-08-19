@@ -24,4 +24,17 @@
       "migrations_dir": "./migrations",
     },
   ],
+  "env": {
+    "production": {
+      "name": "myplayprint",
+      "d1_databases": [
+        {
+          "binding": "NEED_GAMES_DB",
+          "database_name": "need-games-production",
+          "database_id": "00000000-0000-4000-8000-000000000002",
+          "migrations_dir": "./migrations",
+        },
+      ],
+    },
+  },
 }

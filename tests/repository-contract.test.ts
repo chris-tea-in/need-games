@@ -21,10 +21,15 @@ const packageManifest = JSON.parse(
 const ciWorkflowUrl = new URL('../.github/workflows/ci.yml', import.meta.url)
 const contributingGuideUrl = new URL('../CONTRIBUTING.md', import.meta.url)
 const dependabotUrl = new URL('../.github/dependabot.yml', import.meta.url)
+const productionDeploymentUrl = new URL(
+  '../.github/workflows/deploy-production.yml',
+  import.meta.url,
+)
 const pullRequestTemplateUrl = new URL('../.github/pull_request_template.md', import.meta.url)
 const setupActionUrl = new URL('../.github/actions/setup/action.yml', import.meta.url)
 const wranglerConfigUrl = new URL('../wrangler.jsonc', import.meta.url)
-const releaseGuardUrl = new URL('../scripts/assert-release-d1-id.mjs', import.meta.url)
+const releaseGuardUrl = new URL('../scripts/assert-release-d1-id.mts', import.meta.url)
+const workerTypeCheckUrl = new URL('../scripts/check-worker-types.mjs', import.meta.url)
 const repositoryPath = fileURLToPath(new URL('../', import.meta.url))
 
 function readAutomationFile(fileUrl: URL): string {
@@ -57,17 +62,17 @@ describe('repository package contract', () => {
       'test:node': 'vitest run --config vitest.config.ts',
       'test:worker': 'vitest run --config vitest.worker.config.ts',
       typecheck: 'tsc --noEmit',
-      'typecheck:worker': 'wrangler types --check',
+      'typecheck:worker': 'node scripts/check-worker-types.mjs',
       'check:local': 'node scripts/check-local.mjs',
       'catalog:check': 'node scripts/generate-catalog-artifacts.mts',
-      'release:check': 'node scripts/assert-release-d1-id.mjs',
+      'release:check': 'node scripts/assert-release-d1-id.mts',
       predeploy: 'pnpm release:check',
     })
   })
 })
 
 describe('Worker configuration contract', () => {
-  test('keeps the closed-beta Worker local-only until the owner supplies a D1 ID', () => {
+  test('keeps tracked Worker configuration free of real D1 IDs', () => {
     const config = readAutomationFile(wranglerConfigUrl)
 
     expect(config).toContain('"name": "myplayprint-preview"')
@@ -79,16 +84,25 @@ describe('Worker configuration contract', () => {
     expect(config).toContain('"enabled": true')
     expect(config).toContain('"binding": "NEED_GAMES_DB"')
     expect(config).toContain('00000000-0000-4000-8000-000000000001')
+    expect(config).toContain('00000000-0000-4000-8000-000000000002')
+    expect(config).toContain('"production"')
     expect(existsSync(releaseGuardUrl)).toBe(true)
   })
 
-  test('blocks releases while the local preview D1 sentinel remains configured', () => {
+  test('accepts the tracked Worker configuration while it keeps only placeholder D1 IDs', () => {
     expect(() => {
       execFileSync(process.execPath, [fileURLToPath(releaseGuardUrl)], {
         cwd: repositoryPath,
         stdio: 'pipe',
       })
-    }).toThrow(/Release blocked/)
+    }).not.toThrow()
+  })
+
+  test('keeps ignored local environment values out of generated Worker types', () => {
+    const workerTypeCheck = readAutomationFile(workerTypeCheckUrl)
+
+    expect(workerTypeCheck).toContain("CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false'")
+    expect(workerTypeCheck).toContain("'types', '--check'")
   })
 })
 
@@ -96,6 +110,20 @@ describe('repository automation contract', () => {
   test('provides the CI workflow and shared setup action', () => {
     expect(existsSync(ciWorkflowUrl)).toBe(true)
     expect(existsSync(setupActionUrl)).toBe(true)
+  })
+
+  test('keeps production deployment manual and protected', () => {
+    const workflow = readAutomationFile(productionDeploymentUrl)
+
+    expect(workflow).toContain('workflow_dispatch:')
+    expect(workflow).toContain('environment: production')
+    expect(workflow).toContain('permissions:')
+    expect(workflow).toContain('contents: read')
+    expect(workflow).toContain('secrets.CLOUDFLARE_API_TOKEN')
+    expect(workflow).toContain('secrets.CLOUDFLARE_ACCOUNT_ID')
+    expect(workflow).toContain('secrets.PRODUCTION_D1_DATABASE_ID')
+    expect(workflow).not.toContain('pull_request:')
+    expect(workflow).not.toContain('push:')
   })
 
   test('provides dependency automation and contribution guidance', () => {
@@ -150,10 +178,18 @@ describe('repository automation contract', () => {
     expect(workflow).toContain('pnpm test:worker')
   })
 
+  test('blocks pull requests that leak a real D1 database ID into tracked configuration', () => {
+    const workflow = readAutomationFile(ciWorkflowUrl)
+
+    expect(workflow).toContain('pnpm release:check')
+  })
+
   test('pins every external action to an immutable commit', () => {
-    const automation = [readAutomationFile(ciWorkflowUrl), readAutomationFile(setupActionUrl)].join(
-      '\n',
-    )
+    const automation = [
+      readAutomationFile(ciWorkflowUrl),
+      readAutomationFile(productionDeploymentUrl),
+      readAutomationFile(setupActionUrl),
+    ].join('\n')
     const externalActionLines = automation
       .split('\n')
       .filter((line) => line.trimStart().startsWith('uses:') && !line.includes('uses: ./'))

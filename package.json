@@ -17,13 +17,13 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "predeploy": "pnpm release:check",
-    "release:check": "node scripts/assert-release-d1-id.mjs",
+    "release:check": "node scripts/assert-release-d1-id.mts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:node": "vitest run --config vitest.config.ts",
     "test:worker": "vitest run --config vitest.worker.config.ts",
     "typecheck": "tsc --noEmit",
-    "typecheck:worker": "wrangler types --check"
+    "typecheck:worker": "node scripts/check-worker-types.mjs"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.52.1",
