@@ -555,10 +555,13 @@ export async function requestProductionJson(
 }
 
 export function assertAnonymousSessionResponse(status: number, body: unknown): void {
-  if (status === 404) {
-    return
-  }
-  if (status !== 200 || !isRecord(body) || body.authenticated !== false) {
+  if (
+    status !== 200 ||
+    !isRecord(body) ||
+    Object.keys(body).length !== 2 ||
+    body.authenticated !== false ||
+    body.steamSignInEnabled !== false
+  ) {
     throw new Error('Production smoke test failed: anonymous session status is invalid.')
   }
 }

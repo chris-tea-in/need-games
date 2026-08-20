@@ -32,12 +32,27 @@ describe('production smoke boundary', () => {
     ).rejects.toThrow(/cross-origin/i)
   })
 
-  test('rejects malformed anonymous session responses while the route is present', () => {
-    expect(() => assertAnonymousSessionResponse(404, undefined)).not.toThrow()
+  test('accepts only the exact disabled anonymous session contract', () => {
+    expect(() => assertAnonymousSessionResponse(404, undefined)).toThrow(/anonymous session/i)
     expect(() => assertAnonymousSessionResponse(200, {})).toThrow(/anonymous session/i)
+    expect(() =>
+      assertAnonymousSessionResponse(200, { authenticated: false, steamSignInEnabled: true }),
+    ).toThrow(/anonymous session/i)
+    expect(() => assertAnonymousSessionResponse(200, { authenticated: false })).toThrow(
+      /anonymous session/i,
+    )
+    expect(() =>
+      assertAnonymousSessionResponse(200, {
+        authenticated: false,
+        steamSignInEnabled: false,
+        extra: 'unexpected',
+      }),
+    ).toThrow(/anonymous session/i)
     expect(() => assertAnonymousSessionResponse(200, { authenticated: true })).toThrow(
       /anonymous session/i,
     )
-    expect(() => assertAnonymousSessionResponse(200, { authenticated: false })).not.toThrow()
+    expect(() =>
+      assertAnonymousSessionResponse(200, { authenticated: false, steamSignInEnabled: false }),
+    ).not.toThrow()
   })
 })
