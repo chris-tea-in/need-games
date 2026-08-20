@@ -9,7 +9,15 @@ import {
 } from '../auth/session-cookie.js'
 import { validateSteamAssertion } from '../auth/steam-openid.js'
 import { synchronizeSteamProfile, type SteamProfileLookupResult } from '../auth/steam-profile.js'
-import { deriveCsrfToken, generateToken, hashToken, verifyCsrfToken } from '../auth/token-hash.js'
+import {
+  constantTimeEqual,
+  deriveCsrfToken,
+  deriveLoginTransactionState,
+  generateToken,
+  hashToken,
+  isToken,
+  verifyCsrfToken,
+} from '../auth/token-hash.js'
 import {
   cleanupExpiredAuthRows,
   consumeLoginTransaction,
@@ -314,8 +322,13 @@ async function startSteamAuthentication(
   await cleanupAuthRows(env.NEED_GAMES_DB, now, log)
   const rawTransactionToken = (options.generateToken ?? generateToken)()
   let transactionHash: string
+  let callbackState: string
   try {
     transactionHash = await hashToken(rawTransactionToken)
+    if (env.CSRF_HMAC_SECRET === undefined || env.CSRF_HMAC_SECRET.length === 0) {
+      throw new Error('csrf-secret-missing')
+    }
+    callbackState = await deriveLoginTransactionState(transactionHash, env.CSRF_HMAC_SECRET)
     await createLoginTransaction(env.NEED_GAMES_DB, {
       tokenHash: transactionHash,
       returnPath,
@@ -328,6 +341,7 @@ async function startSteamAuthentication(
   }
 
   const callback = new URL(AUTH_ROUTES.steamCallback, origin)
+  callback.searchParams.set('state', callbackState)
   const steamUrl = new URL(STEAM_OPENID_ENDPOINT)
   steamUrl.searchParams.set('openid.ns', STEAM_OPENID_NAMESPACE)
   steamUrl.searchParams.set('openid.mode', 'checkid_setup')
@@ -406,12 +420,47 @@ async function callbackSteamAuthentication(
     return failureRedirect(origin, returnPath, 'expired_login_transaction', log)
   }
 
+  const callbackUrl = new URL(request.url)
+  const callbackStates = callbackUrl.searchParams.getAll('state')
+  if (
+    callbackStates.length !== 1 ||
+    !isToken(callbackStates[0] ?? '') ||
+    env.CSRF_HMAC_SECRET === undefined ||
+    env.CSRF_HMAC_SECRET.length === 0
+  ) {
+    try {
+      await invalidateLoginTransaction(env.NEED_GAMES_DB, transactionHash, now)
+    } catch {
+      log({ event: 'identity_unavailable', reason: 'state_invalidate_failed' })
+    }
+    return failureRedirect(origin, returnPath, 'invalid_login_transaction', log)
+  }
+
+  let expectedCallbackState: string
+  try {
+    expectedCallbackState = await deriveLoginTransactionState(transactionHash, env.CSRF_HMAC_SECRET)
+  } catch {
+    return failureRedirect(origin, returnPath, 'identity_storage_unavailable', log)
+  }
+  if (!constantTimeEqual(callbackStates[0] ?? '', expectedCallbackState)) {
+    try {
+      await invalidateLoginTransaction(env.NEED_GAMES_DB, transactionHash, now)
+    } catch {
+      log({ event: 'identity_unavailable', reason: 'state_invalidate_failed' })
+    }
+    return failureRedirect(origin, returnPath, 'invalid_login_transaction', log)
+  }
+
+  const expectedCallback = new URL(AUTH_ROUTES.steamCallback, origin)
+  expectedCallback.searchParams.set('state', expectedCallbackState)
+
   const validate = options.validateAssertion ?? validateSteamAssertion
   let assertion: Awaited<ReturnType<typeof validate>>
   try {
     assertion = await validate(request, {
       productionOrigin: origin.origin,
       callbackUrl: request.url,
+      expectedReturnTo: expectedCallback.href,
       fetcher: options.fetcher,
     })
   } catch (error) {

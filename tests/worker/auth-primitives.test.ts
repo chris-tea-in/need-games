@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   constantTimeEqual,
   deriveCsrfToken,
+  deriveLoginTransactionState,
   generateToken,
   hashToken,
   verifyCsrfToken,
@@ -44,6 +45,17 @@ describe('auth token primitives', () => {
     await expect(verifyCsrfToken(altered, sessionHash, 'test-csrf-secret')).resolves.toBe(false)
     expect(constantTimeEqual(first, second)).toBe(true)
     expect(constantTimeEqual(first, otherSession)).toBe(false)
+  })
+
+  test('derives a domain-separated callback state from the login transaction hash', async () => {
+    const transactionHash = 'a'.repeat(64)
+    const state = await deriveLoginTransactionState(transactionHash, 'test-csrf-secret')
+    const csrf = await deriveCsrfToken(transactionHash, 'test-csrf-secret')
+    const otherTransaction = await deriveLoginTransactionState('b'.repeat(64), 'test-csrf-secret')
+
+    expect(state).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    expect(state).not.toBe(csrf)
+    expect(otherTransaction).not.toBe(state)
   })
 
   test('hashes arbitrary input deterministically while rejecting malformed CSRF inputs', async () => {

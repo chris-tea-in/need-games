@@ -127,6 +127,36 @@ describe('Steam OpenID assertion validation', () => {
     expect(fetcher).not.toHaveBeenCalled()
   })
 
+  test('requires the transaction state in the exact signed return_to URL', async () => {
+    const fetcher = vi.fn<typeof fetch>(() => Promise.resolve(new Response('is_valid:true\n')))
+    const state = 'S'.repeat(43)
+    const expectedReturnTo = `${callbackUrl}?state=${state}`
+    const options = {
+      ...validOptions(fetcher),
+      expectedReturnTo,
+    }
+
+    await expect(
+      validateSteamAssertion(
+        assertion({
+          state,
+          'openid.return_to': expectedReturnTo,
+        }),
+        options,
+      ),
+    ).resolves.toMatchObject({ returnTo: expectedReturnTo })
+
+    await expect(
+      validateSteamAssertion(
+        assertion({
+          state,
+          'openid.return_to': callbackUrl,
+        }),
+        { ...options, replayGuard: createSteamNonceReplayGuard() },
+      ),
+    ).rejects.toThrow()
+  })
+
   test('accepts a nonce at the D1 limit but rejects one character beyond it', async () => {
     const fetcher = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response('is_valid:true\n', { status: 200 })),

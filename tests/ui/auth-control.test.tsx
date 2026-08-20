@@ -156,6 +156,27 @@ describe('AuthControl', () => {
     expect(logout).toHaveBeenCalledOnce()
   })
 
+  test('restores focus to the authenticated trigger when Escape closes the menu', () => {
+    const { container, root } = renderControl({
+      csrfToken,
+      kind: 'authenticated',
+      steamSignInEnabled: true,
+    })
+    roots.push(root)
+
+    const accountButton = container.querySelector('button') as HTMLButtonElement
+    act(() => accountButton.click())
+    const signOut = container.querySelector('[role="menuitem"]') as HTMLButtonElement
+    signOut.focus()
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }))
+    })
+
+    expect(container.querySelector('[role="menuitem"]')).toBeNull()
+    expect(document.activeElement).toBe(accountButton)
+  })
+
   test('renders the authenticated control as disabled while logging out', () => {
     const { container, root } = renderControl({
       csrfToken,

@@ -13,10 +13,20 @@ import {
   LOGIN_TRANSACTION_COOKIE_NAME,
   SESSION_COOKIE_NAME,
 } from '../../src/worker/auth/session-cookie.js'
-import { deriveCsrfToken, hashToken } from '../../src/worker/auth/token-hash.js'
+import {
+  deriveCsrfToken,
+  deriveLoginTransactionState,
+  hashToken,
+} from '../../src/worker/auth/token-hash.js'
 import { applyBetaMigrations } from './apply-beta-migrations.js'
 
 const origin = 'https://myplayprint.e9k.workers.dev'
+const csrfSecret = 'test-csrf-secret'
+
+async function callbackWithState(token: string): Promise<string> {
+  const state = await deriveLoginTransactionState(await hashToken(token), csrfSecret)
+  return `${origin}/api/auth/steam/callback?state=${state}`
+}
 
 function authEnv(overrides: Record<string, unknown> = {}): Env {
   return {
@@ -61,7 +71,8 @@ describe('Steam authentication routes', () => {
       createdAt: now,
     })
 
-    const request = new Request(`${origin}/api/auth/steam/callback`, {
+    const callback = await callbackWithState(loginToken)
+    const request = new Request(callback, {
       headers: { Cookie: `${LOGIN_TRANSACTION_COOKIE_NAME}=${loginToken}` },
     })
     const response = await routeAuthRequest(
@@ -86,13 +97,102 @@ describe('Steam authentication routes', () => {
 
     expect(response?.status).toBe(302)
     expect(response?.headers.get('location')).toContain('https://steamcommunity.com/openid/login?')
-    expect(response?.headers.get('location')).toContain(
-      encodeURIComponent(`${origin}/api/auth/steam/callback`),
-    )
+    const location = new URL(response?.headers.get('location') ?? '')
+    const returnTo = new URL(location.searchParams.get('openid.return_to') ?? '')
+    expect(returnTo.pathname).toBe('/api/auth/steam/callback')
+    expect(returnTo.searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]{43}$/)
     expect(response?.headers.get('set-cookie')).toContain('__Host-myplayprint_login_transaction=')
     expect(response?.headers.get('set-cookie')).toContain('HttpOnly')
     expect(response?.headers.get('set-cookie')).toContain('SameSite=Lax')
   })
+
+  test('rejects a callback state bound to a different login transaction before identity creation', async () => {
+    const now = 1_800_030_000
+    const victimToken = 'V'.repeat(43)
+    const victimHash = await hashToken(victimToken)
+    await createLoginTransaction(env.NEED_GAMES_DB, {
+      tokenHash: victimHash,
+      returnPath: '/',
+      createdAt: now,
+    })
+    const validateAssertion = vi.fn(() =>
+      Promise.resolve({
+        steamId: '76561198000000301',
+        responseNonce: 'nonce-attacker-state',
+        returnTo: `${origin}/api/auth/steam/callback?state=${'A'.repeat(43)}`,
+      }),
+    )
+
+    const response = await routeAuthRequest(
+      new Request(`${origin}/api/auth/steam/callback?state=${'A'.repeat(43)}`, {
+        headers: { Cookie: `${LOGIN_TRANSACTION_COOKIE_NAME}=${victimToken}` },
+      }),
+      authEnv(),
+      new URL(`${origin}/api/auth/steam/callback?state=${'A'.repeat(43)}`),
+      {
+        now: () => now,
+        validateAssertion,
+        fetcher: vi.fn<typeof fetch>().mockRejectedValue(new Error('profile should not run')),
+      },
+    )
+
+    expect(response?.status).toBe(302)
+    expect(response?.headers.get('location')).toBe(`${origin}/?auth=failed`)
+    expect(validateAssertion).not.toHaveBeenCalled()
+    await expect(
+      env.NEED_GAMES_DB.prepare('SELECT id FROM users WHERE steam_id = ?')
+        .bind('76561198000000301')
+        .first(),
+    ).resolves.toBeNull()
+  })
+
+  test.each([
+    ['missing', () => `${origin}/api/auth/steam/callback`],
+    [
+      'duplicate',
+      (state: string) => `${origin}/api/auth/steam/callback?state=${state}&state=${state}`,
+    ],
+    ['malformed', () => `${origin}/api/auth/steam/callback?state=not-a-state`],
+    [
+      'cookie mismatch',
+      async () =>
+        `${origin}/api/auth/steam/callback?state=${await deriveLoginTransactionState(await hashToken('R'.repeat(43)), csrfSecret)}`,
+    ],
+  ])(
+    'rejects %s callback state without invoking assertion validation',
+    async (_label, buildUrl) => {
+      const now = 1_800_031_000
+      const loginToken =
+        `${_label === 'missing' ? 'M' : _label === 'duplicate' ? 'N' : _label === 'malformed' ? 'O' : 'P'}`.repeat(
+          43,
+        )
+      const tokenHash = await hashToken(loginToken)
+      await createLoginTransaction(env.NEED_GAMES_DB, {
+        tokenHash,
+        returnPath: '/',
+        createdAt: now,
+      })
+      const validState = await deriveLoginTransactionState(tokenHash, csrfSecret)
+      const callback = await buildUrl(validState)
+      const validateAssertion = vi.fn()
+      const response = await routeAuthRequest(
+        new Request(callback, {
+          headers: { Cookie: `${LOGIN_TRANSACTION_COOKIE_NAME}=${loginToken}` },
+        }),
+        authEnv(),
+        new URL(callback),
+        { now: () => now, validateAssertion },
+      )
+
+      expect(response?.status).toBe(302)
+      expect(response?.headers.get('location')).toBe(`${origin}/?auth=failed`)
+      expect(validateAssertion).not.toHaveBeenCalled()
+      await expect(getLoginTransaction(env.NEED_GAMES_DB, tokenHash)).resolves.toMatchObject({
+        consumedAt: now,
+        steamResponseNonce: null,
+      })
+    },
+  )
 
   test('rejects unsupported methods with an explicit Allow header', async () => {
     const request = new Request(`${origin}/api/session`, { method: 'POST' })
@@ -211,7 +311,8 @@ describe('Steam authentication routes', () => {
       returnPath: '/games/apex-legends',
       createdAt: now,
     })
-    const request = new Request(`${origin}/api/auth/steam/callback`, {
+    const callback = await callbackWithState(loginToken)
+    const request = new Request(callback, {
       headers: { Cookie: `${LOGIN_TRANSACTION_COOKIE_NAME}=${loginToken}` },
     })
 
@@ -222,7 +323,7 @@ describe('Steam authentication routes', () => {
         Promise.resolve({
           steamId: '76561198000000221',
           responseNonce: 'nonce-route-1',
-          returnTo: `${origin}/api/auth/steam/callback`,
+          returnTo: callback,
         }),
       ),
       fetcher: vi.fn<typeof fetch>().mockRejectedValue(new Error('offline')),
@@ -270,7 +371,8 @@ describe('Steam authentication routes', () => {
       returnPath: '/games/apex-legends?auth=failed&tab=reviews#comments',
       createdAt: now,
     })
-    const request = new Request(`${origin}/api/auth/steam/callback`, {
+    const callback = await callbackWithState(loginToken)
+    const request = new Request(callback, {
       headers: { Cookie: `${LOGIN_TRANSACTION_COOKIE_NAME}=${loginToken}` },
     })
 
@@ -281,7 +383,7 @@ describe('Steam authentication routes', () => {
         Promise.resolve({
           steamId: '76561198000000225',
           responseNonce: 'nonce-route-marker',
-          returnTo: `${origin}/api/auth/steam/callback`,
+          returnTo: callback,
         }),
       ),
       fetcher: vi.fn<typeof fetch>().mockRejectedValue(new Error('offline')),
@@ -303,7 +405,8 @@ describe('Steam authentication routes', () => {
       createdAt: now,
     })
 
-    const request = new Request(`${origin}/api/auth/steam/callback`, {
+    const callback = await callbackWithState(loginToken)
+    const request = new Request(callback, {
       headers: { Cookie: `${LOGIN_TRANSACTION_COOKIE_NAME}=${loginToken}` },
     })
     const response = await routeAuthRequest(request, authEnv(), new URL(request.url), {
@@ -312,7 +415,7 @@ describe('Steam authentication routes', () => {
         Promise.resolve({
           steamId: '76561198000000222',
           responseNonce: 'N'.repeat(513),
-          returnTo: `${origin}/api/auth/steam/callback`,
+          returnTo: callback,
         }),
       ),
     })
@@ -339,7 +442,8 @@ describe('Steam authentication routes', () => {
       .bind('/\\\\evil.example/phish', tokenHash)
       .run()
 
-    const request = new Request(`${origin}/api/auth/steam/callback`, {
+    const callback = await callbackWithState(loginToken)
+    const request = new Request(callback, {
       headers: { Cookie: `${LOGIN_TRANSACTION_COOKIE_NAME}=${loginToken}` },
     })
     const response = await routeAuthRequest(request, authEnv(), new URL(request.url), {

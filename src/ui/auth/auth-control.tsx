@@ -81,6 +81,7 @@ export function AuthControl({
   const [modalOpen, setModalOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const controlRef = useRef<HTMLDivElement>(null)
+  const accountTriggerRef = useRef<HTMLButtonElement>(null)
   const initiatingControlRef = useRef<HTMLElement | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
 
@@ -160,7 +161,9 @@ export function AuthControl({
     }
     const closeMenuFromEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.preventDefault()
         setMenuOpen(false)
+        accountTriggerRef.current?.focus()
       }
     }
 
@@ -220,6 +223,7 @@ export function AuthControl({
         className="auth-trigger auth-trigger-authenticated"
         disabled={isLoggingOut}
         onClick={() => setMenuOpen((open) => !open)}
+        ref={accountTriggerRef}
         type="button"
       >
         <span aria-hidden="true" className="auth-verified-check">

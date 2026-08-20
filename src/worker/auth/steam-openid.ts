@@ -23,6 +23,7 @@ const ALLOWED_FIELD_NAMES = new Set([
   'openid.assoc_handle',
   'openid.signed',
   'openid.sig',
+  'state',
 ])
 
 const DEFAULT_MAX_FIELD_COUNT = 32
@@ -510,6 +511,7 @@ export async function validateSteamAssertion(
   const responseNonce = oneField(fields, 'openid.response_nonce')
   oneField(fields, 'openid.assoc_handle')
   oneField(fields, 'openid.sig')
+  oneField(fields, 'state', false)
 
   if (
     namespace !== STEAM_OPENID_NAMESPACE ||

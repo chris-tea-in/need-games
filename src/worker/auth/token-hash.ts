@@ -1,6 +1,7 @@
 const TOKEN_BYTE_LENGTH = 32
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/
 const HASH_PATTERN = /^[0-9a-f]{64}$/
+const STEAM_LOGIN_STATE_DOMAIN = 'myplayprint:steam-login-state:v1:'
 
 const encoder = new TextEncoder()
 
@@ -23,6 +24,18 @@ function assertSecret(value: string): void {
   if (value.length === 0) {
     throw new TypeError('The CSRF HMAC secret must not be empty.')
   }
+}
+
+async function deriveHmacValue(value: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { hash: 'SHA-256', name: 'HMAC' },
+    false,
+    ['sign'],
+  )
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(value))
+  return toBase64Url(new Uint8Array(signature))
 }
 
 /** Return a cryptographically random, URL-safe 256-bit opaque token. */
@@ -69,15 +82,18 @@ export async function deriveCsrfToken(
   assertSessionTokenHash(sessionTokenHash)
   assertSecret(csrfHmacSecret)
 
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(csrfHmacSecret),
-    { hash: 'SHA-256', name: 'HMAC' },
-    false,
-    ['sign'],
-  )
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(sessionTokenHash))
-  return toBase64Url(new Uint8Array(signature))
+  return deriveHmacValue(sessionTokenHash, csrfHmacSecret)
+}
+
+/** Derive the non-secret, transaction-bound state sent through Steam's callback URL. */
+export async function deriveLoginTransactionState(
+  loginTransactionTokenHash: string,
+  csrfHmacSecret: string,
+): Promise<string> {
+  assertSessionTokenHash(loginTransactionTokenHash)
+  assertSecret(csrfHmacSecret)
+
+  return deriveHmacValue(`${STEAM_LOGIN_STATE_DOMAIN}${loginTransactionTokenHash}`, csrfHmacSecret)
 }
 
 /** Verify a submitted CSRF value against the active session hash. */

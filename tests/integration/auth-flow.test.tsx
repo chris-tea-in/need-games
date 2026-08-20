@@ -295,16 +295,27 @@ function environment(database: MemoryD1, enabled = true): RouterEnvironment {
   } as RouterEnvironment
 }
 
-function steamAssertionQuery(): string {
+function callbackStateFromStart(response: Response): string {
+  const steamLocation = new URL(response.headers.get('location') ?? '')
+  const returnTo = new URL(steamLocation.searchParams.get('openid.return_to') ?? '')
+  const state = returnTo.searchParams.get('state')
+  if (state === null) {
+    throw new Error('Steam start response omitted callback state')
+  }
+  return state
+}
+
+function steamAssertionQuery(state: string): string {
   const now = new Date(Math.floor(Date.now() / 1_000) * 1_000).toISOString().replace('.000Z', 'Z')
   const identity = `https://steamcommunity.com/openid/id/${STEAM_ID}`
   const params = new URLSearchParams({
+    state,
     'openid.ns': 'https://specs.openid.net/auth/2.0',
     'openid.mode': 'id_res',
     'openid.op_endpoint': 'https://steamcommunity.com/openid/login',
     'openid.claimed_id': identity,
     'openid.identity': identity,
-    'openid.return_to': `${ORIGIN}${AUTH_ROUTES.steamCallback}`,
+    'openid.return_to': `${ORIGIN}${AUTH_ROUTES.steamCallback}?state=${encodeURIComponent(state)}`,
     'openid.response_nonce': `${now}integration-nonce`,
     'openid.assoc_handle': 'integration-handle',
     'openid.signed': 'op_endpoint,claimed_id,identity,return_to,response_nonce,assoc_handle',
@@ -509,8 +520,9 @@ describe('real-router Steam authentication flow', () => {
       `${AUTH_ROUTES.steamStart}?return=${encodeURIComponent(RETURN_PATH)}`,
     )
     expect(start.status).toBe(302)
+    const callbackState = callbackStateFromStart(start)
     const callback = await client.fetcher(
-      `${ORIGIN}${AUTH_ROUTES.steamCallback}?${steamAssertionQuery()}`,
+      `${ORIGIN}${AUTH_ROUTES.steamCallback}?${steamAssertionQuery(callbackState)}`,
     )
     expect(callback.status).toBe(302)
     const callbackLocation = callback.headers.get('location') ?? ''
@@ -569,8 +581,9 @@ describe('real-router Steam authentication flow', () => {
       navigationDone = (async () => {
         const started = await client.fetcher(new URL(url, ORIGIN).href)
         expect(started.status).toBe(302)
+        const callbackState = callbackStateFromStart(started)
         const callback = await client.fetcher(
-          `${ORIGIN}${AUTH_ROUTES.steamCallback}?${steamAssertionQuery()}`,
+          `${ORIGIN}${AUTH_ROUTES.steamCallback}?${steamAssertionQuery(callbackState)}`,
         )
         expect(callback.status).toBe(302)
         const location = new URL(callback.headers.get('location') ?? '')
