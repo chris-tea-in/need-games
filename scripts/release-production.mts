@@ -659,10 +659,7 @@ SELECT type, name, sql FROM sqlite_master WHERE name IN (
   'users'
 ) ORDER BY name;
 SELECT
-  (SELECT COUNT(*) FROM authoritative_mimma_seeds) AS authoritative_seed_count,
-  (SELECT COUNT(*) FROM users) AS user_count,
-  (SELECT COUNT(*) FROM steam_login_transactions) AS login_transaction_count,
-  (SELECT COUNT(*) FROM sessions) AS session_count;`,
+  (SELECT COUNT(*) FROM authoritative_mimma_seeds) AS authoritative_seed_count;`,
     ]),
     env,
   )

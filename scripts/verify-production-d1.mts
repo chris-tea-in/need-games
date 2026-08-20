@@ -127,15 +127,6 @@ function assertAuthSchema(queryResults: unknown): void {
   if (countRows.length !== 1 || countRows[0].authoritative_seed_count !== 62) {
     throw new Error('Production D1 verification failed: authoritative seed data is incomplete.')
   }
-  if (
-    countRows[0].user_count !== 0 ||
-    countRows[0].login_transaction_count !== 0 ||
-    countRows[0].session_count !== 0
-  ) {
-    throw new Error(
-      'Production D1 verification failed: unexpected production identity data exists.',
-    )
-  }
 }
 
 export function assertProductionD1Verification({

@@ -61,9 +61,6 @@ function validVerification() {
         results: [
           {
             authoritative_seed_count: 62,
-            user_count: 0,
-            login_transaction_count: 0,
-            session_count: 0,
           },
         ],
       },
@@ -74,6 +71,17 @@ function validVerification() {
 describe('production D1 verification', () => {
   test('accepts the expected database identity, catalog release, and auth-ready schema', () => {
     expect(() => assertProductionD1Verification(validVerification())).not.toThrow()
+  })
+
+  test('accepts expected operational identity rows during recurring verification', () => {
+    const operationalIdentity = validVerification()
+    Object.assign(operationalIdentity.queryResults[3].results[0], {
+      user_count: 1,
+      login_transaction_count: 2,
+      session_count: 1,
+    })
+
+    expect(() => assertProductionD1Verification(operationalIdentity)).not.toThrow()
   })
 
   test.each([
@@ -125,17 +133,10 @@ describe('production D1 verification', () => {
     )
   })
 
-  test('rejects a missing auth schema object or pre-existing identity row', () => {
+  test('rejects a missing auth schema object', () => {
     const missingObject = validVerification()
     missingObject.queryResults[2].results = missingObject.queryResults[2].results.slice(1)
     expect(() => assertProductionD1Verification(missingObject)).toThrow(/auth schema/i)
-
-    const populatedIdentity = validVerification()
-    const identityCounts = populatedIdentity.queryResults[3].results[0] as {
-      user_count: number
-    }
-    identityCounts.user_count = 1
-    expect(() => assertProductionD1Verification(populatedIdentity)).toThrow(/identity data/i)
   })
 
   test('rejects an auth schema object with the wrong SQLite object type', () => {
