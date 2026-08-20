@@ -2,9 +2,24 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 export const productionDatabaseName = 'need-games-production'
-export const expectedProductionMigrationPrefix = [
+export const expectedProductionMigrations = [
   '0001_schema.sql',
   '0002_seed_beta_catalog.sql',
+  '0003_authoritative_mimma_seed.sql',
+  '0004_identity_sessions.sql',
+] as const
+
+const expectedAuthSchemaObjects = [
+  ['authoritative_mimma_seeds', 'table'],
+  ['authoritative_mimma_seeds_prevent_delete', 'trigger'],
+  ['authoritative_mimma_seeds_prevent_insert', 'trigger'],
+  ['authoritative_mimma_seeds_prevent_update', 'trigger'],
+  ['sessions', 'table'],
+  ['sessions_expiry_idx', 'index'],
+  ['sessions_user_idx', 'index'],
+  ['steam_login_transactions', 'table'],
+  ['steam_login_transactions_expiry_idx', 'index'],
+  ['users', 'table'],
 ] as const
 
 const productionDatabaseIdPattern =
@@ -63,6 +78,66 @@ function assertProductionDatabaseId(databaseId: string): void {
   }
 }
 
+function normalizeSql(sql: string): string {
+  return sql.replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function assertAuthSchema(queryResults: unknown): void {
+  const objectRows = requireResultRows(queryResults, 2, 'auth schema')
+  const objectsByName = new Map(
+    objectRows.map((row, rowIndex) => {
+      if (
+        typeof row.name !== 'string' ||
+        typeof row.type !== 'string' ||
+        typeof row.sql !== 'string'
+      ) {
+        throw new Error(
+          `Production D1 verification failed: auth schema row ${rowIndex + 1} is invalid.`,
+        )
+      }
+      return [row.name, row.type]
+    }),
+  )
+  if (
+    objectsByName.size !== expectedAuthSchemaObjects.length ||
+    !expectedAuthSchemaObjects.every(([name, type]) => objectsByName.get(name) === type)
+  ) {
+    throw new Error('Production D1 verification failed: auth schema objects are incomplete.')
+  }
+
+  const objectSql = new Map(
+    objectRows.map((row) => [row.name as string, normalizeSql(row.sql as string)]),
+  )
+  const requiredTableSql = [
+    ['authoritative_mimma_seeds', "provenance = 'authoritative_sample_seed'"],
+    ['users', 'length(steam_id) = 17'],
+    ['users', "steam_id not glob '*[^0-9]*'"],
+    ['steam_login_transactions', 'steam_response_nonce text unique'],
+    ['sessions', 'references users(id) on delete cascade'],
+  ] as const
+  if (
+    requiredTableSql.some(
+      ([name, fragment]) => !objectSql.get(name)?.includes(fragment.toLowerCase()),
+    )
+  ) {
+    throw new Error('Production D1 verification failed: auth schema constraints are incomplete.')
+  }
+
+  const countRows = requireResultRows(queryResults, 3, 'auth data')
+  if (countRows.length !== 1 || countRows[0].authoritative_seed_count !== 62) {
+    throw new Error('Production D1 verification failed: authoritative seed data is incomplete.')
+  }
+  if (
+    countRows[0].user_count !== 0 ||
+    countRows[0].login_transaction_count !== 0 ||
+    countRows[0].session_count !== 0
+  ) {
+    throw new Error(
+      'Production D1 verification failed: unexpected production identity data exists.',
+    )
+  }
+}
+
 export function assertProductionD1Verification({
   expectedDatabaseId,
   expectedDatabaseName,
@@ -105,16 +180,18 @@ export function assertProductionD1Verification({
   })
 
   if (
-    migrations.length !== expectedProductionMigrationPrefix.length ||
+    migrations.length !== expectedProductionMigrations.length ||
     migrations.some(
       (migration, index) =>
-        migration.id !== index + 1 || migration.name !== expectedProductionMigrationPrefix[index],
+        migration.id !== index + 1 || migration.name !== expectedProductionMigrations[index],
     )
   ) {
     throw new Error(
-      'Production D1 verification failed: migration history does not exactly match the copied beta state.',
+      'Production D1 verification failed: migration history does not exactly match the auth-ready state.',
     )
   }
+
+  assertAuthSchema(queryResults)
 }
 
 function parseArguments(argv: readonly string[]): { infoPath: string; statePath: string } {
@@ -144,7 +221,7 @@ async function main(): Promise<void> {
     queryResults,
   })
   console.log(
-    'Production D1 identity, schema, exact migration state, and catalog release verified.',
+    'Production D1 identity, auth schema, exact migration state, and catalog release verified.',
   )
 }
 

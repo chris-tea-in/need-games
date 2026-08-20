@@ -4,6 +4,7 @@ import path from 'node:path'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 
+import { requiredProductionSecretNames } from './create-production-wrangler-config.mjs'
 import { assertProductionD1Verification, productionDatabaseName } from './verify-production-d1.mjs'
 
 const execFileAsync = promisify(execFile)
@@ -93,6 +94,38 @@ function isEnvironmentFile(relativePath: string): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function assertProductionSecretList(secretList: unknown): void {
+  if (!Array.isArray(secretList)) {
+    throw new Error('Production release blocked: required production secrets could not be read.')
+  }
+
+  for (const secret of secretList) {
+    if (!isRecord(secret)) {
+      throw new Error('Production release blocked: required production secrets are invalid.')
+    }
+    if ('value' in secret) {
+      throw new Error('Production release blocked: secret value appeared in secret-list output.')
+    }
+  }
+
+  const availableSecretNames = new Set(
+    secretList
+      .filter(
+        (secret): secret is Record<string, unknown> =>
+          isRecord(secret) && typeof secret.name === 'string' && secret.type === 'secret_text',
+      )
+      .map((secret) => secret.name as string),
+  )
+  const missingSecretNames = requiredProductionSecretNames.filter(
+    (name) => !availableSecretNames.has(name),
+  )
+  if (missingSecretNames.length > 0) {
+    throw new Error(
+      `Production release blocked: required production secrets are missing: ${missingSecretNames.join(', ')}.`,
+    )
+  }
 }
 
 export function createProductionRollbackBaseline(
@@ -503,7 +536,25 @@ async function verifyProductionDatabase(databaseId: string, env: NodeJS.ProcessE
       '--remote',
       '--json',
       '--command',
-      'SELECT dataset_version, schema_version FROM catalog_release_metadata; SELECT id, name FROM d1_migrations ORDER BY id;',
+      `SELECT dataset_version, schema_version FROM catalog_release_metadata;
+SELECT id, name FROM d1_migrations ORDER BY id;
+SELECT type, name, sql FROM sqlite_master WHERE name IN (
+  'authoritative_mimma_seeds',
+  'authoritative_mimma_seeds_prevent_delete',
+  'authoritative_mimma_seeds_prevent_insert',
+  'authoritative_mimma_seeds_prevent_update',
+  'sessions',
+  'sessions_expiry_idx',
+  'sessions_user_idx',
+  'steam_login_transactions',
+  'steam_login_transactions_expiry_idx',
+  'users'
+) ORDER BY name;
+SELECT
+  (SELECT COUNT(*) FROM authoritative_mimma_seeds) AS authoritative_seed_count,
+  (SELECT COUNT(*) FROM users) AS user_count,
+  (SELECT COUNT(*) FROM steam_login_transactions) AS login_transaction_count,
+  (SELECT COUNT(*) FROM sessions) AS session_count;`,
     ]),
     env,
   )
@@ -542,8 +593,10 @@ export async function requestProductionJson(
   pathname: string,
   normalizedOrigin: URL,
   requester: ProductionFetcher = fetch,
+  init: RequestInit = {},
 ): Promise<{ status: number; body: unknown }> {
   const response = await requester(new URL(pathname, normalizedOrigin), {
+    ...init,
     redirect: 'manual',
     signal: AbortSignal.timeout(5_000),
   })
@@ -563,6 +616,32 @@ export function assertAnonymousSessionResponse(status: number, body: unknown): v
     body.steamSignInEnabled !== false
   ) {
     throw new Error('Production smoke test failed: anonymous session status is invalid.')
+  }
+}
+
+function isExactAuthError(body: unknown, code: string, message: string): boolean {
+  if (!isRecord(body) || Object.keys(body).length !== 1 || !isRecord(body.error)) {
+    return false
+  }
+  return (
+    Object.keys(body.error).length === 2 &&
+    body.error.code === code &&
+    body.error.message === message
+  )
+}
+
+export function assertDisabledAuthStartResponse(status: number, body: unknown): void {
+  if (
+    status !== 503 ||
+    !isExactAuthError(body, 'sign_in_disabled', 'Steam sign-in is currently unavailable.')
+  ) {
+    throw new Error('Production smoke test failed: disabled auth start is invalid.')
+  }
+}
+
+export function assertMissingCsrfLogoutResponse(status: number, body: unknown): void {
+  if (status !== 403 || !isExactAuthError(body, 'invalid_csrf', 'The logout request is invalid.')) {
+    throw new Error('Production smoke test failed: missing-CSRF logout was not rejected.')
   }
 }
 
@@ -607,6 +686,14 @@ async function readOnlySmokeTest(origin: string): Promise<void> {
 
   const session = await request('/api/session')
   assertAnonymousSessionResponse(session.status, session.body)
+
+  const authStart = await request('/api/auth/steam/start?return=%2F')
+  assertDisabledAuthStartResponse(authStart.status, authStart.body)
+
+  const logout = await requestProductionJson('/api/auth/logout', normalizedOrigin, fetch, {
+    method: 'POST',
+  })
+  assertMissingCsrfLogoutResponse(logout.status, logout.body)
 }
 
 async function main(): Promise<void> {
@@ -641,6 +728,22 @@ async function main(): Promise<void> {
       nodeScriptCommand('scripts/create-production-wrangler-config.mts'),
       env,
     )
+    const productionSecrets = await captureJson(
+      'Verify production Worker auth secret names',
+      wranglerCommand([
+        'secret',
+        'list',
+        '--env',
+        'production',
+        '--config',
+        productionConfigPath,
+        '--format',
+        'json',
+      ]),
+      env,
+    )
+    assertProductionSecretList(productionSecrets)
+    console.log('[release:production] Required production Worker auth secret names verified.')
 
     const productionBuildEnvironment = {
       ...env,

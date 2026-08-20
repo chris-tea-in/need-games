@@ -27,6 +27,9 @@
   "env": {
     "production": {
       "name": "myplayprint",
+      "secrets": {
+        "required": ["STEAM_WEB_API_KEY", "CSRF_HMAC_SECRET"],
+      },
       "vars": {
         "STEAM_SIGN_IN_ENABLED": "false",
         "PRODUCTION_ORIGIN": "https://myplayprint.e9k.workers.dev",

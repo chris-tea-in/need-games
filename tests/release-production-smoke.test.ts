@@ -2,6 +2,8 @@ import { describe, expect, test, vi } from 'vitest'
 
 import {
   assertAnonymousSessionResponse,
+  assertDisabledAuthStartResponse,
+  assertMissingCsrfLogoutResponse,
   assertProductionSmokeOrigin,
   requestProductionJson,
 } from '../scripts/release-production.mjs'
@@ -54,5 +56,24 @@ describe('production smoke boundary', () => {
     expect(() =>
       assertAnonymousSessionResponse(200, { authenticated: false, steamSignInEnabled: false }),
     ).not.toThrow()
+  })
+
+  test('accepts only the disabled auth-start and missing-CSRF logout contracts', () => {
+    expect(() =>
+      assertDisabledAuthStartResponse(503, {
+        error: {
+          code: 'sign_in_disabled',
+          message: 'Steam sign-in is currently unavailable.',
+        },
+      }),
+    ).not.toThrow()
+    expect(() => assertDisabledAuthStartResponse(302, undefined)).toThrow(/auth start/i)
+
+    expect(() =>
+      assertMissingCsrfLogoutResponse(403, {
+        error: { code: 'invalid_csrf', message: 'The logout request is invalid.' },
+      }),
+    ).not.toThrow()
+    expect(() => assertMissingCsrfLogoutResponse(204, undefined)).toThrow(/logout/i)
   })
 })

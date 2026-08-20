@@ -9,6 +9,9 @@ import {
 const safeConfig = `{
   "env": {
     "production": {
+      "secrets": {
+        "required": ["STEAM_WEB_API_KEY", "CSRF_HMAC_SECRET"]
+      },
       "d1_databases": [
         {
           "database_id": "${productionDatabaseIdSentinel}"
@@ -52,5 +55,20 @@ describe('production Wrangler configuration', () => {
         crypto.randomUUID(),
       ),
     ).toThrow(/production D1 sentinel/i)
+  })
+
+  test('rejects a production config that does not require exactly the auth secrets', () => {
+    expect(() =>
+      createProductionWranglerConfig(
+        safeConfig.replace('"STEAM_WEB_API_KEY", ', ''),
+        crypto.randomUUID(),
+      ),
+    ).toThrow(/required production secrets/i)
+    expect(() =>
+      createProductionWranglerConfig(
+        safeConfig.replace('"CSRF_HMAC_SECRET"]', '"CSRF_HMAC_SECRET", "EXTRA_SECRET"]'),
+        crypto.randomUUID(),
+      ),
+    ).toThrow(/required production secrets/i)
   })
 })
