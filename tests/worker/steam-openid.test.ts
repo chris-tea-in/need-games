@@ -1,8 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 
 import {
-  STEAM_OPENID_ENDPOINT,
-  STEAM_OPENID_NAMESPACE,
   createSteamNonceReplayGuard,
   validateSteamAssertion,
 } from '../../src/worker/auth/steam-openid.js'
@@ -11,11 +9,32 @@ const callbackUrl = 'https://myplayprint.e9k.workers.dev/api/auth/steam/callback
 const steamId = '76561198000000001'
 const now = Date.parse('2026-08-19T12:00:00.000Z')
 
+// These OpenID wire values are deliberately independent from the adapter exports.
+const specificationNamespace = 'http://specs.openid.net/auth/2.0'
+const specificationEndpoint = 'https://steamcommunity.com/openid/login'
+
+function specificationAssertion(overrides: Record<string, string> = {}): URLSearchParams {
+  return new URLSearchParams({
+    'openid.ns': specificationNamespace,
+    'openid.mode': 'id_res',
+    'openid.op_endpoint': specificationEndpoint,
+    'openid.claimed_id': `https://steamcommunity.com/openid/id/${steamId}`,
+    'openid.identity': `https://steamcommunity.com/openid/id/${steamId}`,
+    'openid.return_to': `${callbackUrl}?state=${'S'.repeat(43)}`,
+    'openid.response_nonce': '2026-08-19T11:55:00Z-provider-contract',
+    'openid.assoc_handle': 'handle-1',
+    'openid.signed': 'signed,op_endpoint,claimed_id,identity,return_to,response_nonce,assoc_handle',
+    'openid.sig': 'encoded-signature',
+    state: 'S'.repeat(43),
+    ...overrides,
+  })
+}
+
 function assertion(overrides: Record<string, string> = {}): URLSearchParams {
   return new URLSearchParams({
-    'openid.ns': STEAM_OPENID_NAMESPACE,
+    'openid.ns': specificationNamespace,
     'openid.mode': 'id_res',
-    'openid.op_endpoint': STEAM_OPENID_ENDPOINT,
+    'openid.op_endpoint': specificationEndpoint,
     'openid.claimed_id': `https://steamcommunity.com/openid/id/${steamId}`,
     'openid.identity': `https://steamcommunity.com/openid/id/${steamId}`,
     'openid.return_to': callbackUrl,
@@ -42,9 +61,83 @@ function validOptions(
 }
 
 describe('Steam OpenID assertion validation', () => {
+  test('forwards a specification-correct Steam assertion to confirmation without application state', async () => {
+    const fetcher = vi.fn<typeof fetch>((input, init) => {
+      expect(input).toBe(specificationEndpoint)
+      const body = new URLSearchParams(
+        typeof init?.body === 'string'
+          ? init.body
+          : init?.body instanceof URLSearchParams
+            ? init.body.toString()
+            : '',
+      )
+      expect(body.get('openid.return_to')).toBe(`${callbackUrl}?state=${'S'.repeat(43)}`)
+      expect(body.get('state')).toBeNull()
+      expect(body.get('openid.mode')).toBe('check_authentication')
+      return Promise.resolve(
+        new Response('ns:http://specs.openid.net/auth/2.0\nis_valid:true\n', { status: 200 }),
+      )
+    })
+
+    await expect(
+      validateSteamAssertion(specificationAssertion(), {
+        ...validOptions(fetcher),
+        expectedReturnTo: `${callbackUrl}?state=${'S'.repeat(43)}`,
+      }),
+    ).resolves.toMatchObject({ steamId })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
+  test('rejects the HTTPS namespace variant before confirmation', async () => {
+    const fetcher = vi.fn<typeof fetch>()
+
+    await expect(
+      validateSteamAssertion(
+        specificationAssertion({ 'openid.ns': 'https://specs.openid.net/auth/2.0' }),
+        {
+          ...validOptions(fetcher),
+          expectedReturnTo: `${callbackUrl}?state=${'S'.repeat(43)}`,
+        },
+      ),
+    ).rejects.toThrow()
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  test('accepts an additional signed extension field with one corresponding assertion field', async () => {
+    const fetcher = vi.fn<typeof fetch>(() => Promise.resolve(new Response('is_valid:true\n')))
+    const fields = specificationAssertion({
+      'openid.signed':
+        'signed,op_endpoint,claimed_id,identity,return_to,response_nonce,assoc_handle,ax.type.email',
+      'openid.ax.type.email': 'http://axschema.org/contact/email',
+    })
+
+    await expect(
+      validateSteamAssertion(fields, {
+        ...validOptions(fetcher),
+        expectedReturnTo: `${callbackUrl}?state=${'S'.repeat(43)}`,
+      }),
+    ).resolves.toMatchObject({ steamId })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
+  test('accepts a bounded optional OpenID field without weakening required signed fields', async () => {
+    const fetcher = vi.fn<typeof fetch>(() => Promise.resolve(new Response('is_valid:true\n')))
+
+    await expect(
+      validateSteamAssertion(
+        specificationAssertion({ 'openid.invalidate_handle': 'obsolete-association' }),
+        {
+          ...validOptions(fetcher),
+          expectedReturnTo: `${callbackUrl}?state=${'S'.repeat(43)}`,
+        },
+      ),
+    ).resolves.toMatchObject({ steamId })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
   test('validates the assertion and confirms it with Steam check_authentication', async () => {
     const fetcher = vi.fn<typeof fetch>((_input, init) => {
-      expect(_input).toBe(STEAM_OPENID_ENDPOINT)
+      expect(_input).toBe(specificationEndpoint)
       expect(init?.method).toBe('POST')
       expect(init?.headers).toMatchObject({
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -60,7 +153,7 @@ describe('Steam OpenID assertion validation', () => {
         `openid.identity=https%3A%2F%2Fsteamcommunity.com%2Fopenid%2Fid%2F${steamId}`,
       )
       return Promise.resolve(
-        new Response('ns:https://specs.openid.net/auth/2.0\nis_valid:true\n', { status: 200 }),
+        new Response('ns:http://specs.openid.net/auth/2.0\nis_valid:true\n', { status: 200 }),
       )
     })
 
@@ -103,21 +196,12 @@ describe('Steam OpenID assertion validation', () => {
     },
   )
 
-  test('rejects mismatched callback URLs, oversized fields, and extra signed fields', async () => {
+  test('rejects mismatched callback URLs and oversized fields', async () => {
     const fetcher = vi.fn<typeof fetch>()
 
     await expect(
       validateSteamAssertion(
         assertion({ 'openid.return_to': `${callbackUrl}?unexpected=value` }),
-        validOptions(fetcher),
-      ),
-    ).rejects.toThrow()
-    await expect(
-      validateSteamAssertion(
-        assertion({
-          'openid.signed':
-            'op_endpoint,claimed_id,identity,return_to,response_nonce,assoc_handle,extra',
-        }),
         validOptions(fetcher),
       ),
     ).rejects.toThrow()
@@ -196,5 +280,61 @@ describe('Steam OpenID assertion validation', () => {
     )
 
     await expect(validateSteamAssertion(assertion(), validOptions(fetcher))).rejects.toThrow()
+  })
+
+  test('rejects a present incorrect confirmation namespace but accepts an absent namespace', async () => {
+    const incorrectNamespace = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response('ns:https://specs.openid.net/auth/2.0\nis_valid:true\n')),
+    )
+    await expect(
+      validateSteamAssertion(assertion(), validOptions(incorrectNamespace)),
+    ).rejects.toThrow()
+
+    const absentNamespace = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response('is_valid:true\n')),
+    )
+    await expect(
+      validateSteamAssertion(assertion(), validOptions(absentNamespace)),
+    ).resolves.toMatchObject({
+      steamId,
+    })
+  })
+
+  test('rejects duplicate, empty, and missing required signed assertion fields before confirmation', async () => {
+    const fetcher = vi.fn<typeof fetch>()
+    const duplicateReturnTo = specificationAssertion()
+    duplicateReturnTo.append('openid.return_to', `${callbackUrl}?state=${'S'.repeat(43)}`)
+    const emptyAssociation = specificationAssertion({ 'openid.assoc_handle': '' })
+    const missingAssociation = specificationAssertion()
+    missingAssociation.delete('openid.assoc_handle')
+
+    for (const fields of [duplicateReturnTo, emptyAssociation, missingAssociation]) {
+      await expect(
+        validateSteamAssertion(fields, {
+          ...validOptions(fetcher),
+          expectedReturnTo: `${callbackUrl}?state=${'S'.repeat(43)}`,
+        }),
+      ).rejects.toThrow()
+    }
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  test('keeps the ten-field validation floor without double-counting openid.signed', async () => {
+    const fetcher = vi.fn<typeof fetch>(() => Promise.resolve(new Response('is_valid:true\n')))
+
+    await expect(
+      validateSteamAssertion(assertion(), {
+        ...validOptions(fetcher),
+        maxFieldCount: 10,
+      }),
+    ).resolves.toMatchObject({ steamId })
+
+    await expect(
+      validateSteamAssertion(assertion(), {
+        ...validOptions(fetcher),
+        maxFieldCount: 9,
+      }),
+    ).rejects.toThrow()
+    expect(fetcher).toHaveBeenCalledTimes(1)
   })
 })

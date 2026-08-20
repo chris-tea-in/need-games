@@ -310,7 +310,7 @@ function steamAssertionQuery(state: string): string {
   const identity = `https://steamcommunity.com/openid/id/${STEAM_ID}`
   const params = new URLSearchParams({
     state,
-    'openid.ns': 'https://specs.openid.net/auth/2.0',
+    'openid.ns': 'http://specs.openid.net/auth/2.0',
     'openid.mode': 'id_res',
     'openid.op_endpoint': 'https://steamcommunity.com/openid/login',
     'openid.claimed_id': identity,

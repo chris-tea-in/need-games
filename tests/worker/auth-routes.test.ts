@@ -98,6 +98,13 @@ describe('Steam authentication routes', () => {
     expect(response?.status).toBe(302)
     expect(response?.headers.get('location')).toContain('https://steamcommunity.com/openid/login?')
     const location = new URL(response?.headers.get('location') ?? '')
+    expect(location.searchParams.get('openid.ns')).toBe('http://specs.openid.net/auth/2.0')
+    expect(location.searchParams.get('openid.identity')).toBe(
+      'http://specs.openid.net/auth/2.0/identifier_select',
+    )
+    expect(location.searchParams.get('openid.claimed_id')).toBe(
+      'http://specs.openid.net/auth/2.0/identifier_select',
+    )
     const returnTo = new URL(location.searchParams.get('openid.return_to') ?? '')
     expect(returnTo.pathname).toBe('/api/auth/steam/callback')
     expect(returnTo.searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]{43}$/)

@@ -7,7 +7,12 @@ import {
   serializeLoginTransactionCookie,
   serializeSessionCookie,
 } from '../auth/session-cookie.js'
-import { validateSteamAssertion } from '../auth/steam-openid.js'
+import {
+  STEAM_OPENID_ENDPOINT,
+  STEAM_OPENID_IDENTIFIER_SELECT,
+  STEAM_OPENID_NAMESPACE,
+  validateSteamAssertion,
+} from '../auth/steam-openid.js'
 import { synchronizeSteamProfile, type SteamProfileLookupResult } from '../auth/steam-profile.js'
 import {
   constantTimeEqual,
@@ -43,9 +48,6 @@ import {
 import { jsonResponse } from '../http.js'
 import { gameExists, isValidSlug } from './similar-games.js'
 
-const STEAM_OPENID_NAMESPACE = 'https://specs.openid.net/auth/2.0'
-const STEAM_OPENID_ENDPOINT = 'https://steamcommunity.com/openid/login'
-const STEAM_OPENID_IDENTIFIER_SELECT = 'https://specs.openid.net/auth/2.0/identifier_select'
 const AUTH_FAILURE_MESSAGE = 'Authentication failed. Please try again later.'
 const AUTH_UNAVAILABLE_MESSAGE = 'Authentication is temporarily unavailable.'
 const SIGN_IN_DISABLED_MESSAGE = 'Steam sign-in is currently unavailable.'

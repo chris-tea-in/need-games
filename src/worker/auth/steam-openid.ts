@@ -1,38 +1,25 @@
-export const STEAM_OPENID_NAMESPACE = 'https://specs.openid.net/auth/2.0'
+export const STEAM_OPENID_NAMESPACE = 'http://specs.openid.net/auth/2.0'
 export const STEAM_OPENID_ENDPOINT = 'https://steamcommunity.com/openid/login'
+export const STEAM_OPENID_IDENTIFIER_SELECT = `${STEAM_OPENID_NAMESPACE}/identifier_select`
 export const STEAM_OPENID_ID_PREFIX = 'https://steamcommunity.com/openid/id/'
 export const STEAM_OPENID_RESPONSE_NONCE_MAX_LENGTH = 512
 
-const STEAM_OPENID_SIGNED_FIELDS = [
+const REQUIRED_SIGNED_FIELDS = [
   'op_endpoint',
-  'claimed_id',
-  'identity',
   'return_to',
   'response_nonce',
   'assoc_handle',
 ] as const
 
-const ALLOWED_FIELD_NAMES = new Set([
-  'openid.ns',
-  'openid.mode',
-  'openid.op_endpoint',
-  'openid.claimed_id',
-  'openid.identity',
-  'openid.return_to',
-  'openid.response_nonce',
-  'openid.assoc_handle',
-  'openid.signed',
-  'openid.sig',
-  'state',
-])
-
 const DEFAULT_MAX_FIELD_COUNT = 32
+const MINIMUM_ASSERTION_FIELD_COUNT = 10
 const DEFAULT_MAX_VALUE_LENGTH = 2048
 const DEFAULT_NONCE_MAX_AGE_SECONDS = 10 * 60
 const DEFAULT_NONCE_FUTURE_SKEW_SECONDS = 60
 const MAX_CONFIRMATION_BODY_LENGTH = 16 * 1024
 const steamIdPattern = /^[0-9]{17}$/
 const noncePattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})Z([^\s]+)$/
+const openIdFieldNamePattern = /^openid\.[A-Za-z0-9][A-Za-z0-9_.-]*$/
 
 export type SteamAssertionInput = Request | URL | URLSearchParams | Readonly<Record<string, string>>
 
@@ -142,7 +129,7 @@ function collectFields(
   }
 
   for (const name of fields.keys()) {
-    if (!ALLOWED_FIELD_NAMES.has(name)) {
+    if (name !== 'state' && !openIdFieldNamePattern.test(name)) {
       throw invalidAssertion()
     }
   }
@@ -315,17 +302,24 @@ function validateNonce(
 function validateSignedFields(fields: Map<string, string[]>): void {
   const signed = oneField(fields, 'openid.signed')
   const names = signed.split(',')
-  const expected = new Set(STEAM_OPENID_SIGNED_FIELDS)
-  if (
-    names.length !== expected.size ||
-    new Set(names).size !== names.length ||
-    names.some((name) => !expected.has(name as (typeof STEAM_OPENID_SIGNED_FIELDS)[number]))
-  ) {
+  if (names.some((name) => name.length === 0) || new Set(names).size !== names.length) {
     throw invalidAssertion()
   }
 
-  for (const name of STEAM_OPENID_SIGNED_FIELDS) {
+  for (const name of names) {
     oneField(fields, `openid.${name}`)
+  }
+
+  for (const name of REQUIRED_SIGNED_FIELDS) {
+    if (!names.includes(name)) {
+      throw invalidAssertion()
+    }
+  }
+
+  for (const name of ['claimed_id', 'identity'] as const) {
+    if (fields.has(`openid.${name}`) && !names.includes(name)) {
+      throw invalidAssertion()
+    }
   }
 }
 
@@ -389,6 +383,9 @@ async function confirmWithSteam(
 ): Promise<void> {
   const body = new URLSearchParams()
   for (const [name, values] of fields) {
+    if (!name.startsWith('openid.')) {
+      continue
+    }
     for (const value of values) {
       body.append(name, value)
     }
@@ -433,8 +430,17 @@ async function confirmWithSteam(
     )
   }
 
-  const valid = confirmation.split(/\r?\n/).some((line) => /^is_valid\s*:\s*true\s*$/.test(line))
-  if (!valid) {
+  const lines = confirmation.split(/\r?\n/)
+  const namespaces = lines.flatMap((line) => {
+    const match = /^ns:(.*)$/.exec(line)
+    return match === null ? [] : [match[1]]
+  })
+  const valid = lines.some((line) => /^is_valid\s*:\s*true\s*$/.test(line))
+  if (
+    !valid ||
+    namespaces.length > 1 ||
+    (namespaces.length === 1 && namespaces[0] !== STEAM_OPENID_NAMESPACE)
+  ) {
     throw new SteamOpenIdValidationError(
       'steam_confirmation_failed',
       'Steam could not confirm the assertion.',
@@ -479,7 +485,7 @@ export async function validateSteamAssertion(
   const maxValueLength = options.maxValueLength ?? DEFAULT_MAX_VALUE_LENGTH
   if (
     !Number.isSafeInteger(maxFieldCount) ||
-    maxFieldCount < STEAM_OPENID_SIGNED_FIELDS.length + 4 ||
+    maxFieldCount < MINIMUM_ASSERTION_FIELD_COUNT ||
     !Number.isSafeInteger(maxValueLength) ||
     maxValueLength < 1
   ) {
