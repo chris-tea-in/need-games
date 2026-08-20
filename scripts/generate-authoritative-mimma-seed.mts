@@ -8,8 +8,8 @@ import type { MimmaScore } from '../src/shared/mimma.js'
 const DATASET_VERSION = 'authoritative-mimma-seed-v1'
 const CREATED_AT = '2026-08-18T20:02:44Z'
 const PROVENANCE = 'authoritative_sample_seed'
-const SOURCE_HEADER = 'game,zone,micro,meso,macro,provenance,source_url'
-const SOURCE_SHA256 = '6b237d4a513a88eceead7d7c5dcaa6a5d073f59b23da49f651f9ee5bb0ee0c74'
+const SOURCE_HEADER = 'game,zone,micro,meso,macro,provenance'
+const SOURCE_SHA256 = '250890d0e742b5514ccf411b6a52d34ecb6b87aa3fdefd4630ae6c9084229275'
 const DEFAULT_COUNTS = { macro: 21, meso: 17, micro: 24 } as const
 
 type SingleAxisZone = 'micro' | 'meso' | 'macro'
@@ -20,7 +20,6 @@ export interface SurnexRow {
   meso: string
   micro: string
   provenance: string
-  sourceUrl: string
   zone: string
 }
 
@@ -71,15 +70,15 @@ export function parseSurnexCsv(source: string): readonly SurnexRow[] {
   return lines.slice(1).map((line, index) => {
     const lineNumber = index + 2
     const fields = line.split(',')
-    if (fields.length !== 7) {
+    if (fields.length !== 6) {
       throw new Error(`Authoritative MiMMa source line ${lineNumber} has ${fields.length} fields`)
     }
     if (fields.some((field) => field.trim().length === 0)) {
       throw new Error(`Authoritative MiMMa source line ${lineNumber} contains a blank field`)
     }
 
-    const [game, zone, micro, meso, macro, provenance, sourceUrl] = fields
-    return { game, zone, micro, meso, macro, provenance, sourceUrl }
+    const [game, zone, micro, meso, macro, provenance] = fields
+    return { game, zone, micro, meso, macro, provenance }
   })
 }
 
