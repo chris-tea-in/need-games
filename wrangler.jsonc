@@ -29,6 +29,7 @@
       "name": "myplayprint",
       "vars": {
         "STEAM_SIGN_IN_ENABLED": "false",
+        "PRODUCTION_ORIGIN": "https://myplayprint.e9k.workers.dev",
       },
       "d1_databases": [
         {
