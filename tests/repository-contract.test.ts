@@ -90,7 +90,7 @@ describe('Worker configuration contract', () => {
     expect(config).toContain('00000000-0000-4000-8000-000000000001')
     expect(config).toContain('00000000-0000-4000-8000-000000000002')
     expect(config).toContain('"production"')
-    expect(config).toContain('"STEAM_SIGN_IN_ENABLED": "false"')
+    expect(config).toContain('"STEAM_SIGN_IN_ENABLED": "true"')
     expect(existsSync(releaseGuardUrl)).toBe(true)
   })
 
@@ -134,6 +134,7 @@ describe('repository automation contract', () => {
 
     expect(releaseScript).toContain('PRODUCTION_D1_DATABASE_ID')
     expect(releaseScript).toContain('STEAM_SIGN_IN_ENABLED')
+    expect(releaseScript).toContain('assertProductionSteamSignInMode')
     expect(releaseScript).toContain('--smoke-only')
     expect(releaseScript).not.toContain('Smoke test skipped')
     expect(releaseScript).toContain('production-release.lock')
@@ -188,10 +189,8 @@ describe('repository automation contract', () => {
     const rollbackBaseline = releaseScript.indexOf(
       'Capture current production Worker rollback baseline',
     )
-    const deployment = releaseScript.lastIndexOf(
-      'Deploy read-only production Worker with Steam sign-in disabled',
-    )
-    const smoke = releaseScript.lastIndexOf('readOnlySmokeTest(origin)')
+    const deployment = releaseScript.lastIndexOf('Deploy production Worker with Steam sign-in')
+    const smoke = releaseScript.lastIndexOf('readOnlySmokeTest(origin, steamSignInMode)')
 
     expect(localChecks).toBeGreaterThan(-1)
     expect(trackedGuard).toBeGreaterThan(localChecks)
@@ -204,6 +203,8 @@ describe('repository automation contract', () => {
     expect(rollbackBaseline).toBeGreaterThan(verification)
     expect(deployment).toBeGreaterThan(rollbackBaseline)
     expect(smoke).toBeGreaterThan(deployment)
+    expect(contributing).toContain('Initial Steam sign-in enablement')
+    expect(contributing).toContain('Steam sign-in kill switch')
   })
 
   test('keeps the generated production config ignored', () => {

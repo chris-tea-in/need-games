@@ -12,6 +12,7 @@ interface CandidateOptions {
   main?: string
   assetFiles?: readonly string[]
   databaseId?: string
+  expectedSteamSignInMode?: 'true' | 'false'
   steamSignInEnabled?: string
 }
 
@@ -55,7 +56,12 @@ async function createCandidate(options: CandidateOptions = {}) {
     }),
   )
 
-  return { clientDirectory, expectedDatabaseId: productionDatabaseId, outputConfigPath }
+  return {
+    clientDirectory,
+    expectedDatabaseId: productionDatabaseId,
+    expectedSteamSignInMode: options.expectedSteamSignInMode ?? 'false',
+    outputConfigPath,
+  }
 }
 
 describe('production Vite output asset boundary', () => {
@@ -65,6 +71,17 @@ describe('production Vite output asset boundary', () => {
     const result = await assertProductionAssetBoundary(candidate)
 
     expect(result.assetFiles).toEqual(['assets/app.js', 'index.html'])
+  })
+
+  test('accepts an enabled generated Worker config only when enabled mode was reviewed', async () => {
+    const candidate = await createCandidate({
+      expectedSteamSignInMode: 'true',
+      steamSignInEnabled: 'true',
+    })
+
+    await expect(assertProductionAssetBoundary(candidate)).resolves.toMatchObject({
+      assetFiles: ['index.html'],
+    })
   })
 
   test('rejects a Worker config that points assets outside the client directory', async () => {
@@ -117,9 +134,18 @@ describe('production Vite output asset boundary', () => {
     await expect(assertProductionAssetBoundary(candidate)).rejects.toThrow(/database ID/i)
   })
 
-  test('rejects a generated config that enables Steam sign-in', async () => {
-    const candidate = await createCandidate({ steamSignInEnabled: 'true' })
+  test.each([
+    { configured: 'true', reviewed: 'false' as const },
+    { configured: 'false', reviewed: 'true' as const },
+  ])(
+    'rejects generated mode $configured when reviewed mode is $reviewed',
+    async ({ configured, reviewed }) => {
+      const candidate = await createCandidate({
+        expectedSteamSignInMode: reviewed,
+        steamSignInEnabled: configured,
+      })
 
-    await expect(assertProductionAssetBoundary(candidate)).rejects.toThrow(/Steam sign-in/i)
-  })
+      await expect(assertProductionAssetBoundary(candidate)).rejects.toThrow(/Steam sign-in/i)
+    },
+  )
 })

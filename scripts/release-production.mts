@@ -4,11 +4,14 @@ import path from 'node:path'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 
+import { parseConfigFileTextToJson } from 'typescript'
+
 import { requiredProductionSecretNames } from './create-production-wrangler-config.mjs'
 import { assertProductionD1Verification, productionDatabaseName } from './verify-production-d1.mjs'
 
 const execFileAsync = promisify(execFile)
 const productionConfigPath = '.wrangler.production.jsonc'
+const trackedConfigPath = 'wrangler.jsonc'
 const productionBuildEnvironmentName = 'production'
 const productionWorkerName = 'myplayprint'
 const productionWorkerOrigin = 'https://myplayprint.e9k.workers.dev'
@@ -35,6 +38,7 @@ interface ProductionAssetBoundaryCandidate {
   outputConfigPath: string
   clientDirectory: string
   expectedDatabaseId: string
+  expectedSteamSignInMode: SteamSignInMode
 }
 
 interface ProductionAssetBoundaryResult {
@@ -63,6 +67,7 @@ interface ProductionRollbackBaseline {
 }
 
 type ProductionFetcher = (input: URL | RequestInfo, init?: RequestInit) => Promise<Response>
+type SteamSignInMode = 'true' | 'false'
 
 function isPathInside(childPath: string, parentPath: string): boolean {
   const relativePath = path.relative(parentPath, childPath)
@@ -94,6 +99,49 @@ function isEnvironmentFile(relativePath: string): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function assertProductionSteamSignInMode(
+  trackedConfig: string,
+  requestedMode: string | undefined,
+): SteamSignInMode {
+  const declarations = trackedConfig.match(/"STEAM_SIGN_IN_ENABLED"\s*:/g) ?? []
+  const parsedConfig = parseConfigFileTextToJson(trackedConfigPath, trackedConfig)
+  const environments = isRecord(parsedConfig.config) ? parsedConfig.config.env : undefined
+  const production = isRecord(environments) ? environments.production : undefined
+  const variables = isRecord(production) ? production.vars : undefined
+  const trackedMode = isRecord(variables) ? variables[steamSignInEnvironmentVariable] : undefined
+
+  if (
+    parsedConfig.error !== undefined ||
+    declarations.length !== 1 ||
+    (trackedMode !== 'true' && trackedMode !== 'false')
+  ) {
+    throw new Error(
+      'Production release blocked: tracked Steam sign-in mode must be exactly true or false.',
+    )
+  }
+  if (requestedMode !== 'true' && requestedMode !== 'false') {
+    throw new Error(
+      'Production release blocked: explicitly confirm the tracked Steam sign-in mode as true or false.',
+    )
+  }
+  if (requestedMode !== trackedMode) {
+    throw new Error(
+      'Production release blocked: requested Steam sign-in mode does not match tracked production configuration.',
+    )
+  }
+
+  return trackedMode
+}
+
+async function requireProductionSteamSignInMode(): Promise<SteamSignInMode> {
+  const trackedConfig = await readFile(trackedConfigPath, 'utf8')
+  return assertProductionSteamSignInMode(trackedConfig, process.env[steamSignInEnvironmentVariable])
+}
+
+function describeSteamSignInMode(mode: SteamSignInMode): 'enabled' | 'disabled' {
+  return mode === 'true' ? 'enabled' : 'disabled'
 }
 
 export function assertProductionSecretList(secretList: unknown): void {
@@ -197,6 +245,7 @@ export async function assertProductionAssetBoundary({
   outputConfigPath,
   clientDirectory,
   expectedDatabaseId,
+  expectedSteamSignInMode,
 }: ProductionAssetBoundaryCandidate): Promise<ProductionAssetBoundaryResult> {
   let outputConfig: GeneratedWorkerConfig
   try {
@@ -231,9 +280,11 @@ export async function assertProductionAssetBoundary({
 
   if (
     !isRecord(outputConfig.vars) ||
-    outputConfig.vars[steamSignInEnvironmentVariable] !== 'false'
+    outputConfig.vars[steamSignInEnvironmentVariable] !== expectedSteamSignInMode
   ) {
-    throw new Error('Production release blocked: generated config must disable Steam sign-in.')
+    throw new Error(
+      'Production release blocked: generated config Steam sign-in mode does not match the reviewed mode.',
+    )
   }
 
   if (typeof outputConfig.assets?.directory !== 'string') {
@@ -414,16 +465,14 @@ function requireProductionDatabaseId(): string {
   return databaseId
 }
 
-function releaseEnvironment(databaseId: string): NodeJS.ProcessEnv {
-  const requestedSteamSignIn = process.env[steamSignInEnvironmentVariable]?.trim().toLowerCase()
-  if (requestedSteamSignIn !== undefined && requestedSteamSignIn !== 'false') {
-    throw new Error('Production release blocked: Steam sign-in must remain disabled.')
-  }
-
+function releaseEnvironment(
+  databaseId: string,
+  steamSignInMode: SteamSignInMode,
+): NodeJS.ProcessEnv {
   return {
     ...process.env,
     [releaseIdEnvironmentVariable]: databaseId,
-    [steamSignInEnvironmentVariable]: 'false',
+    [steamSignInEnvironmentVariable]: steamSignInMode,
   }
 }
 
@@ -607,13 +656,17 @@ export async function requestProductionJson(
   return { status: response.status, body }
 }
 
-export function assertAnonymousSessionResponse(status: number, body: unknown): void {
+export function assertAnonymousSessionResponse(
+  status: number,
+  body: unknown,
+  steamSignInMode: SteamSignInMode,
+): void {
   if (
     status !== 200 ||
     !isRecord(body) ||
     Object.keys(body).length !== 2 ||
     body.authenticated !== false ||
-    body.steamSignInEnabled !== false
+    body.steamSignInEnabled !== (steamSignInMode === 'true')
   ) {
     throw new Error('Production smoke test failed: anonymous session status is invalid.')
   }
@@ -645,11 +698,18 @@ export function assertMissingCsrfLogoutResponse(status: number, body: unknown): 
   }
 }
 
-async function readOnlySmokeTest(origin: string): Promise<void> {
+export async function readOnlySmokeTest(
+  origin: string,
+  steamSignInMode: SteamSignInMode,
+  requester: ProductionFetcher = fetch,
+): Promise<void> {
   const normalizedOrigin = assertProductionSmokeOrigin(origin)
-  const request = (pathname: string) => requestProductionJson(pathname, normalizedOrigin)
+  const request = (pathname: string, init: RequestInit = {}) =>
+    requestProductionJson(pathname, normalizedOrigin, requester, init)
 
-  console.log('[release:production] Read-only production smoke test')
+  console.log(
+    `[release:production] Read-only production smoke test (Steam sign-in ${describeSteamSignInMode(steamSignInMode)})`,
+  )
   const catalog = await request('/api/catalog')
   if (
     catalog.status !== 200 ||
@@ -685,12 +745,14 @@ async function readOnlySmokeTest(origin: string): Promise<void> {
   }
 
   const session = await request('/api/session')
-  assertAnonymousSessionResponse(session.status, session.body)
+  assertAnonymousSessionResponse(session.status, session.body, steamSignInMode)
 
-  const authStart = await request('/api/auth/steam/start?return=%2F')
-  assertDisabledAuthStartResponse(authStart.status, authStart.body)
+  if (steamSignInMode === 'false') {
+    const authStart = await request('/api/auth/steam/start?return=%2F')
+    assertDisabledAuthStartResponse(authStart.status, authStart.body)
+  }
 
-  const logout = await requestProductionJson('/api/auth/logout', normalizedOrigin, fetch, {
+  const logout = await request('/api/auth/logout', {
     method: 'POST',
   })
   assertMissingCsrfLogoutResponse(logout.status, logout.body)
@@ -699,10 +761,11 @@ async function readOnlySmokeTest(origin: string): Promise<void> {
 async function main(): Promise<void> {
   if (process.argv.includes('--smoke-only')) {
     const origin = requireProductionOrigin()
+    const steamSignInMode = await requireProductionSteamSignInMode()
 
     const releaseLockCleanup = await acquireReleaseLock()
     try {
-      await readOnlySmokeTest(origin)
+      await readOnlySmokeTest(origin, steamSignInMode)
     } finally {
       await releaseLockCleanup()
     }
@@ -711,7 +774,8 @@ async function main(): Promise<void> {
 
   const databaseId = requireProductionDatabaseId()
   const origin = requireProductionOrigin()
-  const env = releaseEnvironment(databaseId)
+  const steamSignInMode = await requireProductionSteamSignInMode()
+  const env = releaseEnvironment(databaseId, steamSignInMode)
   const releaseLockCleanup = await acquireReleaseLock()
 
   try {
@@ -762,9 +826,10 @@ async function main(): Promise<void> {
       outputConfigPath: generatedWorkerConfigPath,
       clientDirectory: productionClientDirectory,
       expectedDatabaseId: databaseId,
+      expectedSteamSignInMode: steamSignInMode,
     })
     console.log(
-      `[release:production] Vite Worker output and client asset boundary verified (${assetBoundary.assetFiles.length} assets).`,
+      `[release:production] Vite Worker output and client asset boundary verified (${assetBoundary.assetFiles.length} assets; Steam sign-in ${describeSteamSignInMode(steamSignInMode)}).`,
     )
 
     await verifyProductionDatabase(databaseId, env)
@@ -783,12 +848,12 @@ async function main(): Promise<void> {
       `[release:production] Rollback baseline saved in ignored operator state: ${path.relative(process.cwd(), rollbackBaselinePath)}`,
     )
     await runInherited(
-      'Deploy read-only production Worker with Steam sign-in disabled',
+      `Deploy production Worker with Steam sign-in ${describeSteamSignInMode(steamSignInMode)}`,
       wranglerCommand(['deploy', '--config', generatedWorkerConfigPath]),
       env,
     )
 
-    await readOnlySmokeTest(origin)
+    await readOnlySmokeTest(origin, steamSignInMode)
   } finally {
     await releaseLockCleanup()
   }

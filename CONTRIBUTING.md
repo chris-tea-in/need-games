@@ -95,7 +95,7 @@ git rev-parse HEAD
 git status --short
 corepack pnpm exec wrangler whoami
 $env:PRODUCTION_D1_DATABASE_ID = Read-Host 'Owner-confirmed need-games-production D1 ID'
-$env:STEAM_SIGN_IN_ENABLED = 'false'
+$env:STEAM_SIGN_IN_ENABLED = 'true'
 $env:PRODUCTION_ORIGIN = 'https://myplayprint.e9k.workers.dev'
 corepack pnpm release:production
 Remove-Item Env:PRODUCTION_D1_DATABASE_ID
@@ -118,7 +118,10 @@ production Cloudflare environment with `CLOUDFLARE_ENV=production`,
 configuration and fails closed unless its static asset directory is exactly `dist/client` and
 contains no `.dev.vars`, `.env`, Worker output, or paths outside that directory. Wrangler then
 deploys that generated output configuration, never the input config, without applying migrations.
-The final generated config must contain the transient D1 ID and `STEAM_SIGN_IN_ENABLED=false`.
+The tracked production value is the release mode source of truth. Set the transient
+`STEAM_SIGN_IN_ENABLED` value to the same exact `true` or `false` value as the reviewed commit.
+The release rejects a missing, invalid, duplicate, or mismatched mode before upload. The final
+generated config must contain the transient D1 ID and the reviewed Steam sign-in mode.
 The release verifies the target D1 identity, catalog state, and exactly `0001_schema.sql` and
 `0002_seed_beta_catalog.sql` in its migration history. A later migration blocks this Phase 1
 release. A real D1 ID must never be committed, added to GitHub, or written to a release report.
@@ -140,10 +143,37 @@ rerun remote migrations:
 
 ```powershell
 $env:PRODUCTION_ORIGIN = Read-Host 'Stable production HTTPS origin'
+$env:STEAM_SIGN_IN_ENABLED = 'true'
 corepack pnpm release:production -- --smoke-only
 Remove-Item Env:PRODUCTION_ORIGIN
+Remove-Item Env:STEAM_SIGN_IN_ENABLED
 ```
 
 This check rejects a different origin and cross-origin redirects. It then checks the read-only
-catalog, detail, unknown-route, unscored-similarity, and anonymous-session responses. Never enable
-Steam sign-in from this release path; that requires its later explicit production gate.
+catalog, detail, unknown-route, unscored-similarity, anonymous-session, and missing-CSRF logout
+responses. Disabled mode also verifies the exact disabled auth-start response. Enabled mode never
+calls auth start because that endpoint creates a login transaction.
+
+### Initial Steam sign-in enablement
+
+Set tracked production `STEAM_SIGN_IN_ENABLED` to `true`, regenerate Worker types, commit the
+scoped change, and complete review and local verification. Obtain explicit owner approval for the
+reviewed commit and production target. Then run the owner release sequence with the transient mode
+set to `true`. Do not put a D1 ID, secret, session value, SteamID, or CSRF value in Git, commands,
+reports, or copied output.
+
+After the guarded release passes, complete the separate owner browser acceptance gate. Verify one
+real Steam flow, the authenticated session and verified display name, callback replay rejection,
+logout, and return to the same game without reopening voting. This workflow does not authorize a
+later release or kill-switch reversal.
+
+### Steam sign-in kill switch
+
+To disable sign-in, set the tracked production value to `false`, regenerate Worker types, commit
+and review the scoped change, and run the same guarded release with the transient mode set to
+`false`. Confirm catalog and game browsing remain healthy while session status and auth start show
+the exact disabled contract. Keep the newly captured rollback baseline.
+
+Re-enabling after a kill-switch release requires a new reviewed `true` commit and separate explicit
+owner approval. Never use an unreviewed environment override or dashboard toggle to diverge from
+the tracked mode.
