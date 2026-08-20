@@ -13,6 +13,7 @@ interface CandidateOptions {
   assetFiles?: readonly string[]
   databaseId?: string
   expectedSteamSignInMode?: 'true' | 'false'
+  rawProductionVars?: string
   steamSignInEnabled?: string
 }
 
@@ -33,27 +34,33 @@ async function createCandidate(options: CandidateOptions = {}) {
   }
 
   const outputConfigPath = path.join(workerDirectory, 'wrangler.json')
+  const serializedConfig = JSON.stringify({
+    name: 'myplayprint',
+    main: options.main ?? 'index.js',
+    targetEnvironment: 'production',
+    assets: {
+      directory: options.assetsDirectory ?? '../client',
+    },
+    d1_databases: [
+      {
+        binding: 'NEED_GAMES_DB',
+        database_name: 'need-games-production',
+        database_id: options.databaseId ?? productionDatabaseId,
+      },
+      ...(options.additionalDatabases ?? []),
+    ],
+    vars: {
+      STEAM_SIGN_IN_ENABLED: options.steamSignInEnabled ?? 'false',
+    },
+  })
   await writeFile(
     outputConfigPath,
-    JSON.stringify({
-      name: 'myplayprint',
-      main: options.main ?? 'index.js',
-      targetEnvironment: 'production',
-      assets: {
-        directory: options.assetsDirectory ?? '../client',
-      },
-      d1_databases: [
-        {
-          binding: 'NEED_GAMES_DB',
-          database_name: 'need-games-production',
-          database_id: options.databaseId ?? productionDatabaseId,
-        },
-        ...(options.additionalDatabases ?? []),
-      ],
-      vars: {
-        STEAM_SIGN_IN_ENABLED: options.steamSignInEnabled ?? 'false',
-      },
-    }),
+    options.rawProductionVars === undefined
+      ? serializedConfig
+      : serializedConfig.replace(
+          /"vars":\{"STEAM_SIGN_IN_ENABLED":"[^"]+"\}/,
+          `"vars":{${options.rawProductionVars}}`,
+        ),
   )
 
   return {
@@ -143,6 +150,27 @@ describe('production Vite output asset boundary', () => {
       const candidate = await createCandidate({
         expectedSteamSignInMode: reviewed,
         steamSignInEnabled: configured,
+      })
+
+      await expect(assertProductionAssetBoundary(candidate)).rejects.toThrow(/Steam sign-in/i)
+    },
+  )
+
+  test.each([
+    {
+      reviewed: 'false' as const,
+      vars: '"STEAM_SIGN_IN_ENABLED":"true","STEAM_SIGN_IN_\\u0045NABLED":"false"',
+    },
+    {
+      reviewed: 'true' as const,
+      vars: '"STEAM_SIGN_IN_\\u0045NABLED":"false","STEAM_SIGN_IN_ENABLED":"true"',
+    },
+  ])(
+    'rejects generated semantic mode duplicates when the surviving value is $reviewed',
+    async ({ reviewed, vars }) => {
+      const candidate = await createCandidate({
+        expectedSteamSignInMode: reviewed,
+        rawProductionVars: vars,
       })
 
       await expect(assertProductionAssetBoundary(candidate)).rejects.toThrow(/Steam sign-in/i)

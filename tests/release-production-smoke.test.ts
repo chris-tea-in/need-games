@@ -51,6 +51,26 @@ describe('production smoke boundary', () => {
     )
   })
 
+  test.each([
+    {
+      requested: 'false',
+      vars: '"STEAM_SIGN_IN_ENABLED":"true","STEAM_SIGN_IN_\\u0045NABLED":"false"',
+    },
+    {
+      requested: 'true',
+      vars: '"STEAM_SIGN_IN_\\u0045NABLED":"false","STEAM_SIGN_IN_ENABLED":"true"',
+    },
+  ] as const)(
+    'rejects a normal and escaped semantic mode duplicate before release for requested $requested',
+    ({ requested, vars }) => {
+      const ambiguousConfig = `{"env":{"production":{"vars":{${vars}}}}}`
+
+      expect(() => assertProductionSteamSignInMode(ambiguousConfig, requested)).toThrow(
+        /Steam sign-in mode/i,
+      )
+    },
+  )
+
   test('accepts only the stable production Worker origin', () => {
     expect(assertProductionSmokeOrigin(`${productionOrigin}/`).origin).toBe(productionOrigin)
     expect(() =>

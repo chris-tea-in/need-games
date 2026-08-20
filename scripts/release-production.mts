@@ -4,7 +4,15 @@ import path from 'node:path'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 
-import { parseConfigFileTextToJson } from 'typescript'
+import {
+  isObjectLiteralExpression,
+  isPropertyAssignment,
+  isStringLiteralLike,
+  parseConfigFileTextToJson,
+  parseJsonText,
+  type ObjectLiteralExpression,
+  type PropertyAssignment,
+} from 'typescript'
 
 import { requiredProductionSecretNames } from './create-production-wrangler-config.mjs'
 import { assertProductionD1Verification, productionDatabaseName } from './verify-production-d1.mjs'
@@ -101,26 +109,73 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-export function assertProductionSteamSignInMode(
-  trackedConfig: string,
-  requestedMode: string | undefined,
-): SteamSignInMode {
-  const declarations = trackedConfig.match(/"STEAM_SIGN_IN_ENABLED"\s*:/g) ?? []
-  const parsedConfig = parseConfigFileTextToJson(trackedConfigPath, trackedConfig)
-  const environments = isRecord(parsedConfig.config) ? parsedConfig.config.env : undefined
-  const production = isRecord(environments) ? environments.production : undefined
-  const variables = isRecord(production) ? production.vars : undefined
-  const trackedMode = isRecord(variables) ? variables[steamSignInEnvironmentVariable] : undefined
+function requireUniqueJsonObjectProperty(
+  objectExpression: ObjectLiteralExpression,
+  propertyName: string,
+): PropertyAssignment {
+  const matches = objectExpression.properties.filter(
+    (property): property is PropertyAssignment =>
+      isPropertyAssignment(property) &&
+      isStringLiteralLike(property.name) &&
+      property.name.text === propertyName,
+  )
+  if (matches.length !== 1) {
+    throw new Error(
+      'Production release blocked: Steam sign-in mode configuration is missing or ambiguous.',
+    )
+  }
+  return matches[0]
+}
 
+function readSteamSignInModeFromJsonText(
+  fileName: string,
+  sourceText: string,
+  objectPath: readonly string[],
+): SteamSignInMode {
+  const parsedConfig = parseConfigFileTextToJson(fileName, sourceText)
+  const sourceFile = parseJsonText(fileName, sourceText)
+  const rootExpression = sourceFile.statements[0]?.expression
   if (
     parsedConfig.error !== undefined ||
-    declarations.length !== 1 ||
-    (trackedMode !== 'true' && trackedMode !== 'false')
+    sourceFile.statements.length !== 1 ||
+    !isObjectLiteralExpression(rootExpression)
+  ) {
+    throw new Error('Production release blocked: Steam sign-in mode configuration is invalid.')
+  }
+
+  let currentObject = rootExpression
+  for (const propertyName of objectPath) {
+    const property = requireUniqueJsonObjectProperty(currentObject, propertyName)
+    if (!isObjectLiteralExpression(property.initializer)) {
+      throw new Error('Production release blocked: Steam sign-in mode configuration is invalid.')
+    }
+    currentObject = property.initializer
+  }
+
+  const modeProperty = requireUniqueJsonObjectProperty(
+    currentObject,
+    steamSignInEnvironmentVariable,
+  )
+  if (
+    !isStringLiteralLike(modeProperty.initializer) ||
+    (modeProperty.initializer.text !== 'true' && modeProperty.initializer.text !== 'false')
   ) {
     throw new Error(
       'Production release blocked: tracked Steam sign-in mode must be exactly true or false.',
     )
   }
+  return modeProperty.initializer.text
+}
+
+export function assertProductionSteamSignInMode(
+  trackedConfig: string,
+  requestedMode: string | undefined,
+): SteamSignInMode {
+  const trackedMode = readSteamSignInModeFromJsonText(trackedConfigPath, trackedConfig, [
+    'env',
+    'production',
+    'vars',
+  ])
   if (requestedMode !== 'true' && requestedMode !== 'false') {
     throw new Error(
       'Production release blocked: explicitly confirm the tracked Steam sign-in mode as true or false.',
@@ -247,9 +302,11 @@ export async function assertProductionAssetBoundary({
   expectedDatabaseId,
   expectedSteamSignInMode,
 }: ProductionAssetBoundaryCandidate): Promise<ProductionAssetBoundaryResult> {
+  let outputConfigSource: string
   let outputConfig: GeneratedWorkerConfig
   try {
-    outputConfig = JSON.parse(await readFile(outputConfigPath, 'utf8')) as GeneratedWorkerConfig
+    outputConfigSource = await readFile(outputConfigPath, 'utf8')
+    outputConfig = JSON.parse(outputConfigSource) as GeneratedWorkerConfig
   } catch (error: unknown) {
     throw new Error('Production release blocked: generated Vite Worker config is invalid.', {
       cause: error,
@@ -278,10 +335,12 @@ export async function assertProductionAssetBoundary({
     throw new Error('Production release blocked: generated config has the wrong database ID.')
   }
 
-  if (
-    !isRecord(outputConfig.vars) ||
-    outputConfig.vars[steamSignInEnvironmentVariable] !== expectedSteamSignInMode
-  ) {
+  const generatedSteamSignInMode = readSteamSignInModeFromJsonText(
+    outputConfigPath,
+    outputConfigSource,
+    ['vars'],
+  )
+  if (generatedSteamSignInMode !== expectedSteamSignInMode) {
     throw new Error(
       'Production release blocked: generated config Steam sign-in mode does not match the reviewed mode.',
     )
