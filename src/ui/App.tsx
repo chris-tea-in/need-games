@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
 import {
   loadCatalog,
@@ -10,6 +10,10 @@ import { CatalogPage } from './catalog-page.js'
 import { type CatalogSort } from './catalog-state.js'
 import { GameDetailPage } from './game-detail-page.js'
 import { OfflineNotice } from './offline-notice.js'
+import { AuthControl } from './auth/auth-control.js'
+import { AuthFailureNotice } from './auth/auth-failure-notice.js'
+import { consumeAuthFailureMarker, currentReturnPath } from './auth/auth-return.js'
+import { useSession } from './auth/use-session.js'
 import { catalogSnapshot } from './generated/catalog-snapshot.js'
 
 type ScreenState<T> = { kind: 'loading' } | T
@@ -45,6 +49,7 @@ function ErrorState({ message }: { message: string }) {
 
 export function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname)
+  const [authFailureVisible, setAuthFailureVisible] = useState(false)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<CatalogSort>('title')
   const [catalogState, setCatalogState] = useState<ScreenState<CatalogLoadResult>>({
@@ -53,7 +58,25 @@ export function App() {
   const [detailState, setDetailState] = useState<ScreenState<GameDetailLoadResult>>({
     kind: 'loading',
   })
+  const session = useSession()
   const slug = currentGameSlug(pathname)
+  const dismissAuthFailure = useCallback(() => setAuthFailureVisible(false), [])
+  const authControl = (
+    <AuthControl
+      beginSignIn={session.beginSignIn}
+      currentPath={currentReturnPath()}
+      logout={session.logout}
+      logoutPending={session.logoutPending}
+      signInPending={session.signInPending}
+      state={session.state}
+    />
+  )
+
+  useEffect(() => {
+    if (consumeAuthFailureMarker()) {
+      setAuthFailureVisible(true)
+    }
+  }, [])
 
   useEffect(() => {
     const updatePathname = () => setPathname(window.location.pathname)
@@ -99,58 +122,67 @@ export function App() {
     document.title = slug === undefined ? 'Need Games catalog' : 'Need Games game detail'
   }, [slug])
 
+  let content: ReactNode
+
   if (slug !== undefined) {
     if (detailState.kind === 'loading') {
-      return <LoadingState />
-    }
-    if (detailState.kind === 'not-found') {
-      return (
+      content = <LoadingState />
+    } else if (detailState.kind === 'not-found') {
+      content = (
         <main className="not-found-page">
           <h1>Game not found</h1>
           <p>This game is not in the closed-beta catalog.</p>
           <a href="/">Back to catalog</a>
         </main>
       )
+    } else if (detailState.kind === 'error') {
+      content = <ErrorState message={detailState.message} />
+    } else {
+      content = (
+        <>
+          {detailState.source === 'snapshot' ? (
+            <OfflineNotice
+              datasetVersion={detailState.data.datasetVersion}
+              generatedAt={catalogSnapshot.generatedAt}
+            />
+          ) : null}
+          <div data-auth-background="true">
+            <GameDetailPage authControl={authControl} game={detailState.data.game} />
+          </div>
+        </>
+      )
     }
-    if (detailState.kind === 'error') {
-      return <ErrorState message={detailState.message} />
-    }
-
-    return (
+  } else if (catalogState.kind === 'loading') {
+    content = <LoadingState />
+  } else if (catalogState.kind === 'error') {
+    content = <ErrorState message={catalogState.message} />
+  } else {
+    content = (
       <>
-        {detailState.source === 'snapshot' ? (
+        {catalogState.source === 'snapshot' ? (
           <OfflineNotice
-            datasetVersion={detailState.data.datasetVersion}
+            datasetVersion={catalogState.data.datasetVersion}
             generatedAt={catalogSnapshot.generatedAt}
           />
         ) : null}
-        <GameDetailPage game={detailState.data.game} />
+        <div data-auth-background="true">
+          <CatalogPage
+            authControl={authControl}
+            catalog={catalogState.data}
+            query={query}
+            sort={sort}
+            onQueryChange={setQuery}
+            onSortChange={setSort}
+          />
+        </div>
       </>
     )
   }
 
-  if (catalogState.kind === 'loading') {
-    return <LoadingState />
-  }
-  if (catalogState.kind === 'error') {
-    return <ErrorState message={catalogState.message} />
-  }
-
   return (
     <>
-      {catalogState.source === 'snapshot' ? (
-        <OfflineNotice
-          datasetVersion={catalogState.data.datasetVersion}
-          generatedAt={catalogSnapshot.generatedAt}
-        />
-      ) : null}
-      <CatalogPage
-        catalog={catalogState.data}
-        query={query}
-        sort={sort}
-        onQueryChange={setQuery}
-        onSortChange={setSort}
-      />
+      {authFailureVisible ? <AuthFailureNotice onDismiss={dismissAuthFailure} /> : null}
+      {content}
     </>
   )
 }

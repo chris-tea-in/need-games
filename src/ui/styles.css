@@ -64,7 +64,8 @@ a:hover {
 
 a:focus-visible,
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+button:focus-visible {
   outline: 0.2rem solid var(--accent);
   outline-offset: 0.2rem;
 }
@@ -78,6 +79,36 @@ select:focus-visible {
   margin-inline: auto;
 }
 
+.auth-failure-notice {
+  position: fixed;
+  z-index: 20;
+  top: var(--space-3);
+  left: 50%;
+  max-width: min(calc(100% - 2rem), 32rem);
+  border: 1px solid color-mix(in srgb, var(--status-danger) 70%, var(--border-subtle));
+  border-radius: var(--ui-radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-3);
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.auth-failure-notice--fading {
+  animation: auth-failure-notice-fade 200ms ease-out forwards;
+}
+
+@keyframes auth-failure-notice-fade {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
 .catalog-page,
 .detail-page,
 .not-found-page {
@@ -88,6 +119,136 @@ select:focus-visible {
   display: grid;
   gap: var(--ui-space-4);
   max-width: 45rem;
+}
+
+.page-header-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.page-header-copy {
+  min-width: 0;
+}
+
+.auth-control {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.auth-trigger,
+.auth-steam-action,
+.auth-account-menu button {
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.45rem;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.85rem;
+}
+
+.auth-trigger:hover,
+.auth-steam-action:hover,
+.auth-account-menu button:hover {
+  border-color: var(--accent);
+}
+
+.auth-trigger:disabled,
+.auth-steam-action:disabled,
+.auth-account-menu button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.auth-trigger-authenticated {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.auth-verified-check {
+  display: inline-grid;
+  width: 1.2rem;
+  height: 1.2rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-mimma-macro);
+  color: var(--color-bg);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.auth-account-menu {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  min-width: 100%;
+  padding: var(--space-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--ui-radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+}
+
+.auth-account-menu button {
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.auth-modal-backdrop {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 68%);
+  padding: var(--space-4);
+}
+
+.auth-modal {
+  width: min(100%, 30rem);
+  padding: var(--space-4);
+}
+
+.auth-modal-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.auth-modal h2 {
+  margin: 0;
+}
+
+.auth-modal p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.auth-modal-close {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.8rem;
+  line-height: 1;
+  padding: 0.15rem 0.35rem;
+}
+
+.auth-steam-action {
+  width: 100%;
+  border-color: var(--color-accent-gold);
+  background: color-mix(in srgb, var(--color-accent-gold) 16%, var(--surface-raised));
+  color: var(--text-primary);
 }
 
 .page-header h1,
@@ -375,6 +536,30 @@ select {
 @media (min-width: 42rem) {
   .catalog-controls {
     grid-template-columns: minmax(0, 1fr) 15rem;
+  }
+}
+
+@media (max-width: 41.99rem) {
+  .page-header-top {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .auth-control {
+    align-self: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .auth-failure-notice--fading {
+    animation: none;
   }
 }
 
