@@ -229,7 +229,7 @@ export function AuthControl({
         <span aria-hidden="true" className="auth-verified-check">
           ✓
         </span>
-        Authenticated with Steam
+        {state.profile.lookupStatus === 'verified' ? state.profile.displayName : 'Steam account'}
       </button>
       {menuOpen ? (
         <div className="auth-account-menu" role="menu">

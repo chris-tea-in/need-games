@@ -17,6 +17,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 const authenticatedResponse = {
   authenticated: true,
   csrfToken: 'OqtRhl8vRN75EUQ3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
+  profile: { displayName: 'Steam User', lookupStatus: 'verified' as const },
   steamSignInEnabled: true,
 }
 

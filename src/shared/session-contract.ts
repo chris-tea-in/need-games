@@ -39,6 +39,10 @@ export interface AnonymousSessionResponse {
 export interface AuthenticatedSessionResponse {
   authenticated: true
   csrfToken: string
+  profile: {
+    displayName: string | null
+    lookupStatus: ProfileLookupStatus
+  }
   steamSignInEnabled: boolean
 }
 
@@ -71,9 +75,17 @@ export function isSessionResponse(value: unknown): value is SessionResponse {
     return hasExactKeys(value, ['authenticated', 'steamSignInEnabled'])
   }
 
+  const profile = value.profile
   return (
-    hasExactKeys(value, ['authenticated', 'csrfToken', 'steamSignInEnabled']) &&
+    hasExactKeys(value, ['authenticated', 'csrfToken', 'profile', 'steamSignInEnabled']) &&
     typeof value.csrfToken === 'string' &&
-    csrfTokenPattern.test(value.csrfToken)
+    csrfTokenPattern.test(value.csrfToken) &&
+    isRecord(profile) &&
+    hasExactKeys(profile, ['displayName', 'lookupStatus']) &&
+    (profile.displayName === null || typeof profile.displayName === 'string') &&
+    PROFILE_LOOKUP_STATUSES.some((status) => status === profile.lookupStatus) &&
+    (profile.lookupStatus === 'verified'
+      ? typeof profile.displayName === 'string' && profile.displayName.length > 0
+      : profile.displayName === null)
   )
 }

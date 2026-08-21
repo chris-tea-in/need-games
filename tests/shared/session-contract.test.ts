@@ -52,6 +52,7 @@ describe('shared Steam session contract', () => {
       {
         authenticated: true,
         csrfToken: 'OqtRhl8vRN75EUQ3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
+        profile: { displayName: 'Steam User', lookupStatus: 'verified' },
         steamSignInEnabled: true,
       },
     ]
@@ -61,7 +62,7 @@ describe('shared Steam session contract', () => {
     }
   })
 
-  test.each(['steamId', 'sessionToken', 'tokenHash', 'steamApiKey', 'displayName'])(
+  test.each(['steamId', 'sessionToken', 'tokenHash', 'steamApiKey'])(
     'rejects a session response that exposes %s',
     (sensitiveField) => {
       expect(
@@ -88,6 +89,32 @@ describe('shared Steam session contract', () => {
         authenticated: false,
         csrfToken: 'OqtRhl8vRN75EUQ3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
         steamSignInEnabled: true,
+      }),
+    ).toBe(false)
+  })
+
+  test('accepts only a bounded public profile for authenticated sessions', () => {
+    const authenticated = {
+      authenticated: true,
+      csrfToken: 'OqtRhl8vRN75EUQ3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
+      steamSignInEnabled: true,
+    }
+    expect(
+      isSessionResponse({
+        ...authenticated,
+        profile: { displayName: 'Steam User', lookupStatus: 'verified' },
+      }),
+    ).toBe(true)
+    expect(
+      isSessionResponse({
+        ...authenticated,
+        profile: { displayName: null, lookupStatus: 'unavailable' },
+      }),
+    ).toBe(true)
+    expect(
+      isSessionResponse({
+        ...authenticated,
+        profile: { displayName: 'stale name', lookupStatus: 'unavailable' },
       }),
     ).toBe(false)
   })
