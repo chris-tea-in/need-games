@@ -504,7 +504,7 @@ describe('real-router Steam authentication flow', () => {
 
   test('maps storage-unavailable session responses to a renderable unavailable UI state', async () => {
     activeEnvironment = environment(new MemoryD1(true))
-    client.setCookie(SESSION_COOKIE_NAME, 'unavailable-session-token')
+    client.setCookie(SESSION_COOKIE_NAME, 'U'.repeat(43))
     await act(async () => {
       root.render(<AuthHarness fetcher={client.fetcher} />)
       await Promise.resolve()

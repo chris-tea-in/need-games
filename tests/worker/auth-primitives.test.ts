@@ -89,13 +89,14 @@ describe('auth cookies', () => {
   })
 
   test('parses only the selected cookie and clears it with identical scope attributes', () => {
+    const sessionToken = 'S'.repeat(43)
     const request = new Request('https://need-games.test/', {
       headers: {
-        Cookie: `other=value; ${SESSION_COOKIE_NAME}=session-token; duplicate=ignored`,
+        Cookie: `other=value%20with%20octets; ${SESSION_COOKIE_NAME}=${sessionToken}; duplicate=ignored`,
       },
     })
 
-    expect(getCookie(request, SESSION_COOKIE_NAME)).toBe('session-token')
+    expect(getCookie(request, SESSION_COOKIE_NAME)).toBe(sessionToken)
     expect(getCookie(request, 'missing')).toBeNull()
 
     const clearedSession = clearSessionCookie()
@@ -110,16 +111,31 @@ describe('auth cookies', () => {
     }
   })
 
-  test('rejects duplicate or unsafe cookie values', () => {
+  test('rejects duplicate or malformed requested authentication cookies', () => {
     const duplicate = new Request('https://need-games.test/', {
       headers: { Cookie: `${SESSION_COOKIE_NAME}=one; ${SESSION_COOKIE_NAME}=two` },
     })
-    const unsafe = new Request('https://need-games.test/', {
-      headers: { Cookie: `${SESSION_COOKIE_NAME}=value%3Bother` },
+    const malformed = new Request('https://need-games.test/', {
+      headers: { Cookie: `${SESSION_COOKIE_NAME}="quoted"` },
+    })
+    const unrelatedMalformed = new Request('https://need-games.test/', {
+      headers: { Cookie: `unrelated="quoted"; ${SESSION_COOKIE_NAME}=${'T'.repeat(43)}` },
     })
 
     expect(getCookie(duplicate, SESSION_COOKIE_NAME)).toBeNull()
-    expect(getCookie(unsafe, SESSION_COOKIE_NAME)).toBeNull()
+    expect(getCookie(malformed, SESSION_COOKIE_NAME)).toBeNull()
+    expect(getCookie(unrelatedMalformed, SESSION_COOKIE_NAME)).toBe('T'.repeat(43))
     expect(() => serializeSessionCookie('bad;token')).toThrow(/cookie/i)
+  })
+
+  test('accepts RFC 6265 cookie-octets in unrelated cookies', () => {
+    const rfcCookieValue = "!#$%&'()*+-./:<=>?@[\\\\]^_" + String.fromCharCode(0x60) + '{|}~'
+    const request = new Request('https://need-games.test/', {
+      headers: {
+        Cookie: `unrelated=${rfcCookieValue}; ${SESSION_COOKIE_NAME}=${'U'.repeat(43)}`,
+      },
+    })
+
+    expect(getCookie(request, SESSION_COOKIE_NAME)).toBe('U'.repeat(43))
   })
 })

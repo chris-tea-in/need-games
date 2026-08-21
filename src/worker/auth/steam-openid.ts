@@ -398,7 +398,7 @@ async function confirmWithSteam(
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
-      redirect: 'error',
+      redirect: 'manual',
     })
   } catch {
     throw new SteamOpenIdValidationError(

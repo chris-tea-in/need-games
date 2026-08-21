@@ -139,6 +139,7 @@ describe('Steam OpenID assertion validation', () => {
     const fetcher = vi.fn<typeof fetch>((_input, init) => {
       expect(_input).toBe(specificationEndpoint)
       expect(init?.method).toBe('POST')
+      expect(init?.redirect).toBe('manual')
       expect(init?.headers).toMatchObject({
         'Content-Type': 'application/x-www-form-urlencoded',
       })
@@ -280,6 +281,18 @@ describe('Steam OpenID assertion validation', () => {
     )
 
     await expect(validateSteamAssertion(assertion(), validOptions(fetcher))).rejects.toThrow()
+  })
+
+  test('rejects a redirect response from the Steam confirmation endpoint', async () => {
+    const fetcher = vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        new Response(null, { status: 302, headers: { Location: 'https://example.test' } }),
+      ),
+    )
+
+    await expect(validateSteamAssertion(assertion(), validOptions(fetcher))).rejects.toMatchObject({
+      code: 'steam_confirmation_failed',
+    })
   })
 
   test('rejects a present incorrect confirmation namespace but accepts an absent namespace', async () => {

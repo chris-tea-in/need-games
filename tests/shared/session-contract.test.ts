@@ -18,6 +18,7 @@ describe('shared Steam session contract', () => {
     expect(AUTH_RESULT_CODES).toEqual([
       'sign_in_disabled',
       'authentication_failed',
+      'steam_confirmation_failed',
       'invalid_login_transaction',
       'invalid_steam_assertion',
       'expired_login_transaction',

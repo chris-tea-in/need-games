@@ -434,6 +434,41 @@ describe('Steam authentication routes', () => {
     })
   })
 
+  test('preserves the confirmation failure code without exposing runtime details', async () => {
+    const now = 1_800_021_500
+    const loginToken = 'Q'.repeat(43)
+    const tokenHash = await hashToken(loginToken)
+    await createLoginTransaction(env.NEED_GAMES_DB, {
+      tokenHash,
+      returnPath: '/games/apex-legends',
+      createdAt: now,
+    })
+
+    const callback = await callbackWithState(loginToken)
+    const events: Array<{ code?: string; reason?: string }> = []
+    const response = await routeAuthRequest(
+      new Request(callback, {
+        headers: { Cookie: `${LOGIN_TRANSACTION_COOKIE_NAME}=${loginToken}` },
+      }),
+      authEnv(),
+      new URL(callback),
+      {
+        now: () => now,
+        validateAssertion: vi.fn(() =>
+          Promise.reject(
+            Object.assign(new Error('runtime details'), { code: 'steam_confirmation_failed' }),
+          ),
+        ),
+        logger: (event) => events.push(event),
+      },
+    )
+
+    expect(response?.status).toBe(302)
+    expect(response?.headers.get('location')).toBe(`${origin}/games/apex-legends?auth=failed`)
+    expect(events.at(-1)?.code).toBe('steam_confirmation_failed')
+    expect(JSON.stringify(await response?.text())).not.toContain('runtime details')
+  })
+
   test('falls back to the catalog root when a persisted return path is tampered', async () => {
     const now = 1_800_022_000
     const loginToken = 'F'.repeat(43)

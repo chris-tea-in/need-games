@@ -262,7 +262,7 @@ async function runAttempt(options: SteamProfileLookupOptions, timeoutMs: number)
       response = await fetcher(url.toString(), {
         method: 'GET',
         headers: { Accept: 'application/json' },
-        redirect: 'error',
+        redirect: 'manual',
         signal: controller.signal,
       })
     } catch {

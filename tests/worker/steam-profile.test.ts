@@ -45,6 +45,7 @@ describe('Steam profile synchronization', () => {
       expect(url.searchParams.get('key')).toBe(apiKey)
       expect(url.searchParams.get('steamids')).toBe(steamId)
       expect(init?.method).toBe('GET')
+      expect(init?.redirect).toBe('manual')
       expect(init?.signal).toBeInstanceOf(AbortSignal)
       return Promise.resolve(profileResponse([player()]))
     })
@@ -127,6 +128,22 @@ describe('Steam profile synchronization', () => {
     })
     expect(fetcher).toHaveBeenCalledTimes(2)
     expect(sleep).toHaveBeenCalledWith(10)
+  })
+
+  test('treats a redirect response as an unavailable profile', async () => {
+    const fetcher = vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        new Response(null, { status: 302, headers: { Location: 'https://example.test' } }),
+      ),
+    )
+
+    await expect(
+      synchronizeSteamProfile({ steamId, apiKey, fetcher, maxAttempts: 1 }),
+    ).resolves.toMatchObject({
+      status: 'unavailable',
+      attempts: 1,
+      reason: 'http_error',
+    })
   })
 
   test('caps an injected retry budget at two attempts', async () => {

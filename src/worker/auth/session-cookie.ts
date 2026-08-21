@@ -5,7 +5,10 @@ export const SESSION_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 export const LOGIN_TRANSACTION_COOKIE_MAX_AGE_SECONDS = 10 * 60
 
 const cookieNamePattern = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/
-const cookieValuePattern = /^[A-Za-z0-9_-]+$/
+const cookieOctetPattern = /^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$/
+const serializedValuePattern = /^[A-Za-z0-9_-]+$/
+const authenticationTokenPattern = /^[A-Za-z0-9_-]{43}$/
+const authenticationCookieNames = new Set([SESSION_COOKIE_NAME, LOGIN_TRANSACTION_COOKIE_NAME])
 
 function assertCookieName(name: string): void {
   if (!cookieNamePattern.test(name)) {
@@ -14,7 +17,7 @@ function assertCookieName(name: string): void {
 }
 
 function assertCookieValue(value: string): void {
-  if (!cookieValuePattern.test(value)) {
+  if (!serializedValuePattern.test(value)) {
     throw new TypeError('Cookie value contains an invalid character.')
   }
 }
@@ -67,7 +70,22 @@ export function clearLoginTransactionCookie(): string {
   return serializeClearedHostCookie(LOGIN_TRANSACTION_COOKIE_NAME)
 }
 
-/** Parse an RFC 6265 Cookie header, rejecting ambiguous or malformed values. */
+function parseCookiePair(part: string): { name: string; value: string } | null {
+  const separator = part.indexOf('=')
+  if (separator <= 0) {
+    return null
+  }
+
+  const name = part.slice(0, separator).trim()
+  const value = part.slice(separator + 1).trim()
+  if (!cookieNamePattern.test(name) || !cookieOctetPattern.test(value)) {
+    return null
+  }
+
+  return { name, value }
+}
+
+/** Parse an RFC 6265 Cookie header, ignoring malformed unrelated pairs. */
 export function parseCookieHeader(header: string | null): ReadonlyMap<string, string> | null {
   if (header === null || header.trim() === '') {
     return new Map()
@@ -75,18 +93,15 @@ export function parseCookieHeader(header: string | null): ReadonlyMap<string, st
 
   const cookies = new Map<string, string>()
   for (const part of header.split(';')) {
-    const separator = part.indexOf('=')
-    if (separator <= 0) {
+    const pair = parseCookiePair(part)
+    if (pair === null) {
+      continue
+    }
+    if (cookies.has(pair.name)) {
       return null
     }
 
-    const name = part.slice(0, separator).trim()
-    const value = part.slice(separator + 1).trim()
-    if (!cookieNamePattern.test(name) || !cookieValuePattern.test(value) || cookies.has(name)) {
-      return null
-    }
-
-    cookies.set(name, value)
+    cookies.set(pair.name, pair.value)
   }
 
   return cookies
@@ -96,8 +111,37 @@ export const parseCookies = parseCookieHeader
 
 export function getCookie(request: Request, name: string): string | null {
   assertCookieName(name)
-  const cookies = parseCookieHeader(request.headers.get('Cookie'))
-  return cookies?.get(name) ?? null
+  const header = request.headers.get('Cookie')
+  if (header === null || header.trim() === '') {
+    return null
+  }
+
+  let requestedCount = 0
+  for (const part of header.split(';')) {
+    const separator = part.indexOf('=')
+    const candidateName = (separator <= 0 ? part : part.slice(0, separator)).trim()
+    if (candidateName !== name) {
+      continue
+    }
+
+    requestedCount += 1
+    if (parseCookiePair(part) === null) {
+      return null
+    }
+  }
+  if (requestedCount > 1) {
+    return null
+  }
+
+  const value = parseCookieHeader(header)?.get(name) ?? null
+  if (
+    value !== null &&
+    authenticationCookieNames.has(name) &&
+    !authenticationTokenPattern.test(value)
+  ) {
+    return null
+  }
+  return value
 }
 
 export const readCookie = getCookie
