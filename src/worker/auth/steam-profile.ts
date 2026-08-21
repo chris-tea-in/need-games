@@ -386,10 +386,3 @@ export async function synchronizeSteamProfile(
 export const lookupSteamProfile = synchronizeSteamProfile
 export const synchronizeSteamUsername = synchronizeSteamProfile
 export const fetchSteamProfile = synchronizeSteamProfile
-
-/** Format an error without allowing a secret-bearing exception to escape. */
-export function redactSteamProfileError(error: unknown, apiKey: string): string {
-  const raw = error instanceof Error ? error.message : String(error)
-  const redacted = apiKey.length > 0 ? raw.split(apiKey).join('[REDACTED]') : raw
-  return `Steam profile lookup failed: ${redacted}`
-}

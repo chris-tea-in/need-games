@@ -16,6 +16,7 @@ const MINIMUM_ASSERTION_FIELD_COUNT = 10
 const DEFAULT_MAX_VALUE_LENGTH = 2048
 const DEFAULT_NONCE_MAX_AGE_SECONDS = 10 * 60
 const DEFAULT_NONCE_FUTURE_SKEW_SECONDS = 60
+const STEAM_CONFIRMATION_TIMEOUT_MS = 5_000
 const MAX_CONFIRMATION_BODY_LENGTH = 16 * 1024
 const steamIdPattern = /^[0-9]{17}$/
 const noncePattern = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})Z([^\s]+)$/
@@ -392,59 +393,69 @@ async function confirmWithSteam(
   }
   body.set('openid.mode', 'check_authentication')
 
-  let response: Response
+  const controller = new AbortController()
+  const timeoutHandle = globalThis.setTimeout(
+    () => controller.abort(),
+    STEAM_CONFIRMATION_TIMEOUT_MS,
+  )
   try {
-    response = await fetcher(STEAM_OPENID_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
-      redirect: 'manual',
+    let response: Response
+    try {
+      response = await fetcher(STEAM_OPENID_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+        redirect: 'manual',
+        signal: controller.signal,
+      })
+    } catch {
+      throw new SteamOpenIdValidationError(
+        'steam_confirmation_failed',
+        'Steam could not confirm the assertion.',
+      )
+    }
+
+    if (!response.ok) {
+      throw new SteamOpenIdValidationError(
+        'steam_confirmation_failed',
+        'Steam could not confirm the assertion.',
+      )
+    }
+
+    let confirmation: string
+    try {
+      confirmation = await response.text()
+    } catch {
+      throw new SteamOpenIdValidationError(
+        'steam_confirmation_failed',
+        'Steam could not confirm the assertion.',
+      )
+    }
+    if (confirmation.length > MAX_CONFIRMATION_BODY_LENGTH) {
+      throw new SteamOpenIdValidationError(
+        'steam_confirmation_failed',
+        'Steam could not confirm the assertion.',
+      )
+    }
+
+    const lines = confirmation.split(/\r?\n/)
+    const namespaces = lines.flatMap((line) => {
+      const match = /^ns:(.*)$/.exec(line)
+      return match === null ? [] : [match[1]]
     })
-  } catch {
-    throw new SteamOpenIdValidationError(
-      'steam_confirmation_failed',
-      'Steam could not confirm the assertion.',
-    )
-  }
-
-  if (!response.ok) {
-    throw new SteamOpenIdValidationError(
-      'steam_confirmation_failed',
-      'Steam could not confirm the assertion.',
-    )
-  }
-
-  let confirmation: string
-  try {
-    confirmation = await response.text()
-  } catch {
-    throw new SteamOpenIdValidationError(
-      'steam_confirmation_failed',
-      'Steam could not confirm the assertion.',
-    )
-  }
-  if (confirmation.length > MAX_CONFIRMATION_BODY_LENGTH) {
-    throw new SteamOpenIdValidationError(
-      'steam_confirmation_failed',
-      'Steam could not confirm the assertion.',
-    )
-  }
-
-  const lines = confirmation.split(/\r?\n/)
-  const namespaces = lines.flatMap((line) => {
-    const match = /^ns:(.*)$/.exec(line)
-    return match === null ? [] : [match[1]]
-  })
-  const valid = lines.some((line) => /^is_valid\s*:\s*true\s*$/.test(line))
-  if (
-    !valid ||
-    namespaces.length > 1 ||
-    (namespaces.length === 1 && namespaces[0] !== STEAM_OPENID_NAMESPACE)
-  ) {
-    throw new SteamOpenIdValidationError(
-      'steam_confirmation_failed',
-      'Steam could not confirm the assertion.',
-    )
+    const valid = lines.some((line) => /^is_valid\s*:\s*true\s*$/.test(line))
+    if (
+      !valid ||
+      namespaces.length > 1 ||
+      (namespaces.length === 1 && namespaces[0] !== STEAM_OPENID_NAMESPACE)
+    ) {
+      throw new SteamOpenIdValidationError(
+        'steam_confirmation_failed',
+        'Steam could not confirm the assertion.',
+      )
+    }
+  } finally {
+    globalThis.clearTimeout(timeoutHandle)
   }
 }
 

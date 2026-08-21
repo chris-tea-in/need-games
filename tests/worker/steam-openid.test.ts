@@ -295,6 +295,52 @@ describe('Steam OpenID assertion validation', () => {
     })
   })
 
+  test('aborts confirmation when Steam does not finish its response body', async () => {
+    vi.useFakeTimers()
+    try {
+      const fetcher = vi.fn<typeof fetch>((_input, init) =>
+        Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start(controller) {
+                init?.signal?.addEventListener(
+                  'abort',
+                  () => controller.error(new DOMException('Aborted', 'AbortError')),
+                  { once: true },
+                )
+              },
+            }),
+            { status: 200 },
+          ),
+        ),
+      )
+
+      let outcome: 'pending' | 'resolved' | 'rejected' = 'pending'
+      const validation = validateSteamAssertion(assertion(), validOptions(fetcher)).then(
+        (result) => {
+          outcome = 'resolved'
+          return result
+        },
+        (error: unknown) => {
+          outcome = 'rejected'
+          return error
+        },
+      )
+
+      await vi.advanceTimersByTimeAsync(4_999)
+      expect(outcome).toBe('pending')
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(outcome).toBe('rejected')
+
+      await expect(validation).resolves.toMatchObject({
+        code: 'steam_confirmation_failed',
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  }, 1_000)
+
   test('rejects a present incorrect confirmation namespace but accepts an absent namespace', async () => {
     const incorrectNamespace = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response('ns:https://specs.openid.net/auth/2.0\nis_valid:true\n')),
