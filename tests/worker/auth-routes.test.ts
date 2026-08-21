@@ -370,6 +370,59 @@ describe('Steam authentication routes', () => {
     expect(logout?.headers.get('set-cookie')).toContain('Max-Age=0')
   })
 
+  test('logs the final Steam HTTP status without exposing profile request details', async () => {
+    const now = 1_800_010_250
+    const loginToken = 'L'.repeat(43)
+    await createLoginTransaction(env.NEED_GAMES_DB, {
+      tokenHash: await hashToken(loginToken),
+      returnPath: '/games/apex-legends',
+      createdAt: now,
+    })
+    const callback = await callbackWithState(loginToken)
+    const events: unknown[] = []
+    const response = await routeAuthRequest(
+      new Request(callback, {
+        headers: { Cookie: `${LOGIN_TRANSACTION_COOKIE_NAME}=${loginToken}` },
+      }),
+      authEnv(),
+      new URL(callback),
+      {
+        now: () => now,
+        generateToken: () => 'M'.repeat(43),
+        validateAssertion: vi.fn(() =>
+          Promise.resolve({
+            steamId: '76561198000000226',
+            responseNonce: 'nonce-route-http-status',
+            returnTo: callback,
+          }),
+        ),
+        fetcher: vi.fn<typeof fetch>().mockResolvedValue(
+          new Response('Steam response body must not be logged', {
+            status: 403,
+            headers: { 'x-steam-private': 'Steam response header must not be logged' },
+          }),
+        ),
+        logger: (event) => events.push(event),
+      },
+    )
+
+    expect(response?.status).toBe(302)
+    expect(response?.headers.get('location')).toBe(`${origin}/games/apex-legends`)
+    expect(events).toContainEqual({
+      event: 'profile_refresh',
+      profileStatus: 'unavailable',
+      attempts: 2,
+      reason: 'http_error',
+      httpStatus: 403,
+    })
+    const serializedEvents = JSON.stringify(events)
+    expect(serializedEvents).not.toContain('test-steam-key')
+    expect(serializedEvents).not.toContain('76561198000000226')
+    expect(serializedEvents).not.toContain('api.steampowered.com')
+    expect(serializedEvents).not.toContain('Steam response body must not be logged')
+    expect(serializedEvents).not.toContain('Steam response header must not be logged')
+  })
+
   test('strips a crafted failure marker from a successful return while preserving URL state', async () => {
     const now = 1_800_010_500
     const loginToken = 'J'.repeat(43)

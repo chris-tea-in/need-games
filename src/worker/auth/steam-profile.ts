@@ -26,6 +26,8 @@ export type SteamProfileLookupFailureReason =
 export interface SteamProfileLookupEvent {
   message: string
   reason: SteamProfileLookupFailureReason
+  /** Present only when Steam returned a non-success HTTP response. */
+  httpStatus?: number
   attempt: number
   attempts: number
 }
@@ -78,17 +80,21 @@ export interface SteamProfileUnavailableResult {
   attempts: number
   shouldWrite: true
   reason: SteamProfileLookupFailureReason
+  /** Present only when the final failed attempt received an HTTP response. */
+  httpStatus?: number
 }
 
 export type SteamProfileLookupResult = SteamProfileVerifiedResult | SteamProfileUnavailableResult
 
 class ProfileAttemptError extends Error {
   readonly reason: SteamProfileLookupFailureReason
+  readonly httpStatus?: number
 
-  constructor(reason: SteamProfileLookupFailureReason) {
+  constructor(reason: SteamProfileLookupFailureReason, httpStatus?: number) {
     super(reason)
     this.name = 'ProfileAttemptError'
     this.reason = reason
+    this.httpStatus = httpStatus
   }
 }
 
@@ -162,6 +168,7 @@ function unavailable(
   reason: SteamProfileLookupFailureReason,
   attempts: number,
   options: SteamProfileLookupOptions,
+  httpStatus?: number,
 ): SteamProfileUnavailableResult {
   const checkedAt = epochSeconds(options.now)
   return {
@@ -171,12 +178,14 @@ function unavailable(
     attempts,
     shouldWrite: true,
     reason,
+    ...(httpStatus === undefined ? {} : { httpStatus }),
   }
 }
 
 function reportFailure(
   logger: SteamProfileLookupLogger | undefined,
   reason: SteamProfileLookupFailureReason,
+  httpStatus: number | undefined,
   attempt: number,
   attempts: number,
 ): void {
@@ -188,6 +197,7 @@ function reportFailure(
   const event: SteamProfileLookupEvent = {
     message: `Steam profile lookup unavailable (${reason}).`,
     reason,
+    ...(httpStatus === undefined ? {} : { httpStatus }),
     attempt,
     attempts,
   }
@@ -270,10 +280,10 @@ async function runAttempt(options: SteamProfileLookupOptions, timeoutMs: number)
     }
 
     if (response.status === 429) {
-      throw new ProfileAttemptError('rate_limited')
+      throw new ProfileAttemptError('rate_limited', response.status)
     }
     if (!response.ok) {
-      throw new ProfileAttemptError('http_error')
+      throw new ProfileAttemptError('http_error', response.status)
     }
 
     let body: string
@@ -353,7 +363,8 @@ export async function synchronizeSteamProfile(
       }
     } catch (error) {
       const reason = error instanceof ProfileAttemptError ? error.reason : 'network_error'
-      reportFailure(options.logger ?? options.onError, reason, attempt, attemptsAllowed)
+      const httpStatus = error instanceof ProfileAttemptError ? error.httpStatus : undefined
+      reportFailure(options.logger ?? options.onError, reason, httpStatus, attempt, attemptsAllowed)
 
       if (attempt < attemptsAllowed && retryDelayMs > 0) {
         try {
@@ -363,7 +374,7 @@ export async function synchronizeSteamProfile(
         }
       }
       if (attempt === attemptsAllowed) {
-        return unavailable(reason, attempt, { ...options, now: checkedAt })
+        return unavailable(reason, attempt, { ...options, now: checkedAt }, httpStatus)
       }
     }
   }

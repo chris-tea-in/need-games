@@ -75,6 +75,7 @@ export interface AuthEvent {
     | 'identity_unavailable'
   code?: AuthResultCode
   profileStatus?: ProfileLookupStatus
+  httpStatus?: number
   attempts?: number
   success?: boolean
   reason?: string
@@ -515,6 +516,9 @@ async function callbackSteamAuthentication(
       profileStatus: profileResult.status,
       attempts: profileResult.attempts,
       reason: profileResult.status === 'unavailable' ? profileResult.reason : undefined,
+      ...(profileResult.status === 'unavailable' && profileResult.httpStatus !== undefined
+        ? { httpStatus: profileResult.httpStatus }
+        : {}),
     })
     const updatedUser = await synchronizeUserProfile(env.NEED_GAMES_DB, user.id, {
       status: profileResult.status,

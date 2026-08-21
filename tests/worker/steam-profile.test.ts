@@ -146,6 +146,45 @@ describe('Steam profile synchronization', () => {
     })
   })
 
+  test.each([
+    ['ordinary HTTP failure', 503, 'http_error'],
+    ['rate limit', 429, 'rate_limited'],
+  ])(
+    'retains the safe %s status in unavailable results and events',
+    async (_label, status, reason) => {
+      const events: SteamProfileLookupEvent[] = []
+      const fetcher = vi.fn<typeof fetch>(() =>
+        Promise.resolve(new Response('Steam response body must not be logged', { status })),
+      )
+
+      await expect(
+        synchronizeSteamProfile({
+          steamId,
+          apiKey,
+          fetcher,
+          maxAttempts: 1,
+          logger: (event) => events.push(event),
+        }),
+      ).resolves.toMatchObject({
+        status: 'unavailable',
+        reason,
+        httpStatus: status,
+      })
+      expect(events).toEqual([
+        {
+          message: `Steam profile lookup unavailable (${reason}).`,
+          reason,
+          httpStatus: status,
+          attempt: 1,
+          attempts: 1,
+        },
+      ])
+      expect(JSON.stringify(events)).not.toContain(apiKey)
+      expect(JSON.stringify(events)).not.toContain(steamId)
+      expect(JSON.stringify(events)).not.toContain('Steam response body must not be logged')
+    },
+  )
+
   test('caps an injected retry budget at two attempts', async () => {
     const fetcher = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response('unavailable', { status: 429 })),
