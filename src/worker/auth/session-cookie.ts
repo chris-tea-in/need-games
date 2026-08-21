@@ -70,14 +70,15 @@ export function clearLoginTransactionCookie(): string {
   return serializeClearedHostCookie(LOGIN_TRANSACTION_COOKIE_NAME)
 }
 
-function parseCookiePair(part: string): { name: string; value: string } | null {
-  const separator = part.indexOf('=')
+function parseCookiePair(part: string, index: number): { name: string; value: string } | null {
+  const pair = index > 0 && part.startsWith(' ') ? part.slice(1) : part
+  const separator = pair.indexOf('=')
   if (separator <= 0) {
     return null
   }
 
-  const name = part.slice(0, separator).trim()
-  const value = part.slice(separator + 1).trim()
+  const name = pair.slice(0, separator)
+  const value = pair.slice(separator + 1)
   if (!cookieNamePattern.test(name) || !cookieOctetPattern.test(value)) {
     return null
   }
@@ -92,8 +93,8 @@ export function parseCookieHeader(header: string | null): ReadonlyMap<string, st
   }
 
   const cookies = new Map<string, string>()
-  for (const part of header.split(';')) {
-    const pair = parseCookiePair(part)
+  for (const [index, part] of header.split(';').entries()) {
+    const pair = parseCookiePair(part, index)
     if (pair === null) {
       continue
     }
@@ -117,15 +118,17 @@ export function getCookie(request: Request, name: string): string | null {
   }
 
   let requestedCount = 0
-  for (const part of header.split(';')) {
-    const separator = part.indexOf('=')
-    const candidateName = (separator <= 0 ? part : part.slice(0, separator)).trim()
-    if (candidateName !== name) {
+  for (const [index, part] of header.split(';').entries()) {
+    const pair = index > 0 && part.startsWith(' ') ? part.slice(1) : part
+    const separator = pair.indexOf('=')
+    const candidateName = separator <= 0 ? pair : pair.slice(0, separator)
+    const normalizedCandidateName = candidateName.replace(/^[ \t]+|[ \t]+$/g, '')
+    if (candidateName !== name && normalizedCandidateName !== name) {
       continue
     }
 
     requestedCount += 1
-    if (parseCookiePair(part) === null) {
+    if (parseCookiePair(part, index) === null) {
       return null
     }
   }

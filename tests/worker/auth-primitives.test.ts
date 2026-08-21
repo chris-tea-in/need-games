@@ -128,8 +128,21 @@ describe('auth cookies', () => {
     expect(() => serializeSessionCookie('bad;token')).toThrow(/cookie/i)
   })
 
+  test('rejects requested cookies with whitespace normalized around the pair syntax', () => {
+    const token = 'W'.repeat(43)
+    const whitespaceBeforeSeparator = new Request('https://need-games.test/', {
+      headers: { Cookie: `${SESSION_COOKIE_NAME} =${token}` },
+    })
+    const whitespaceAfterValue = new Request('https://need-games.test/', {
+      headers: { Cookie: `${SESSION_COOKIE_NAME}=${token} ; unrelated=value` },
+    })
+
+    expect(getCookie(whitespaceBeforeSeparator, SESSION_COOKIE_NAME)).toBeNull()
+    expect(getCookie(whitespaceAfterValue, SESSION_COOKIE_NAME)).toBeNull()
+  })
+
   test('accepts RFC 6265 cookie-octets in unrelated cookies', () => {
-    const rfcCookieValue = "!#$%&'()*+-./:<=>?@[\\\\]^_" + String.fromCharCode(0x60) + '{|}~'
+    const rfcCookieValue = "!#$%&'()*+-./:<=>?@[]^_" + String.fromCharCode(0x60) + '{|}~'
     const request = new Request('https://need-games.test/', {
       headers: {
         Cookie: `unrelated=${rfcCookieValue}; ${SESSION_COOKIE_NAME}=${'U'.repeat(43)}`,
