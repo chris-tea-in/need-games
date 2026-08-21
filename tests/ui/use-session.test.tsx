@@ -116,6 +116,7 @@ describe('useSession', () => {
     vi.mocked(fetchSession).mockResolvedValue({
       authenticated: true,
       csrfToken,
+      profile: { displayName: 'Steam User', lookupStatus: 'verified' },
       steamSignInEnabled: false,
     })
     await act(() => {
@@ -126,6 +127,7 @@ describe('useSession', () => {
     expect(session.state).toEqual({
       kind: 'authenticated',
       csrfToken,
+      profile: { displayName: 'Steam User', lookupStatus: 'verified' },
       steamSignInEnabled: false,
     })
   })
@@ -149,6 +151,7 @@ describe('useSession', () => {
     vi.mocked(fetchSession).mockResolvedValue({
       authenticated: true,
       csrfToken,
+      profile: { displayName: 'Steam User', lookupStatus: 'verified' },
       steamSignInEnabled: true,
     })
     vi.mocked(logoutSession).mockResolvedValue(undefined)
@@ -166,6 +169,7 @@ describe('useSession', () => {
     expect(controller?.state).toEqual({
       kind: 'authenticated',
       csrfToken,
+      profile: { displayName: 'Steam User', lookupStatus: 'verified' },
       steamSignInEnabled: true,
     })
 
@@ -197,6 +201,7 @@ describe('useSession', () => {
     vi.mocked(fetchSession).mockResolvedValue({
       authenticated: true,
       csrfToken,
+      profile: { displayName: 'Steam User', lookupStatus: 'verified' },
       steamSignInEnabled: true,
     })
     vi.mocked(logoutSession).mockReturnValue(pendingLogout)
@@ -282,6 +287,7 @@ describe('useSession', () => {
     vi.mocked(fetchSession).mockResolvedValue({
       authenticated: true,
       csrfToken,
+      profile: { displayName: 'Steam User', lookupStatus: 'verified' },
       steamSignInEnabled: true,
     })
     vi.mocked(logoutSession).mockRejectedValue(new Error('logout failed'))
@@ -299,6 +305,7 @@ describe('useSession', () => {
     expect(controller?.state).toEqual({
       kind: 'authenticated',
       csrfToken,
+      profile: { displayName: 'Steam User', lookupStatus: 'verified' },
       steamSignInEnabled: true,
     })
     expect(controller?.logoutPending).toBe(false)

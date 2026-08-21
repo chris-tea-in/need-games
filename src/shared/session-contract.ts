@@ -16,6 +16,8 @@ export const PROFILE_LOOKUP_STATUSES = ['verified', 'unavailable'] as const
 
 export type ProfileLookupStatus = (typeof PROFILE_LOOKUP_STATUSES)[number]
 
+export const STEAM_DISPLAY_NAME_MAX_LENGTH = 64
+
 export const AUTH_FAILURE_QUERY_PARAMETER = 'auth' as const
 export const AUTH_FAILURE_QUERY_VALUE = 'failed' as const
 
@@ -39,6 +41,10 @@ export interface AnonymousSessionResponse {
 export interface AuthenticatedSessionResponse {
   authenticated: true
   csrfToken: string
+  profile: {
+    displayName: string | null
+    lookupStatus: ProfileLookupStatus
+  }
   steamSignInEnabled: boolean
 }
 
@@ -58,6 +64,41 @@ function hasExactKeys(value: Record<string, unknown>, expectedKeys: readonly str
   )
 }
 
+function hasUnpairedSurrogate(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index)
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt(index + 1)
+      if (next < 0xdc00 || next > 0xdfff) {
+        return true
+      }
+      index += 1
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return true
+    }
+  }
+  return false
+}
+
+/** Return a trimmed, bounded Steam display name or null when it is unsafe to expose. */
+export function validateSteamDisplayName(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const trimmed = value.trim()
+  if (
+    trimmed.length === 0 ||
+    hasUnpairedSurrogate(trimmed) ||
+    /\p{Cc}/u.test(trimmed) ||
+    Array.from(trimmed).length > STEAM_DISPLAY_NAME_MAX_LENGTH
+  ) {
+    return null
+  }
+
+  return trimmed
+}
+
 export function isSessionResponse(value: unknown): value is SessionResponse {
   if (
     !isRecord(value) ||
@@ -71,9 +112,17 @@ export function isSessionResponse(value: unknown): value is SessionResponse {
     return hasExactKeys(value, ['authenticated', 'steamSignInEnabled'])
   }
 
+  const profile = value.profile
   return (
-    hasExactKeys(value, ['authenticated', 'csrfToken', 'steamSignInEnabled']) &&
+    hasExactKeys(value, ['authenticated', 'csrfToken', 'profile', 'steamSignInEnabled']) &&
     typeof value.csrfToken === 'string' &&
-    csrfTokenPattern.test(value.csrfToken)
+    csrfTokenPattern.test(value.csrfToken) &&
+    isRecord(profile) &&
+    hasExactKeys(profile, ['displayName', 'lookupStatus']) &&
+    (profile.displayName === null || typeof profile.displayName === 'string') &&
+    PROFILE_LOOKUP_STATUSES.some((status) => status === profile.lookupStatus) &&
+    (profile.lookupStatus === 'verified'
+      ? validateSteamDisplayName(profile.displayName) === profile.displayName
+      : profile.displayName === null)
   )
 }

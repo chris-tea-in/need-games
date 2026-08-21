@@ -163,7 +163,13 @@ describe('repository automation contract', () => {
     )
     expect(contributing).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false')
     expect(contributing).toContain('contains no `.dev.vars`, `.env`, Worker output')
-    expect(contributing).toMatch(/exactly `0001_schema\.sql` and\s+`0002_seed_beta_catalog\.sql`/)
+    expect(contributing).toMatch(
+      /exactly `0001_schema\.sql`,\s+`0002_seed_beta_catalog\.sql`, `0003_authoritative_mimma_seed\.sql`, and\s+`0004_identity_sessions\.sql`/,
+    )
+    expect(contributing).toContain(
+      'wrangler d1 migrations apply need-games-production --remote --config .wrangler.production.jsonc',
+    )
+    expect(contributing).toMatch(/The release command does not apply\s+migrations/)
     expect(contributing).toMatch(
       /first production deployment has no recoverable\s+pre-deploy baseline/i,
     )

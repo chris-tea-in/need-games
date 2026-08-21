@@ -552,7 +552,7 @@ describe('real-router Steam authentication flow', () => {
     })
     await settle()
     const account = container.querySelector('button') as HTMLButtonElement
-    expect(account.textContent).toContain('Authenticated with Steam')
+    expect(account.textContent).toContain('Steam account')
     await act(async () => {
       account.click()
       await Promise.resolve()
@@ -628,7 +628,7 @@ describe('real-router Steam authentication flow', () => {
     await settle()
     expect(window.location.pathname).toBe(RETURN_PATH)
     expect(document.querySelector('[role="dialog"]')).toBeNull()
-    expect(container.textContent).toContain('Authenticated with Steam')
+    expect(container.textContent).toContain('Integration Player')
     expect(
       client.externalRequests.filter((url) => url.startsWith('https://api.steampowered.com/')),
     ).toHaveLength(1)

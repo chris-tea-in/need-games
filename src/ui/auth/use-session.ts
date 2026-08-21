@@ -19,6 +19,7 @@ export type SessionState =
   | {
       kind: 'authenticated'
       csrfToken: string
+      profile: AuthenticatedSessionResponse['profile']
       steamSignInEnabled: boolean
     }
   | {
@@ -29,6 +30,7 @@ export type SessionState =
   | {
       kind: 'logging-out'
       csrfToken: string
+      profile: AuthenticatedSessionResponse['profile']
       steamSignInEnabled: boolean
     }
   | { kind: 'unavailable'; message: string }
@@ -56,6 +58,7 @@ function stateFromResponse(response: SessionResponse): SessionState {
   return {
     csrfToken: response.csrfToken,
     kind: 'authenticated',
+    profile: response.profile,
     steamSignInEnabled: response.steamSignInEnabled,
   }
 }
@@ -155,6 +158,7 @@ export function useSession({
     setState({
       csrfToken: currentState.csrfToken,
       kind: 'logging-out',
+      profile: currentState.profile,
       steamSignInEnabled: currentState.steamSignInEnabled,
     })
 

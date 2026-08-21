@@ -39,6 +39,7 @@ describe('App authentication return integration', () => {
       state: {
         csrfToken: 'OqtRhl8vRN75EU3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
         kind: 'authenticated',
+        profile: { displayName: 'Steam User', lookupStatus: 'verified' },
         steamSignInEnabled: true,
       },
     }

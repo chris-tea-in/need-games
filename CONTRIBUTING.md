@@ -122,9 +122,20 @@ The tracked production value is the release mode source of truth. Set the transi
 `STEAM_SIGN_IN_ENABLED` value to the same exact `true` or `false` value as the reviewed commit.
 The release rejects a missing, invalid, duplicate, or mismatched mode before upload. The final
 generated config must contain the transient D1 ID and the reviewed Steam sign-in mode.
-The release verifies the target D1 identity, catalog state, and exactly `0001_schema.sql` and
-`0002_seed_beta_catalog.sql` in its migration history. A later migration blocks this Phase 1
-release. A real D1 ID must never be committed, added to GitHub, or written to a release report.
+The release verifies the target D1 identity, catalog state, and exactly `0001_schema.sql`,
+`0002_seed_beta_catalog.sql`, `0003_authoritative_mimma_seed.sql`, and
+`0004_identity_sessions.sql` in its migration history. Before running `release:production`, use
+the generated `.wrangler.production.jsonc` for the owner-confirmed database ID to apply the
+reviewed migration set remotely:
+
+```powershell
+corepack pnpm node scripts/create-production-wrangler-config.mts
+corepack pnpm exec wrangler d1 migrations apply need-games-production --remote --config .wrangler.production.jsonc
+```
+
+Review Wrangler's migration list before confirming it. The release command does not apply
+migrations; it fails closed if any of these four migrations is absent or if any later migration is
+present. A real D1 ID must never be committed, added to GitHub, or written to a release report.
 The generated configuration is ignored and is the only release file that may contain the ID.
 
 Before each upload, the release reads the current production deployment and stores a rollback

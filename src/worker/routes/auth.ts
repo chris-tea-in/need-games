@@ -594,7 +594,15 @@ async function sessionResponse(
     }
     const csrfToken = await deriveCsrfToken(tokenHash, env.CSRF_HMAC_SECRET)
     return jsonResponse(
-      { authenticated: true, csrfToken, steamSignInEnabled: true },
+      {
+        authenticated: true,
+        csrfToken,
+        profile: {
+          displayName: session.profile.displayName,
+          lookupStatus: session.profile.profileLookupStatus,
+        },
+        steamSignInEnabled: true,
+      },
       {
         cacheControl: SESSION_CACHE_CONTROL,
       },
@@ -612,7 +620,6 @@ async function logoutAuthentication(
   log: (event: AuthEvent) => void,
 ): Promise<Response> {
   const headers = new Headers()
-  appendCookie(headers, clearSessionCookie())
   headers.set('Cache-Control', SESSION_CACHE_CONTROL)
 
   const submittedToken = request.headers.get('X-CSRF-Token')
@@ -639,6 +646,7 @@ async function logoutAuthentication(
       return authErrorResponse('invalid_csrf', 403, headers)
     }
 
+    appendCookie(headers, clearSessionCookie())
     await revokeSession(env.NEED_GAMES_DB, tokenHash, now)
     log({ event: 'logout', success: true })
     return new Response(null, { status: 204, headers })

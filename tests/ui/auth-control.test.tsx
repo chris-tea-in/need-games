@@ -138,12 +138,13 @@ describe('AuthControl', () => {
     const { container, logout, root } = renderControl({
       csrfToken,
       kind: 'authenticated',
+      profile: { displayName: 'Steam User', lookupStatus: 'verified' },
       steamSignInEnabled: true,
     })
     roots.push(root)
 
     const accountButton = container.querySelector('button') as HTMLButtonElement
-    expect(accountButton.textContent).toContain('Authenticated with Steam')
+    expect(accountButton.textContent).toContain('Steam User')
     expect(accountButton.textContent).toContain('✓')
 
     act(() => accountButton.click())
@@ -160,6 +161,7 @@ describe('AuthControl', () => {
     const { container, root } = renderControl({
       csrfToken,
       kind: 'authenticated',
+      profile: { displayName: 'Steam User', lookupStatus: 'verified' },
       steamSignInEnabled: true,
     })
     roots.push(root)
@@ -181,13 +183,14 @@ describe('AuthControl', () => {
     const { container, root } = renderControl({
       csrfToken,
       kind: 'logging-out',
+      profile: { displayName: null, lookupStatus: 'unavailable' },
       steamSignInEnabled: false,
     })
     roots.push(root)
 
     const accountButton = container.querySelector('button') as HTMLButtonElement
     expect(accountButton.disabled).toBe(true)
-    expect(accountButton.textContent).toContain('Authenticated with Steam')
+    expect(accountButton.textContent).toContain('Steam account')
     expect(container.querySelector('[role="menu"]')).toBeNull()
   })
 

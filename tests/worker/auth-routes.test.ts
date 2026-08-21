@@ -264,7 +264,7 @@ describe('Steam authentication routes', () => {
     await expect(readSession(env.NEED_GAMES_DB, sessionTokenHash, now)).resolves.toBeNull()
   })
 
-  test('rejects disabled logout without valid CSRF while clearing the session cookie', async () => {
+  test('rejects disabled logout without valid CSRF without clearing the session cookie', async () => {
     const now = 1_800_024_000
     const rawSessionToken = 'H'.repeat(43)
     const sessionTokenHash = await hashToken(rawSessionToken)
@@ -289,7 +289,7 @@ describe('Steam authentication routes', () => {
     )
 
     expect(response?.status).toBe(403)
-    expect(response?.headers.get('set-cookie')).toContain('Max-Age=0')
+    expect(response?.headers.get('set-cookie')).toBeNull()
     await expect(readSession(env.NEED_GAMES_DB, sessionTokenHash, now)).resolves.not.toBeNull()
 
     const invalidTokenResponse = await routeAuthRequest(
@@ -306,7 +306,7 @@ describe('Steam authentication routes', () => {
     )
 
     expect(invalidTokenResponse?.status).toBe(403)
-    expect(invalidTokenResponse?.headers.get('set-cookie')).toContain('Max-Age=0')
+    expect(invalidTokenResponse?.headers.get('set-cookie')).toBeNull()
     await expect(readSession(env.NEED_GAMES_DB, sessionTokenHash, now)).resolves.not.toBeNull()
   })
 
@@ -351,7 +351,10 @@ describe('Steam authentication routes', () => {
     )
     expect(session?.status).toBe(200)
     const sessionBody = await session?.json()
-    expect(sessionBody).toMatchObject({ authenticated: true })
+    expect(sessionBody).toMatchObject({
+      authenticated: true,
+      profile: { displayName: null, lookupStatus: 'unavailable' },
+    })
     const csrfToken = (sessionBody as { csrfToken: string }).csrfToken
     const logout = await routeAuthRequest(
       new Request(`${origin}/api/auth/logout`, {

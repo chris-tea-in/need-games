@@ -52,6 +52,7 @@ describe('shared Steam session contract', () => {
       {
         authenticated: true,
         csrfToken: 'OqtRhl8vRN75EUQ3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
+        profile: { displayName: 'Steam User', lookupStatus: 'verified' },
         steamSignInEnabled: true,
       },
     ]
@@ -61,7 +62,7 @@ describe('shared Steam session contract', () => {
     }
   })
 
-  test.each(['steamId', 'sessionToken', 'tokenHash', 'steamApiKey', 'displayName'])(
+  test.each(['steamId', 'sessionToken', 'tokenHash', 'steamApiKey'])(
     'rejects a session response that exposes %s',
     (sensitiveField) => {
       expect(
@@ -87,6 +88,48 @@ describe('shared Steam session contract', () => {
       isSessionResponse({
         authenticated: false,
         csrfToken: 'OqtRhl8vRN75EUQ3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
+        steamSignInEnabled: true,
+      }),
+    ).toBe(false)
+  })
+
+  test('accepts only a bounded public profile for authenticated sessions', () => {
+    const authenticated = {
+      authenticated: true,
+      csrfToken: 'OqtRhl8vRN75EUQ3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
+      steamSignInEnabled: true,
+    }
+    expect(
+      isSessionResponse({
+        ...authenticated,
+        profile: { displayName: 'Steam User', lookupStatus: 'verified' },
+      }),
+    ).toBe(true)
+    expect(
+      isSessionResponse({
+        ...authenticated,
+        profile: { displayName: null, lookupStatus: 'unavailable' },
+      }),
+    ).toBe(true)
+    expect(
+      isSessionResponse({
+        ...authenticated,
+        profile: { displayName: 'stale name', lookupStatus: 'unavailable' },
+      }),
+    ).toBe(false)
+  })
+
+  test.each([
+    ['whitespace-only', '   '],
+    ['control-character', 'bad\u0000name'],
+    ['unpaired-surrogate', 'bad\ud800name'],
+    ['over-64-code-point', 'a'.repeat(65)],
+  ])('rejects a %s verified display name', (_caseName, displayName) => {
+    expect(
+      isSessionResponse({
+        authenticated: true,
+        csrfToken: 'OqtRhl8vRN75EUQ3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
+        profile: { displayName, lookupStatus: 'verified' },
         steamSignInEnabled: true,
       }),
     ).toBe(false)
