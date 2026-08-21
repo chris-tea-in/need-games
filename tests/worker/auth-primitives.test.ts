@@ -128,6 +128,17 @@ describe('auth cookies', () => {
     expect(() => serializeSessionCookie('bad;token')).toThrow(/cookie/i)
   })
 
+  test('ignores duplicate unrelated cookies while reading the requested authentication cookie', () => {
+    const sessionToken = 'D'.repeat(43)
+    const request = new Request('https://need-games.test/', {
+      headers: {
+        Cookie: `unrelated=one; unrelated=two; ${SESSION_COOKIE_NAME}=${sessionToken}`,
+      },
+    })
+
+    expect(getCookie(request, SESSION_COOKIE_NAME)).toBe(sessionToken)
+  })
+
   test('rejects requested cookies with whitespace normalized around the pair syntax', () => {
     const token = 'W'.repeat(43)
     const whitespaceBeforeSeparator = new Request('https://need-games.test/', {

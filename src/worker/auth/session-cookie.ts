@@ -118,6 +118,7 @@ export function getCookie(request: Request, name: string): string | null {
   }
 
   let requestedCount = 0
+  let value: string | null = null
   for (const [index, part] of header.split(';').entries()) {
     const pair = index > 0 && part.startsWith(' ') ? part.slice(1) : part
     const separator = pair.indexOf('=')
@@ -128,20 +129,21 @@ export function getCookie(request: Request, name: string): string | null {
     }
 
     requestedCount += 1
-    if (parseCookiePair(part, index) === null) {
+    const parsedPair = parseCookiePair(part, index)
+    if (parsedPair === null) {
       return null
     }
+
+    value = parsedPair.value
   }
-  if (requestedCount > 1) {
+  if (requestedCount !== 1) {
+    return null
+  }
+  if (value === null) {
     return null
   }
 
-  const value = parseCookieHeader(header)?.get(name) ?? null
-  if (
-    value !== null &&
-    authenticationCookieNames.has(name) &&
-    !authenticationTokenPattern.test(value)
-  ) {
+  if (authenticationCookieNames.has(name) && !authenticationTokenPattern.test(value)) {
     return null
   }
   return value
