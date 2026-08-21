@@ -18,6 +18,7 @@
     "lint": "eslint . --max-warnings 0",
     "predeploy": "pnpm release:check",
     "release:check": "node scripts/assert-release-d1-id.mts",
+    "release:production": "node scripts/release-production.mts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:node": "vitest run --config vitest.config.ts",

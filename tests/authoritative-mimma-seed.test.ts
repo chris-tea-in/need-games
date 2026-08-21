@@ -30,8 +30,23 @@ describe('authoritative MiMMa seed generator', () => {
   test('rejects the wrong header and malformed row widths', () => {
     expect(() => parseSurnexCsv('name,zone\nExample,micro')).toThrow('header')
     expect(() =>
-      parseSurnexCsv('game,zone,micro,meso,macro,provenance,source_url\nExample,micro,high'),
+      parseSurnexCsv('game,zone,micro,meso,macro,provenance\nExample,micro,high'),
     ).toThrow('line 2')
+  })
+
+  test('parses a six-column row without a source URL', () => {
+    expect(
+      parseSurnexCsv('game,zone,micro,meso,macro,provenance\nExample,micro,high,low,low,surnex'),
+    ).toEqual([
+      {
+        game: 'Example',
+        macro: 'low',
+        meso: 'low',
+        micro: 'high',
+        provenance: 'surnex',
+        zone: 'micro',
+      },
+    ])
   })
 
   test('maps zone membership instead of qualitative axis text', () => {
@@ -43,7 +58,6 @@ describe('authoritative MiMMa seed generator', () => {
           meso: 'high',
           micro: 'low',
           provenance: 'surnex',
-          sourceUrl: 'https://example.test/game',
           zone: 'micro',
         },
       ],
@@ -58,7 +72,6 @@ describe('authoritative MiMMa seed generator', () => {
       meso: 'low',
       micro: 'high',
       provenance: 'surnex',
-      sourceUrl: 'https://example.test/game',
       zone: 'micro',
     }
     expect(() =>

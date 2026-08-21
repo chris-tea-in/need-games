@@ -52,9 +52,29 @@ describe('tracked release configuration guard', () => {
     expect(() => assertTrackedDatabaseIdsAreSentinels('{}')).toThrow(/no D1 database_id entries/)
   })
 
+  test('blocks a configuration that omits the production sentinel', () => {
+    expect(() =>
+      assertTrackedDatabaseIdsAreSentinels(trackedConfig(localPreviewDatabaseIdSentinel)),
+    ).toThrow(/exactly the preview and production sentinel IDs/i)
+  })
+
+  test('blocks duplicate or unexpected sentinel entries', () => {
+    expect(() =>
+      assertTrackedDatabaseIdsAreSentinels(
+        trackedConfig(
+          localPreviewDatabaseIdSentinel,
+          productionDatabaseIdSentinel,
+          productionDatabaseIdSentinel,
+        ),
+      ),
+    ).toThrow(/exactly the preview and production sentinel IDs/i)
+  })
+
   test('tolerates the whitespace variations a formatter may produce', () => {
     expect(() =>
-      assertTrackedDatabaseIdsAreSentinels(`{ "database_id":"${localPreviewDatabaseIdSentinel}" }`),
+      assertTrackedDatabaseIdsAreSentinels(
+        `{ "database_id":"${localPreviewDatabaseIdSentinel}", "database_id":"${productionDatabaseIdSentinel}" }`,
+      ),
     ).not.toThrow()
   })
 })

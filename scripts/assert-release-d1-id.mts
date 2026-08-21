@@ -25,6 +25,16 @@ export function assertTrackedDatabaseIdsAreSentinels(trackedConfig: string): voi
       `Release blocked: the tracked Wrangler configuration must keep placeholder D1 database IDs, but it declares ${realDatabaseIds.join(', ')}. Real database IDs belong only in the generated production configuration.`,
     )
   }
+
+  const expectedDatabaseIds = [localPreviewDatabaseIdSentinel, productionDatabaseIdSentinel]
+  if (
+    databaseIds.length !== expectedDatabaseIds.length ||
+    [...databaseIds].sort().join('\n') !== [...expectedDatabaseIds].sort().join('\n')
+  ) {
+    throw new Error(
+      'Release blocked: the tracked Wrangler configuration must contain exactly the preview and production sentinel IDs.',
+    )
+  }
 }
 
 async function main(): Promise<void> {

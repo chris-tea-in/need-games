@@ -11,6 +11,8 @@ skill-observations/
 .env
 .env.*
 !.env.example
+.dev.vars
+.dev.vars.*
 
 # Operating-system metadata
 .DS_Store

@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react'
+
 import type { CatalogResponse } from '../shared/catalog-contract.js'
 import { catalogSortOptions, selectCatalogGames, type CatalogSort } from './catalog-state.js'
 
 interface CatalogPageProps {
   catalog: CatalogResponse
+  authControl?: ReactNode
   onQueryChange: (query: string) => void
   onSortChange: (sort: CatalogSort) => void
   query: string
@@ -14,6 +17,7 @@ function formatReviewCount(count: number): string {
 }
 
 export function CatalogPage({
+  authControl,
   catalog,
   onQueryChange,
   onSortChange,
@@ -25,8 +29,13 @@ export function CatalogPage({
   return (
     <main className="catalog-page">
       <header className="page-header">
-        <p className="eyebrow">Closed beta</p>
-        <h1>Find your next game</h1>
+        <div className="page-header-top">
+          <div className="page-header-copy">
+            <p className="eyebrow">Closed beta</p>
+            <h1>Find your next game</h1>
+          </div>
+          {authControl}
+        </div>
         <p>
           Browse the initial Need Games catalog. Steam review metadata is shown as catalog context;
           scoring features are not available in this beta.

@@ -98,7 +98,11 @@ function writeArtifact(path: string, content: string): void {
   writeFileSync(path, content, 'utf8')
 }
 
-function assertArtifactMatches(path: string, expected: string): void {
+function normalizeLineEndings(content: string): string {
+  return content.replace(/\r\n?/g, '\n')
+}
+
+export function assertArtifactMatches(path: string, expected: string): void {
   const actual = (() => {
     try {
       return readFileSync(path, 'utf8')
@@ -107,7 +111,7 @@ function assertArtifactMatches(path: string, expected: string): void {
     }
   })()
 
-  if (actual !== expected) {
+  if (normalizeLineEndings(actual) !== normalizeLineEndings(expected)) {
     throw new Error(
       `Generated artifact drift detected: ${path}. Run node scripts/generate-catalog-artifacts.mts --write.`,
     )

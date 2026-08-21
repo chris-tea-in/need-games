@@ -1,6 +1,9 @@
+import type { ReactNode } from 'react'
+
 import type { GameDetail } from '../shared/catalog-contract.js'
 
 interface GameDetailPageProps {
+  authControl?: ReactNode
   game: GameDetail
 }
 
@@ -15,7 +18,7 @@ function formatFetchedAt(timestamp: string): string {
   }).format(new Date(timestamp))
 }
 
-export function GameDetailPage({ game }: GameDetailPageProps) {
+export function GameDetailPage({ authControl, game }: GameDetailPageProps) {
   return (
     <main className="detail-page">
       <a className="back-link" href="/">
@@ -23,8 +26,13 @@ export function GameDetailPage({ game }: GameDetailPageProps) {
       </a>
       <article className="dashboard-grid detail-layout">
         <header className="page-header game-identity">
-          <p className="eyebrow">Steam App {game.steamAppId}</p>
-          <h1>{game.title}</h1>
+          <div className="page-header-top">
+            <div className="page-header-copy">
+              <p className="eyebrow">Steam App {game.steamAppId}</p>
+              <h1>{game.title}</h1>
+            </div>
+            {authControl}
+          </div>
           <ul className="tag-list" aria-label={`${game.title} tags`}>
             {game.tags.map((tag) => (
               <li key={tag}>{tag}</li>

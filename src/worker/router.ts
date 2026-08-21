@@ -3,6 +3,7 @@ import { apiErrorResponse, headResponse } from './http.js'
 import { getCatalogReleaseMetadata } from './repositories/catalog-release.js'
 import { catalogResponse, parseCatalogQuery } from './routes/catalog.js'
 import { gameResponse } from './routes/games.js'
+import { authUnavailableResponse, routeAuthRequest } from './routes/auth.js'
 import { gameExists, isValidSlug, unavailableVersion } from './routes/similar-games.js'
 
 const apiPrefix = '/api'
@@ -12,6 +13,15 @@ const unavailableMessage = 'The catalog is temporarily unavailable. Please try a
 
 function isApiRequest(pathname: string): boolean {
   return pathname === apiPrefix || pathname.startsWith(`${apiPrefix}/`)
+}
+
+function isAuthRequest(pathname: string): boolean {
+  return (
+    pathname === '/api/auth/steam/start' ||
+    pathname === '/api/auth/steam/callback' ||
+    pathname === '/api/auth/logout' ||
+    pathname === '/api/session'
+  )
 }
 
 function requestRoute(pathname: string): string {
@@ -40,6 +50,11 @@ function errorResponse(
 
 async function routeApiRequest(request: Request, env: Env, url: URL): Promise<Response> {
   const path = url.pathname
+
+  const authResponse = await routeAuthRequest(request, env, url)
+  if (authResponse !== null) {
+    return authResponse
+  }
 
   if (!allowedMethods.has(request.method)) {
     return errorResponse(
@@ -112,7 +127,9 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   }
 
   const response = await routeApiRequest(request, env, url).catch(() =>
-    unavailableResponse(requestRoute(url.pathname)),
+    isAuthRequest(url.pathname)
+      ? authUnavailableResponse()
+      : unavailableResponse(requestRoute(url.pathname)),
   )
   return request.method === 'HEAD' ? headResponse(response) : response
 }

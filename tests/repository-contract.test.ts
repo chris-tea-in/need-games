@@ -25,10 +25,12 @@ const productionDeploymentUrl = new URL(
   '../.github/workflows/deploy-production.yml',
   import.meta.url,
 )
+const gitignoreUrl = new URL('../.gitignore', import.meta.url)
 const pullRequestTemplateUrl = new URL('../.github/pull_request_template.md', import.meta.url)
 const setupActionUrl = new URL('../.github/actions/setup/action.yml', import.meta.url)
 const wranglerConfigUrl = new URL('../wrangler.jsonc', import.meta.url)
 const releaseGuardUrl = new URL('../scripts/assert-release-d1-id.mts', import.meta.url)
+const productionReleaseUrl = new URL('../scripts/release-production.mts', import.meta.url)
 const workerTypeCheckUrl = new URL('../scripts/check-worker-types.mjs', import.meta.url)
 const repositoryPath = fileURLToPath(new URL('../', import.meta.url))
 
@@ -67,6 +69,7 @@ describe('repository package contract', () => {
       'catalog:check': 'node scripts/generate-catalog-artifacts.mts',
       'mimma-seed:check': 'node scripts/generate-authoritative-mimma-seed.mts',
       'release:check': 'node scripts/assert-release-d1-id.mts',
+      'release:production': 'node scripts/release-production.mts',
       predeploy: 'pnpm release:check',
     })
   })
@@ -87,6 +90,7 @@ describe('Worker configuration contract', () => {
     expect(config).toContain('00000000-0000-4000-8000-000000000001')
     expect(config).toContain('00000000-0000-4000-8000-000000000002')
     expect(config).toContain('"production"')
+    expect(config).toContain('"STEAM_SIGN_IN_ENABLED": "true"')
     expect(existsSync(releaseGuardUrl)).toBe(true)
   })
 
@@ -113,18 +117,98 @@ describe('repository automation contract', () => {
     expect(existsSync(setupActionUrl)).toBe(true)
   })
 
-  test('keeps production deployment manual and protected', () => {
+  test('keeps production deployment out of GitHub Actions', () => {
     const workflow = readAutomationFile(productionDeploymentUrl)
 
-    expect(workflow).toContain('workflow_dispatch:')
-    expect(workflow).toContain('environment: production')
-    expect(workflow).toContain('permissions:')
-    expect(workflow).toContain('contents: read')
-    expect(workflow).toContain('secrets.CLOUDFLARE_API_TOKEN')
-    expect(workflow).toContain('secrets.CLOUDFLARE_ACCOUNT_ID')
-    expect(workflow).toContain('secrets.PRODUCTION_D1_DATABASE_ID')
-    expect(workflow).not.toContain('pull_request:')
-    expect(workflow).not.toContain('push:')
+    expect(existsSync(productionDeploymentUrl)).toBe(false)
+    expect(workflow).toBe('')
+  })
+
+  test('documents the owner-run production sequence and keeps it out of CI', () => {
+    const releaseScript = readAutomationFile(productionReleaseUrl)
+    const contributing = readAutomationFile(contributingGuideUrl)
+    const automation = [
+      readAutomationFile(ciWorkflowUrl),
+      ...Array.from({ length: 1 }, () => readAutomationFile(productionDeploymentUrl)),
+    ].join('\n')
+
+    expect(releaseScript).toContain('PRODUCTION_D1_DATABASE_ID')
+    expect(releaseScript).toContain('STEAM_SIGN_IN_ENABLED')
+    expect(releaseScript).toContain('assertProductionSteamSignInMode')
+    expect(releaseScript).toContain('--smoke-only')
+    expect(releaseScript).not.toContain('Smoke test skipped')
+    expect(releaseScript).toContain('production-release.lock')
+    expect(releaseScript).toContain("['rev-parse', 'HEAD']")
+    expect(releaseScript).toContain("['status', '--porcelain']")
+    expect(releaseScript).toContain('check:local')
+    expect(releaseScript).toContain('release:check')
+    expect(releaseScript).toContain('create-production-wrangler-config.mts')
+    expect(releaseScript).toContain('CLOUDFLARE_ENV')
+    expect(releaseScript).toContain('CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH')
+    expect(releaseScript).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV')
+    expect(releaseScript).toContain('findGeneratedProductionWorkerConfig')
+    expect(releaseScript).toContain('assertProductionAssetBoundary')
+    expect(releaseScript).toContain("'deployments',")
+    expect(releaseScript).toContain("'status',")
+    expect(releaseScript).toContain('createProductionRollbackBaseline')
+    expect(releaseScript).toContain('Rollback baseline saved in ignored operator state')
+    expect(releaseScript).toContain("'d1', 'info'")
+    expect(releaseScript).toContain('verify-production-d1.mjs')
+    expect(releaseScript).not.toMatch(/'d1',\s*'migrations'/)
+    expect(releaseScript).toContain("['deploy', '--config', generatedWorkerConfigPath]")
+    expect(releaseScript).not.toContain("'deploy', '--env', 'production'")
+    expect(contributing).toContain('CLOUDFLARE_ENV=production')
+    expect(contributing).toContain(
+      'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=.wrangler.production.jsonc',
+    )
+    expect(contributing).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false')
+    expect(contributing).toContain('contains no `.dev.vars`, `.env`, Worker output')
+    expect(contributing).toMatch(/exactly `0001_schema\.sql` and\s+`0002_seed_beta_catalog\.sql`/)
+    expect(contributing).toMatch(
+      /first production deployment has no recoverable\s+pre-deploy baseline/i,
+    )
+    expect(contributing).toMatch(/rollback\s+baseline/i)
+    expect(contributing).toContain('https://myplayprint.e9k.workers.dev')
+    expect(contributing).toContain("$env:PRODUCTION_ORIGIN = 'https://myplayprint.e9k.workers.dev'")
+    expect(releaseScript).toContain('/api/catalog')
+    expect(releaseScript).toContain('/api/games/counter-strike-2')
+    expect(releaseScript).toContain('/api/not-a-route')
+    expect(releaseScript).toContain('/api/session')
+    expect(automation).not.toContain('secrets.CLOUDFLARE_API_TOKEN')
+    expect(automation).not.toContain('secrets.CLOUDFLARE_ACCOUNT_ID')
+    expect(automation).not.toContain('wrangler deploy --env production')
+
+    const localChecks = releaseScript.indexOf('check:local')
+    const trackedGuard = releaseScript.indexOf('release:check')
+    const config = releaseScript.indexOf('create-production-wrangler-config.mts')
+    const productionBuild = releaseScript.indexOf('Build production Vite Worker output')
+    const assetBoundary = releaseScript.lastIndexOf(
+      'const assetBoundary = await assertProductionAssetBoundary',
+    )
+    const verification = releaseScript.indexOf('await verifyProductionDatabase(databaseId, env)')
+    const rollbackBaseline = releaseScript.indexOf(
+      'Capture current production Worker rollback baseline',
+    )
+    const deployment = releaseScript.lastIndexOf('Deploy production Worker with Steam sign-in')
+    const smoke = releaseScript.lastIndexOf('readOnlySmokeTest(origin, steamSignInMode)')
+
+    expect(localChecks).toBeGreaterThan(-1)
+    expect(trackedGuard).toBeGreaterThan(localChecks)
+    expect(config).toBeGreaterThan(trackedGuard)
+    expect(productionBuild).toBeGreaterThan(config)
+    expect(assetBoundary).toBeGreaterThan(productionBuild)
+    expect(verification).toBeGreaterThan(-1)
+    expect(deployment).toBeGreaterThan(assetBoundary)
+    expect(deployment).toBeGreaterThan(verification)
+    expect(rollbackBaseline).toBeGreaterThan(verification)
+    expect(deployment).toBeGreaterThan(rollbackBaseline)
+    expect(smoke).toBeGreaterThan(deployment)
+    expect(contributing).toContain('Initial Steam sign-in enablement')
+    expect(contributing).toContain('Steam sign-in kill switch')
+  })
+
+  test('keeps the generated production config ignored', () => {
+    expect(readAutomationFile(gitignoreUrl)).toContain('.wrangler.production.jsonc')
   })
 
   test('provides dependency automation and contribution guidance', () => {
