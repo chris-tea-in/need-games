@@ -118,4 +118,20 @@ describe('shared Steam session contract', () => {
       }),
     ).toBe(false)
   })
+
+  test.each([
+    ['whitespace-only', '   '],
+    ['control-character', 'bad\u0000name'],
+    ['unpaired-surrogate', 'bad\ud800name'],
+    ['over-64-code-point', 'a'.repeat(65)],
+  ])('rejects a %s verified display name', (_caseName, displayName) => {
+    expect(
+      isSessionResponse({
+        authenticated: true,
+        csrfToken: 'OqtRhl8vRN75EUQ3YJ-JfYb3Pg-A-T7QQXovh-vm5aQ',
+        profile: { displayName, lookupStatus: 'verified' },
+        steamSignInEnabled: true,
+      }),
+    ).toBe(false)
+  })
 })

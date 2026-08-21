@@ -1,6 +1,10 @@
 import { isValidSteamId } from './steam-openid.js'
 
-import type { ProfileLookupStatus } from '../../shared/session-contract.js'
+import {
+  STEAM_DISPLAY_NAME_MAX_LENGTH,
+  validateSteamDisplayName,
+  type ProfileLookupStatus,
+} from '../../shared/session-contract.js'
 
 export const STEAM_PROFILE_ENDPOINT =
   'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2'
@@ -8,7 +12,7 @@ export const STEAM_PROFILE_ENDPOINT =
 export const STEAM_PROFILE_MAX_ATTEMPTS = 2
 export const STEAM_PROFILE_TIMEOUT_MS = 5_000
 export const STEAM_PROFILE_MAX_RESPONSE_LENGTH = 64 * 1024
-export const STEAM_DISPLAY_NAME_MAX_LENGTH = 64
+export { STEAM_DISPLAY_NAME_MAX_LENGTH, validateSteamDisplayName }
 
 export type SteamProfileLookupFailureReason =
   | 'invalid_steam_id'
@@ -113,42 +117,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function hasUnpairedSurrogate(value: string): boolean {
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index)
-    if (code >= 0xd800 && code <= 0xdbff) {
-      const next = value.charCodeAt(index + 1)
-      if (next < 0xdc00 || next > 0xdfff) {
-        return true
-      }
-      index += 1
-    } else if (code >= 0xdc00 && code <= 0xdfff) {
-      return true
-    }
-  }
-  return false
-}
-
-/** Return a trimmed, bounded Steam display name or null when it is unsafe to store. */
-export function validateSteamPersonaname(value: unknown): string | null {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const trimmed = value.trim()
-  if (
-    trimmed.length === 0 ||
-    hasUnpairedSurrogate(trimmed) ||
-    /\p{Cc}/u.test(trimmed) ||
-    Array.from(trimmed).length > STEAM_DISPLAY_NAME_MAX_LENGTH
-  ) {
-    return null
-  }
-
-  return trimmed
-}
-
-export const validateSteamDisplayName = validateSteamPersonaname
+export const validateSteamPersonaname = validateSteamDisplayName
 
 function normalizeAttempts(value: number | undefined): number {
   if (value === undefined || !Number.isFinite(value)) {
