@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
@@ -12,13 +14,23 @@ export const expectedProductionMigrations = [
 
 const authoritativeRecordHash = 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65'
 
-interface ExpectedSchemaObject {
+const expectedMigrationSourceHashes: Record<string, string> = {
+  '0001_schema.sql': '751a94bbaa163c92f074ba49c0216884901ae088db1c5260fd2ec1425dc4b961',
+  '0002_seed_beta_catalog.sql': '897e30cb9961132245af3f4cc98b92d217ebbcbfb3d745b1d1f09f998b2628e4',
+  '0003_authoritative_mimma_seed.sql':
+    '425a56ae640a2b00c8505a51388402ece135417c1b52e8e2f60b8f5800b6f265',
+  '0004_identity_sessions.sql': '643def4fc16805e84914918c67759adbc61cf9d17a5dfdcd6ed4a53d8a7a45f3',
+  '0005_owner_authoritative_mimma_v1.sql':
+    'eac92f7978dc1e793ef45a51e99aa2ac803c41f2bd131abd5fc14ca0077fe0f3',
+}
+
+interface ExpectedSchemaObjectContract {
   name: string
   type: 'table' | 'index' | 'trigger'
   sqlFragment: string
 }
 
-export const expectedProductionSchemaObjects: readonly ExpectedSchemaObject[] = [
+const expectedProductionSchemaObjectContracts: readonly ExpectedSchemaObjectContract[] = [
   {
     name: 'catalog_release_metadata',
     type: 'table',
@@ -217,6 +229,70 @@ export const expectedProductionSchemaObjects: readonly ExpectedSchemaObject[] = 
   },
 ]
 
+function readCanonicalMigrationSource(name: string): string {
+  const source = readFileSync(new URL(`../migrations/${name}`, import.meta.url), 'utf8')
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n?/g, '\n')
+  const actualHash = createHash('sha256').update(source, 'utf8').digest('hex')
+  if (actualHash !== expectedMigrationSourceHashes[name]) {
+    throw new Error(
+      `Production D1 verification failed: canonical migration source ${name} is altered.`,
+    )
+  }
+  return source
+}
+
+function loadCanonicalSchemaObjects(): readonly ExpectedSchemaObject[] {
+  const canonicalByName = new Map<string, ExpectedSchemaObject>()
+  for (const migrationName of expectedProductionMigrations) {
+    for (const segment of readCanonicalMigrationSource(migrationName).split(
+      /--> statement-breakpoint/,
+    )) {
+      const statement = segment
+        .replace(/^(?:\s*--[^\n]*(?:\n|$))+/, '')
+        .trim()
+        .replace(/;\s*$/, '')
+      const match = statement.match(
+        /^CREATE\s+(?:(?:UNIQUE)\s+)?(TABLE|INDEX|TRIGGER)\s+([A-Za-z_][A-Za-z0-9_]*)\b/i,
+      )
+      if (match === null) continue
+      const [, type, name] = match
+      if (canonicalByName.has(name)) {
+        throw new Error(
+          `Production D1 verification failed: duplicate canonical schema object ${name}.`,
+        )
+      }
+      canonicalByName.set(name, {
+        name,
+        type: type.toLowerCase() as ExpectedSchemaObject['type'],
+        sql: normalizeSql(statement),
+      })
+    }
+  }
+
+  if (
+    canonicalByName.size !== expectedProductionSchemaObjectContracts.length ||
+    expectedProductionSchemaObjectContracts.some(({ name, type }) => {
+      const object = canonicalByName.get(name)
+      return object === undefined || object.type !== type
+    })
+  ) {
+    throw new Error('Production D1 verification failed: canonical schema allowlist is incomplete.')
+  }
+
+  return expectedProductionSchemaObjectContracts.map(
+    ({ name }) => canonicalByName.get(name) as ExpectedSchemaObject,
+  )
+}
+
+interface ExpectedSchemaObject {
+  name: string
+  type: 'table' | 'index' | 'trigger'
+  sql: string
+}
+
+export const expectedProductionSchemaObjects = loadCanonicalSchemaObjects()
+
 export const expectedProductionSchemaObjectNames = expectedProductionSchemaObjects.map(
   ({ name }) => name,
 )
@@ -276,7 +352,7 @@ function assertProductionDatabaseId(databaseId: string): void {
 }
 
 function normalizeSql(sql: string): string {
-  return sql.replace(/\s+/g, ' ').trim().toLowerCase()
+  return sql.replace(/\s+/g, ' ').trim().replace(/;$/, '').trim().toLowerCase()
 }
 
 function assertSchemaObjects(queryResults: unknown): void {
@@ -312,7 +388,7 @@ function assertSchemaObjects(queryResults: unknown): void {
     if (actual?.type !== expected.type) {
       throw new Error('Production D1 verification failed: schema objects have an unexpected type.')
     }
-    if (!normalizeSql(actual.sql as string).includes(expected.sqlFragment)) {
+    if (normalizeSql(actual.sql as string) !== expected.sql) {
       throw new Error(
         `Production D1 verification failed: schema SQL for ${expected.name} is altered.`,
       )
@@ -384,39 +460,151 @@ function assertAuthorityState(queryResults: unknown): void {
     throw new Error('Production D1 verification failed: frozen snapshot state is incomplete.')
   }
 
-  const mappingRows = requireResultRows(queryResults, 5, 'authority mappings')
-  const expectedMappings = [
-    ['auth-game-counter-strike-2', '730', 'steam-730'],
-    ['auth-game-palworld', '1623730', 'steam-1623730'],
-    ['auth-game-marvel-rivals', '2767030', 'steam-2767030'],
-    ['auth-game-apex-legends', '1172470', 'steam-1172470'],
-    ['auth-game-rainbow-six-siege', '359550', 'steam-359550'],
-    ['auth-game-baldurs-gate-3', '1086940', 'steam-1086940'],
-    ['auth-game-monster-hunter-wilds', '2246340', 'steam-2246340'],
-    ['auth-game-elden-ring', '1245620', 'steam-1245620'],
+  const expectedSnapshotMembers = [
+    ['auth-game-apex-legends', 'auth-score-apex-legends-v1'],
+    ['auth-game-baldurs-gate-3', 'auth-score-baldurs-gate-3-v1'],
+    ['auth-game-counter-strike-2', 'auth-score-counter-strike-2-v1'],
+    ['auth-game-elden-ring', 'auth-score-elden-ring-v1'],
+    ['auth-game-league-of-legends', 'auth-score-league-of-legends-v1'],
+    ['auth-game-marvel-rivals', 'auth-score-marvel-rivals-v1'],
+    ['auth-game-monster-hunter-wilds', 'auth-score-monster-hunter-wilds-v1'],
+    ['auth-game-palworld', 'auth-score-palworld-v1'],
+    ['auth-game-rainbow-six-siege', 'auth-score-rainbow-six-siege-v1'],
+    ['auth-game-valorant', 'auth-score-valorant-v1'],
   ] as const
-  const actualMappings = mappingRows.map((row) => [
-    row.game_id,
-    row.external_id,
-    row.catalog_game_id,
-  ])
+  const memberRows = requireResultRows(queryResults, 5, 'frozen snapshot members')
+  const actualSnapshotMembers = memberRows.map((row) => [row.game_id, row.score_id])
+  if (
+    memberRows.length !== expectedSnapshotMembers.length ||
+    actualSnapshotMembers.some(
+      (member, index) =>
+        member[0] !== expectedSnapshotMembers[index][0] ||
+        member[1] !== expectedSnapshotMembers[index][1],
+    )
+  ) {
+    throw new Error('Production D1 verification failed: frozen snapshot members are incomplete.')
+  }
+
+  const expectedMappings = [
+    {
+      id: 'auth-map-steam-apex-legends-v1',
+      game_id: 'auth-game-apex-legends',
+      provider: 'steam',
+      external_id: '1172470',
+      catalog_game_id: 'steam-1172470',
+      mapping_version: 1,
+      decision: 'verified',
+      verification_ref: 'owner-approved-manifest-v1',
+      supersedes_mapping_id: null,
+      source_manifest_version: 'owner-authoritative-mimma-v1',
+    },
+    {
+      id: 'auth-map-steam-baldurs-gate-3-v1',
+      game_id: 'auth-game-baldurs-gate-3',
+      provider: 'steam',
+      external_id: '1086940',
+      catalog_game_id: 'steam-1086940',
+      mapping_version: 1,
+      decision: 'verified',
+      verification_ref: 'owner-approved-manifest-v1',
+      supersedes_mapping_id: null,
+      source_manifest_version: 'owner-authoritative-mimma-v1',
+    },
+    {
+      id: 'auth-map-steam-counter-strike-2-v1',
+      game_id: 'auth-game-counter-strike-2',
+      provider: 'steam',
+      external_id: '730',
+      catalog_game_id: 'steam-730',
+      mapping_version: 1,
+      decision: 'verified',
+      verification_ref: 'owner-approved-manifest-v1',
+      supersedes_mapping_id: null,
+      source_manifest_version: 'owner-authoritative-mimma-v1',
+    },
+    {
+      id: 'auth-map-steam-elden-ring-v1',
+      game_id: 'auth-game-elden-ring',
+      provider: 'steam',
+      external_id: '1245620',
+      catalog_game_id: 'steam-1245620',
+      mapping_version: 1,
+      decision: 'verified',
+      verification_ref: 'owner-approved-manifest-v1',
+      supersedes_mapping_id: null,
+      source_manifest_version: 'owner-authoritative-mimma-v1',
+    },
+    {
+      id: 'auth-map-steam-marvel-rivals-v1',
+      game_id: 'auth-game-marvel-rivals',
+      provider: 'steam',
+      external_id: '2767030',
+      catalog_game_id: 'steam-2767030',
+      mapping_version: 1,
+      decision: 'verified',
+      verification_ref: 'owner-approved-manifest-v1',
+      supersedes_mapping_id: null,
+      source_manifest_version: 'owner-authoritative-mimma-v1',
+    },
+    {
+      id: 'auth-map-steam-monster-hunter-wilds-v1',
+      game_id: 'auth-game-monster-hunter-wilds',
+      provider: 'steam',
+      external_id: '2246340',
+      catalog_game_id: 'steam-2246340',
+      mapping_version: 1,
+      decision: 'verified',
+      verification_ref: 'owner-approved-manifest-v1',
+      supersedes_mapping_id: null,
+      source_manifest_version: 'owner-authoritative-mimma-v1',
+    },
+    {
+      id: 'auth-map-steam-palworld-v1',
+      game_id: 'auth-game-palworld',
+      provider: 'steam',
+      external_id: '1623730',
+      catalog_game_id: 'steam-1623730',
+      mapping_version: 1,
+      decision: 'verified',
+      verification_ref: 'owner-approved-manifest-v1',
+      supersedes_mapping_id: null,
+      source_manifest_version: 'owner-authoritative-mimma-v1',
+    },
+    {
+      id: 'auth-map-steam-rainbow-six-siege-v1',
+      game_id: 'auth-game-rainbow-six-siege',
+      provider: 'steam',
+      external_id: '359550',
+      catalog_game_id: 'steam-359550',
+      mapping_version: 1,
+      decision: 'verified',
+      verification_ref: 'owner-approved-manifest-v1',
+      supersedes_mapping_id: null,
+      source_manifest_version: 'owner-authoritative-mimma-v1',
+    },
+  ] as const
+  const mappingRows = requireResultRows(queryResults, 6, 'authority mappings')
   if (
     mappingRows.length !== expectedMappings.length ||
-    actualMappings.some(
-      (mapping, index) =>
-        mapping[0] !== expectedMappings[index][0] ||
-        mapping[1] !== expectedMappings[index][1] ||
-        mapping[2] !== expectedMappings[index][2] ||
-        mappingRows[index].provider !== 'steam' ||
-        mappingRows[index].mapping_version !== 1 ||
-        mappingRows[index].decision !== 'verified' ||
-        mappingRows[index].source_hash !== authoritativeRecordHash,
+    mappingRows.some(
+      (row, index) =>
+        row.id !== expectedMappings[index].id ||
+        row.game_id !== expectedMappings[index].game_id ||
+        row.provider !== expectedMappings[index].provider ||
+        row.external_id !== expectedMappings[index].external_id ||
+        row.catalog_game_id !== expectedMappings[index].catalog_game_id ||
+        row.mapping_version !== expectedMappings[index].mapping_version ||
+        row.decision !== expectedMappings[index].decision ||
+        row.verification_ref !== expectedMappings[index].verification_ref ||
+        row.supersedes_mapping_id !== expectedMappings[index].supersedes_mapping_id ||
+        row.source_manifest_version !== expectedMappings[index].source_manifest_version ||
+        row.source_hash !== authoritativeRecordHash,
     )
   ) {
     throw new Error('Production D1 verification failed: authority mappings are incomplete.')
   }
 
-  const unmappedRows = requireResultRows(queryResults, 6, 'unmapped authority games')
+  const unmappedRows = requireResultRows(queryResults, 7, 'unmapped authority games')
   const unmappedIds = unmappedRows.map((row) => row.game_id).sort()
   if (
     unmappedIds.length !== 2 ||
@@ -428,7 +616,7 @@ function assertAuthorityState(queryResults: unknown): void {
     )
   }
 
-  const provenanceRows = requireResultRows(queryResults, 7, 'authority provenance')
+  const provenanceRows = requireResultRows(queryResults, 8, 'authority provenance')
   const expectedProvenance = new Map([
     ['authoritative_games', 10],
     ['authoritative_mimma_score_versions', 10],

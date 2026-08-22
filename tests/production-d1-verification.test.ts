@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 
 import {
   assertProductionD1Verification,
+  expectedProductionSchemaObjects,
   type ProductionD1VerificationInput,
   productionDatabaseName,
 } from '../scripts/verify-production-d1.mjs'
@@ -10,14 +11,27 @@ const productionDatabaseId = '11111111-1111-4111-8111-111111111111'
 const sourceHash = 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65'
 
 const expectedMappings = [
-  ['auth-game-counter-strike-2', '730', 'steam-730'],
-  ['auth-game-palworld', '1623730', 'steam-1623730'],
-  ['auth-game-marvel-rivals', '2767030', 'steam-2767030'],
   ['auth-game-apex-legends', '1172470', 'steam-1172470'],
-  ['auth-game-rainbow-six-siege', '359550', 'steam-359550'],
   ['auth-game-baldurs-gate-3', '1086940', 'steam-1086940'],
-  ['auth-game-monster-hunter-wilds', '2246340', 'steam-2246340'],
+  ['auth-game-counter-strike-2', '730', 'steam-730'],
   ['auth-game-elden-ring', '1245620', 'steam-1245620'],
+  ['auth-game-marvel-rivals', '2767030', 'steam-2767030'],
+  ['auth-game-monster-hunter-wilds', '2246340', 'steam-2246340'],
+  ['auth-game-palworld', '1623730', 'steam-1623730'],
+  ['auth-game-rainbow-six-siege', '359550', 'steam-359550'],
+] as const
+
+const expectedSnapshotMembers = [
+  ['auth-game-apex-legends', 'auth-score-apex-legends-v1'],
+  ['auth-game-baldurs-gate-3', 'auth-score-baldurs-gate-3-v1'],
+  ['auth-game-counter-strike-2', 'auth-score-counter-strike-2-v1'],
+  ['auth-game-elden-ring', 'auth-score-elden-ring-v1'],
+  ['auth-game-league-of-legends', 'auth-score-league-of-legends-v1'],
+  ['auth-game-marvel-rivals', 'auth-score-marvel-rivals-v1'],
+  ['auth-game-monster-hunter-wilds', 'auth-score-monster-hunter-wilds-v1'],
+  ['auth-game-palworld', 'auth-score-palworld-v1'],
+  ['auth-game-rainbow-six-siege', 'auth-score-rainbow-six-siege-v1'],
+  ['auth-game-valorant', 'auth-score-valorant-v1'],
 ] as const
 
 const schemaObjects = [
@@ -163,6 +177,10 @@ const schemaObjects = [
   ],
 ] as const
 
+const canonicalSchemaSqlByName = new Map(
+  expectedProductionSchemaObjects.map(({ name, sql }) => [name, sql]),
+)
+
 type VerificationRow = Record<string, unknown>
 type VerificationFixture = ProductionD1VerificationInput & {
   queryResults: Array<{ results: VerificationRow[] }>
@@ -185,10 +203,10 @@ function validVerification(): VerificationFixture {
         ],
       },
       {
-        results: schemaObjects.map(([name, type, fragment]) => ({
+        results: schemaObjects.map(([name, type]) => ({
           name,
           type,
-          sql: `CREATE ${type} ${name} ${fragment}`,
+          sql: canonicalSchemaSqlByName.get(name),
         })),
       },
       {
@@ -221,13 +239,23 @@ function validVerification(): VerificationFixture {
         ],
       },
       {
+        results: expectedSnapshotMembers.map(([gameId, scoreId]) => ({
+          game_id: gameId,
+          score_id: scoreId,
+        })),
+      },
+      {
         results: expectedMappings.map(([gameId, externalId, catalogGameId]) => ({
+          id: `auth-map-steam-${gameId.replace('auth-game-', '')}-v1`,
           game_id: gameId,
           provider: 'steam',
           external_id: externalId,
           catalog_game_id: catalogGameId,
           mapping_version: 1,
           decision: 'verified',
+          verification_ref: 'owner-approved-manifest-v1',
+          supersedes_mapping_id: null,
+          source_manifest_version: 'owner-authoritative-mimma-v1',
           source_hash: sourceHash,
         })),
       },
@@ -360,6 +388,14 @@ describe('production D1 verification', () => {
     expect(() => assertProductionD1Verification(fixture)).toThrow(/schema SQL/i)
   })
 
+  test('rejects a constraint-preserving schema mutation that retains the old fragment', () => {
+    const fixture = validVerification()
+    const row = fixture.queryResults[2].results.find((candidate) => candidate.name === 'games')
+    if (row === undefined) throw new Error('fixture row missing')
+    row.sql = 'CREATE TABLE games (steam_app_id integer not null, altered_constraint TEXT)'
+    expect(() => assertProductionD1Verification(fixture)).toThrow(/schema SQL/i)
+  })
+
   test('rejects an extra schema object', () => {
     const fixture = validVerification()
     fixture.queryResults[2].results.push({
@@ -379,13 +415,13 @@ describe('production D1 verification', () => {
         fixture.queryResults[4].results[0].state = 'draft'
       },
       (fixture) => {
-        fixture.queryResults[5].results.pop()
+        fixture.queryResults[6].results.pop()
       },
       (fixture) => {
-        fixture.queryResults[6].results[0].game_id = 'auth-game-counter-strike-2'
+        fixture.queryResults[7].results[0].game_id = 'auth-game-counter-strike-2'
       },
       (fixture) => {
-        fixture.queryResults[7].results[0].source_hash = '0'.repeat(64)
+        fixture.queryResults[8].results[0].source_hash = '0'.repeat(64)
       },
     ]
     for (const mutate of mutations) {

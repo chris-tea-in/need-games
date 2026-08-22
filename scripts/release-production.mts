@@ -15,11 +15,7 @@ import {
 } from 'typescript'
 
 import { requiredProductionSecretNames } from './create-production-wrangler-config.mjs'
-import {
-  assertProductionD1Verification,
-  expectedProductionSchemaObjectNames,
-  productionDatabaseName,
-} from './verify-production-d1.mjs'
+import { assertProductionD1Verification, productionDatabaseName } from './verify-production-d1.mjs'
 
 const execFileAsync = promisify(execFile)
 const productionConfigPath = '.wrangler.production.jsonc'
@@ -633,9 +629,6 @@ async function captureJson(
 
 async function verifyProductionDatabase(databaseId: string, env: NodeJS.ProcessEnv): Promise<void> {
   const configArguments = ['--env', 'production', '--config', productionConfigPath]
-  const expectedSchemaObjectNames = expectedProductionSchemaObjectNames
-    .map((name) => `'${name}'`)
-    .join(', ')
   const info = await captureJson(
     'Read production D1 identity',
     wranglerCommand(['d1', 'info', productionDatabaseName, ...configArguments, '--json']),
@@ -653,7 +646,7 @@ async function verifyProductionDatabase(databaseId: string, env: NodeJS.ProcessE
       '--command',
       `SELECT dataset_version, schema_version FROM catalog_release_metadata;
 SELECT id, name FROM d1_migrations ORDER BY id;
-SELECT type, name, sql FROM sqlite_master WHERE name IN (${expectedSchemaObjectNames}) ORDER BY name;
+SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND name NOT IN ('_cf_METADATA', 'd1_migrations') ORDER BY name;
 SELECT
   (SELECT COUNT(*) FROM authoritative_mimma_seeds) AS authoritative_seed_count,
   (SELECT COUNT(*) FROM authoritative_mimma_scores) AS legacy_score_count,
@@ -677,7 +670,12 @@ SELECT
   source_hash
 FROM authoritative_snapshots AS s
 WHERE id = 'snapshot-owner-authoritative-mimma-v1' AND version = 1;
-SELECT game_id, provider, external_id, catalog_game_id, mapping_version, decision, source_hash
+SELECT game_id, score_id
+FROM authoritative_snapshot_members
+WHERE snapshot_id = 'snapshot-owner-authoritative-mimma-v1'
+ORDER BY game_id;
+SELECT id, game_id, provider, external_id, catalog_game_id, mapping_version, decision,
+  verification_ref, supersedes_mapping_id, source_manifest_version, source_hash
 FROM authoritative_game_mappings
 ORDER BY game_id, provider, mapping_version;
 SELECT ag.id AS game_id
