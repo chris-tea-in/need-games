@@ -215,7 +215,7 @@ export async function getFrozenAuthoritativeSnapshot(
          ON scores.id = members.score_id AND scores.game_id = members.game_id
        LEFT JOIN usable_mappings AS mappings ON mappings.game_id = members.game_id
        LEFT JOIN games AS catalog ON catalog.id = mappings.catalog_game_id
-       ORDER BY members.rowid ASC`,
+       ORDER BY games.identity_key COLLATE NOCASE ASC, games.id ASC`,
     )
     .bind('frozen', 'steam', 'verified')
     .all<SnapshotMemberRow>()

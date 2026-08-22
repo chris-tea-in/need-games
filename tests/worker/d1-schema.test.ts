@@ -3,9 +3,9 @@ import { beforeAll, describe, expect, test } from 'vitest'
 
 import ownerAuthoritativeMigration from '../../migrations/0005_owner_authoritative_mimma_v1.sql?raw'
 import {
-  applyBetaMigrations,
   applyMigrationWithInjectedFailure,
   prepareMigrationStatements,
+  resetBetaDatabase,
 } from './apply-beta-migrations.js'
 
 const sourceHash = 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65'
@@ -52,7 +52,7 @@ async function insertScoreVersion(
 
 describe('closed beta D1 schema', () => {
   beforeAll(async () => {
-    await applyBetaMigrations(env.NEED_GAMES_DB)
+    await resetBetaDatabase(env.NEED_GAMES_DB)
   })
 
   test('seeds the exact approved catalog and release versions without legacy scores', async () => {
@@ -83,6 +83,14 @@ describe('closed beta D1 schema', () => {
        FROM authoritative_mimma_seeds`,
     ).first<{ total: number; pure_micro: number; pure_meso: number; pure_macro: number }>()
     expect(counts).toEqual({ total: 62, pure_micro: 24, pure_meso: 17, pure_macro: 21 })
+
+    const governance = await env.NEED_GAMES_DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM authoritative_mimma_seeds
+       WHERE provenance <> 'authoritative_sample_seed'
+          OR dataset_version <> 'authoritative-mimma-seed-v1'`,
+    ).first<{ count: number }>()
+    expect(governance?.count).toBe(0)
 
     const columns = await env.NEED_GAMES_DB.prepare(
       'PRAGMA table_info(authoritative_mimma_seeds)',
@@ -276,51 +284,107 @@ describe('closed beta D1 schema', () => {
   })
 
   test('rejects immutable authority, score, snapshot, member, and mapping changes', async () => {
-    const checks = [
-      env.NEED_GAMES_DB.prepare(
-        'UPDATE authoritative_games SET canonical_title = ? WHERE id = ?',
-      ).bind('Changed', 'auth-game-counter-strike-2'),
-      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_games WHERE id = ?').bind(
-        'auth-game-counter-strike-2',
-      ),
+    await env.NEED_GAMES_DB.prepare(
+      `INSERT INTO authoritative_games
+       (id, identity_key, canonical_title, introduced_manifest_version, introduced_source_hash, created_on)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        'auth-game-immutable-test',
+        'immutable-test',
+        'Immutable Test',
+        'test',
+        sourceHash,
+        '2026-08-21',
+      )
+      .run()
+    await insertScoreVersion(
+      'auth-score-immutable-test-v1',
+      'auth-game-immutable-test',
+      1,
+      10,
+      20,
+      30,
+    )
+    await env.NEED_GAMES_DB.prepare(
+      `INSERT INTO authoritative_snapshots
+       (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
+    )
+      .bind('snapshot-immutable-test', 2, 'test', sourceHash, 1, 'draft', '2026-08-21')
+      .run()
+
+    await expect(
+      env.NEED_GAMES_DB.prepare('UPDATE authoritative_games SET canonical_title = ? WHERE id = ?')
+        .bind('Changed', 'auth-game-counter-strike-2')
+        .run(),
+    ).rejects.toThrow('authoritative games are immutable')
+    await expect(
+      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_games WHERE id = ?')
+        .bind('auth-game-immutable-test')
+        .run(),
+    ).rejects.toThrow('authoritative games cannot be deleted')
+    await expect(
       env.NEED_GAMES_DB.prepare(
         'UPDATE authoritative_mimma_score_versions SET micro_score = ? WHERE id = ?',
-      ).bind(1, 'auth-score-counter-strike-2-v1'),
-      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_mimma_score_versions WHERE id = ?').bind(
-        'auth-score-counter-strike-2-v1',
-      ),
-      env.NEED_GAMES_DB.prepare('UPDATE authoritative_snapshots SET version = ? WHERE id = ?').bind(
-        2,
-        'snapshot-owner-authoritative-mimma-v1',
-      ),
-      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_snapshots WHERE id = ?').bind(
-        'snapshot-owner-authoritative-mimma-v1',
-      ),
+      )
+        .bind(1, 'auth-score-counter-strike-2-v1')
+        .run(),
+    ).rejects.toThrow('authoritative score versions are immutable')
+    await expect(
+      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_mimma_score_versions WHERE id = ?')
+        .bind('auth-score-immutable-test-v1')
+        .run(),
+    ).rejects.toThrow('authoritative score versions cannot be deleted')
+    await expect(
+      env.NEED_GAMES_DB.prepare('UPDATE authoritative_snapshots SET version = ? WHERE id = ?')
+        .bind(2, 'snapshot-owner-authoritative-mimma-v1')
+        .run(),
+    ).rejects.toThrow('authoritative snapshots are immutable')
+    await expect(
+      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_snapshots WHERE id = ?')
+        .bind('snapshot-immutable-test')
+        .run(),
+    ).rejects.toThrow('authoritative snapshots cannot be deleted')
+    await expect(
       env.NEED_GAMES_DB.prepare(
         'INSERT INTO authoritative_snapshot_members (snapshot_id, game_id, score_id) VALUES (?, ?, ?)',
-      ).bind(
-        'snapshot-owner-authoritative-mimma-v1',
-        'auth-game-counter-strike-2',
-        'auth-score-counter-strike-2-v1',
-      ),
+      )
+        .bind(
+          'snapshot-owner-authoritative-mimma-v1',
+          'auth-game-counter-strike-2',
+          'auth-score-counter-strike-2-v1',
+        )
+        .run(),
+    ).rejects.toThrow('snapshot members can only be inserted into a draft')
+    await expect(
       env.NEED_GAMES_DB.prepare(
         'UPDATE authoritative_snapshot_members SET score_id = ? WHERE snapshot_id = ? AND game_id = ?',
-      ).bind(
-        'auth-score-palworld-v1',
-        'snapshot-owner-authoritative-mimma-v1',
-        'auth-game-counter-strike-2',
-      ),
+      )
+        .bind(
+          'auth-score-palworld-v1',
+          'snapshot-owner-authoritative-mimma-v1',
+          'auth-game-counter-strike-2',
+        )
+        .run(),
+    ).rejects.toThrow('authoritative snapshot members are immutable')
+    await expect(
       env.NEED_GAMES_DB.prepare(
         'DELETE FROM authoritative_snapshot_members WHERE snapshot_id = ? AND game_id = ?',
-      ).bind('snapshot-owner-authoritative-mimma-v1', 'auth-game-counter-strike-2'),
-      env.NEED_GAMES_DB.prepare(
-        'UPDATE authoritative_game_mappings SET decision = ? WHERE id = ?',
-      ).bind('revoked', 'auth-map-steam-counter-strike-2-v1'),
-      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_game_mappings WHERE id = ?').bind(
-        'auth-map-steam-counter-strike-2-v1',
-      ),
-    ]
-    for (const check of checks) await expect(check.run()).rejects.toThrow()
+      )
+        .bind('snapshot-owner-authoritative-mimma-v1', 'auth-game-counter-strike-2')
+        .run(),
+    ).rejects.toThrow('authoritative snapshot members cannot be deleted')
+    await expect(
+      env.NEED_GAMES_DB.prepare('UPDATE authoritative_game_mappings SET decision = ? WHERE id = ?')
+        .bind('revoked', 'auth-map-steam-counter-strike-2-v1')
+        .run(),
+    ).rejects.toThrow('authoritative mapping history is immutable')
+    await expect(
+      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_game_mappings WHERE id = ?')
+        .bind('auth-map-steam-counter-strike-2-v1')
+        .run(),
+    ).rejects.toThrow('authoritative mapping history cannot be deleted')
   })
 
   test('rejects invalid vectors, duplicates, mismatched membership, and mapping identity', async () => {
@@ -395,7 +459,7 @@ describe('closed beta D1 schema', () => {
        (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
        VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
     )
-      .bind('snapshot-draft-nine', 2, 'test', sourceHash, 10, 'draft', '2026-08-21')
+      .bind('snapshot-draft-nine', 3, 'test', sourceHash, 10, 'draft', '2026-08-21')
       .run()
     for (const [gameId, scoreId] of members.slice(0, 9)) {
       await env.NEED_GAMES_DB.prepare(
@@ -410,7 +474,7 @@ describe('closed beta D1 schema', () => {
       )
         .bind('frozen', '2026-08-21', 'snapshot-draft-nine')
         .run(),
-    ).rejects.toThrow()
+    ).rejects.toThrow('snapshot freeze requires complete membership')
 
     await env.NEED_GAMES_DB.prepare(
       `INSERT INTO authoritative_games
@@ -425,7 +489,7 @@ describe('closed beta D1 schema', () => {
        (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
        VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
     )
-      .bind('snapshot-draft-eleven', 3, 'test', sourceHash, 10, 'draft', '2026-08-21')
+      .bind('snapshot-draft-eleven', 4, 'test', sourceHash, 10, 'draft', '2026-08-21')
       .run()
     for (const [gameId, scoreId] of members) {
       await env.NEED_GAMES_DB.prepare(
@@ -445,7 +509,7 @@ describe('closed beta D1 schema', () => {
       )
         .bind('frozen', '2026-08-21', 'snapshot-draft-eleven')
         .run(),
-    ).rejects.toThrow()
+    ).rejects.toThrow('snapshot freeze requires complete membership')
 
     await expect(
       env.NEED_GAMES_DB.prepare(
@@ -469,7 +533,7 @@ describe('closed beta D1 schema', () => {
           '2026-08-21',
         )
         .run(),
-    ).rejects.toThrow()
+    ).rejects.toThrow('mapping versions must be contiguous')
     await env.NEED_GAMES_DB.prepare(
       `INSERT INTO authoritative_game_mappings (
         id, game_id, provider, external_id, catalog_game_id, mapping_version,
@@ -513,7 +577,7 @@ describe('closed beta D1 schema', () => {
           '2026-08-21',
         )
         .run(),
-    ).rejects.toThrow()
+    ).rejects.toThrow('mapping versions must be contiguous')
     await expect(
       env.NEED_GAMES_DB.prepare(
         `INSERT INTO authoritative_game_mappings (
@@ -536,7 +600,7 @@ describe('closed beta D1 schema', () => {
           '2026-08-21',
         )
         .run(),
-    ).rejects.toThrow()
+    ).rejects.toThrow('mapping supersession must name the prior same-game row')
   })
 
   test('rolls back all 0005 tables when a later batch statement fails', async () => {

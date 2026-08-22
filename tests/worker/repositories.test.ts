@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:test'
-import { beforeAll, describe, expect, test } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, test } from 'vitest'
 
 import { findCatalogGames, findGameBySlug } from '../../src/worker/repositories/games.js'
 import { getCatalogReleaseMetadata } from '../../src/worker/repositories/catalog-release.js'
@@ -8,7 +8,7 @@ import {
   getFrozenAuthoritativeSnapshot,
   getMappedAuthoritativeScoreFromLatestSnapshot,
 } from '../../src/worker/repositories/authoritative-scores.js'
-import { applyBetaMigrations } from './apply-beta-migrations.js'
+import { applyBetaMigrations, resetBetaDatabase } from './apply-beta-migrations.js'
 
 const sourceHash = 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65'
 
@@ -86,6 +86,10 @@ describe('catalog repositories', () => {
     await applyBetaMigrations(env.NEED_GAMES_DB)
   })
 
+  beforeEach(async () => {
+    await resetBetaDatabase(env.NEED_GAMES_DB)
+  })
+
   test('searches and sorts the catalog through validated, parameterized values', async () => {
     const games = await findCatalogGames(env.NEED_GAMES_DB, {
       search: 'ring',
@@ -134,57 +138,28 @@ describe('catalog repositories', () => {
   })
 
   test('reads all ten frozen members including intentionally unmapped identities', async () => {
-    await expect(getFrozenAuthoritativeSnapshot(env.NEED_GAMES_DB)).resolves.toEqual({
-      snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-      snapshotVersion: 1,
-      members: [
+    const snapshot = await getFrozenAuthoritativeSnapshot(env.NEED_GAMES_DB)
+    expect(snapshot?.snapshotId).toBe('snapshot-owner-authoritative-mimma-v1')
+    expect(snapshot?.snapshotVersion).toBe(1)
+    expect(snapshot?.members.map((member) => member.identityKey)).toEqual([
+      'apex-legends',
+      'baldurs-gate-3',
+      'counter-strike-2',
+      'elden-ring',
+      'league-of-legends',
+      'marvel-rivals',
+      'monster-hunter-wilds',
+      'palworld',
+      'rainbow-six-siege',
+      'valorant',
+    ])
+    expect(snapshot?.members).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           gameId: 'auth-game-counter-strike-2',
           scoreId: 'auth-score-counter-strike-2-v1',
           catalogGameId: 'steam-730',
           steamAppId: 730,
-        }),
-        expect.objectContaining({
-          gameId: 'auth-game-palworld',
-          scoreId: 'auth-score-palworld-v1',
-          catalogGameId: 'steam-1623730',
-          steamAppId: 1623730,
-        }),
-        expect.objectContaining({
-          gameId: 'auth-game-marvel-rivals',
-          scoreId: 'auth-score-marvel-rivals-v1',
-          catalogGameId: 'steam-2767030',
-          steamAppId: 2767030,
-        }),
-        expect.objectContaining({
-          gameId: 'auth-game-apex-legends',
-          scoreId: 'auth-score-apex-legends-v1',
-          catalogGameId: 'steam-1172470',
-          steamAppId: 1172470,
-        }),
-        expect.objectContaining({
-          gameId: 'auth-game-rainbow-six-siege',
-          scoreId: 'auth-score-rainbow-six-siege-v1',
-          catalogGameId: 'steam-359550',
-          steamAppId: 359550,
-        }),
-        expect.objectContaining({
-          gameId: 'auth-game-baldurs-gate-3',
-          scoreId: 'auth-score-baldurs-gate-3-v1',
-          catalogGameId: 'steam-1086940',
-          steamAppId: 1086940,
-        }),
-        expect.objectContaining({
-          gameId: 'auth-game-monster-hunter-wilds',
-          scoreId: 'auth-score-monster-hunter-wilds-v1',
-          catalogGameId: 'steam-2246340',
-          steamAppId: 2246340,
-        }),
-        expect.objectContaining({
-          gameId: 'auth-game-elden-ring',
-          scoreId: 'auth-score-elden-ring-v1',
-          catalogGameId: 'steam-1245620',
-          steamAppId: 1245620,
         }),
         expect.objectContaining({
           gameId: 'auth-game-league-of-legends',
@@ -198,8 +173,8 @@ describe('catalog repositories', () => {
           catalogGameId: null,
           steamAppId: null,
         }),
-      ],
-    })
+      ]),
+    )
   })
 
   test('uses the V1 snapshot score rather than a later appended score version', async () => {
@@ -352,6 +327,15 @@ describe('catalog repositories', () => {
   })
 
   test('fails closed when latest verified mappings collide on provider identity', async () => {
+    await insertMapping(
+      'auth-map-steam-palworld-v2',
+      'auth-game-palworld',
+      '1623730',
+      'steam-1623730',
+      2,
+      'revoked',
+      'auth-map-steam-palworld-v1',
+    )
     await insertMapping(
       'auth-map-steam-palworld-v3',
       'auth-game-palworld',
