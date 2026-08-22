@@ -55,6 +55,270 @@ const expectedMappings = [
   ['auth-game-elden-ring', '1245620', 'steam-1245620'],
 ] as const
 
+const expectedFullGames = [
+  {
+    id: 'auth-game-counter-strike-2',
+    identityKey: 'counter-strike-2',
+    canonicalTitle: 'Counter-Strike 2',
+    score: {
+      id: 'auth-score-counter-strike-2-v1',
+      version: 1,
+      microOriginal: '100.0',
+      mesoOriginal: '65.0',
+      macroOriginal: '80.0',
+      micro: 100,
+      meso: 65,
+      macro: 80,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+  {
+    id: 'auth-game-palworld',
+    identityKey: 'palworld',
+    canonicalTitle: 'Palworld',
+    score: {
+      id: 'auth-score-palworld-v1',
+      version: 1,
+      microOriginal: '40.0',
+      mesoOriginal: '20.0',
+      macroOriginal: '70.0',
+      micro: 40,
+      meso: 20,
+      macro: 70,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+  {
+    id: 'auth-game-marvel-rivals',
+    identityKey: 'marvel-rivals',
+    canonicalTitle: 'Marvel Rivals',
+    score: {
+      id: 'auth-score-marvel-rivals-v1',
+      version: 1,
+      microOriginal: '80.0',
+      mesoOriginal: '60.0',
+      macroOriginal: '80.0',
+      micro: 80,
+      meso: 60,
+      macro: 80,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+  {
+    id: 'auth-game-apex-legends',
+    identityKey: 'apex-legends',
+    canonicalTitle: 'Apex Legends',
+    score: {
+      id: 'auth-score-apex-legends-v1',
+      version: 1,
+      microOriginal: '80.0',
+      mesoOriginal: '80.0',
+      macroOriginal: '100.0',
+      micro: 80,
+      meso: 80,
+      macro: 100,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+  {
+    id: 'auth-game-rainbow-six-siege',
+    identityKey: 'rainbow-six-siege',
+    canonicalTitle: "Tom Clancy's Rainbow Six Siege",
+    score: {
+      id: 'auth-score-rainbow-six-siege-v1',
+      version: 1,
+      microOriginal: '80.0',
+      mesoOriginal: '60.0',
+      macroOriginal: '80.0',
+      micro: 80,
+      meso: 60,
+      macro: 80,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+  {
+    id: 'auth-game-baldurs-gate-3',
+    identityKey: 'baldurs-gate-3',
+    canonicalTitle: "Baldur's Gate 3",
+    score: {
+      id: 'auth-score-baldurs-gate-3-v1',
+      version: 1,
+      microOriginal: '20.0',
+      mesoOriginal: '20.0',
+      macroOriginal: '100.0',
+      micro: 20,
+      meso: 20,
+      macro: 100,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+  {
+    id: 'auth-game-monster-hunter-wilds',
+    identityKey: 'monster-hunter-wilds',
+    canonicalTitle: 'Monster Hunter Wilds',
+    score: {
+      id: 'auth-score-monster-hunter-wilds-v1',
+      version: 1,
+      microOriginal: '80.0',
+      mesoOriginal: '40.0',
+      macroOriginal: '60.0',
+      micro: 80,
+      meso: 40,
+      macro: 60,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+  {
+    id: 'auth-game-elden-ring',
+    identityKey: 'elden-ring',
+    canonicalTitle: 'ELDEN RING',
+    score: {
+      id: 'auth-score-elden-ring-v1',
+      version: 1,
+      microOriginal: '80.0',
+      mesoOriginal: '100.0',
+      macroOriginal: '40.0',
+      micro: 80,
+      meso: 100,
+      macro: 40,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+  {
+    id: 'auth-game-league-of-legends',
+    identityKey: 'league-of-legends',
+    canonicalTitle: 'League of Legends',
+    score: {
+      id: 'auth-score-league-of-legends-v1',
+      version: 1,
+      microOriginal: '68.6',
+      mesoOriginal: '77.1',
+      macroOriginal: '100.0',
+      micro: 69,
+      meso: 77,
+      macro: 100,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+  {
+    id: 'auth-game-valorant',
+    identityKey: 'valorant',
+    canonicalTitle: 'Valorant',
+    score: {
+      id: 'auth-score-valorant-v1',
+      version: 1,
+      microOriginal: '100.0',
+      mesoOriginal: '73.3',
+      macroOriginal: '80.0',
+      micro: 100,
+      meso: 73,
+      macro: 80,
+      approvalReason: 'initial-owner-snapshot',
+      approvedOn: '2026-08-21',
+    },
+  },
+] as const
+
+const expectedFullMappings = [
+  {
+    id: 'auth-map-steam-counter-strike-2-v1',
+    authoritativeGameId: 'auth-game-counter-strike-2',
+    provider: 'steam',
+    externalId: '730',
+    catalogGameId: 'steam-730',
+    version: 1,
+    decision: 'verified',
+    verificationRef: 'owner-approved-manifest-v1',
+    decidedOn: '2026-08-21',
+  },
+  {
+    id: 'auth-map-steam-palworld-v1',
+    authoritativeGameId: 'auth-game-palworld',
+    provider: 'steam',
+    externalId: '1623730',
+    catalogGameId: 'steam-1623730',
+    version: 1,
+    decision: 'verified',
+    verificationRef: 'owner-approved-manifest-v1',
+    decidedOn: '2026-08-21',
+  },
+  {
+    id: 'auth-map-steam-marvel-rivals-v1',
+    authoritativeGameId: 'auth-game-marvel-rivals',
+    provider: 'steam',
+    externalId: '2767030',
+    catalogGameId: 'steam-2767030',
+    version: 1,
+    decision: 'verified',
+    verificationRef: 'owner-approved-manifest-v1',
+    decidedOn: '2026-08-21',
+  },
+  {
+    id: 'auth-map-steam-apex-legends-v1',
+    authoritativeGameId: 'auth-game-apex-legends',
+    provider: 'steam',
+    externalId: '1172470',
+    catalogGameId: 'steam-1172470',
+    version: 1,
+    decision: 'verified',
+    verificationRef: 'owner-approved-manifest-v1',
+    decidedOn: '2026-08-21',
+  },
+  {
+    id: 'auth-map-steam-rainbow-six-siege-v1',
+    authoritativeGameId: 'auth-game-rainbow-six-siege',
+    provider: 'steam',
+    externalId: '359550',
+    catalogGameId: 'steam-359550',
+    version: 1,
+    decision: 'verified',
+    verificationRef: 'owner-approved-manifest-v1',
+    decidedOn: '2026-08-21',
+  },
+  {
+    id: 'auth-map-steam-baldurs-gate-3-v1',
+    authoritativeGameId: 'auth-game-baldurs-gate-3',
+    provider: 'steam',
+    externalId: '1086940',
+    catalogGameId: 'steam-1086940',
+    version: 1,
+    decision: 'verified',
+    verificationRef: 'owner-approved-manifest-v1',
+    decidedOn: '2026-08-21',
+  },
+  {
+    id: 'auth-map-steam-monster-hunter-wilds-v1',
+    authoritativeGameId: 'auth-game-monster-hunter-wilds',
+    provider: 'steam',
+    externalId: '2246340',
+    catalogGameId: 'steam-2246340',
+    version: 1,
+    decision: 'verified',
+    verificationRef: 'owner-approved-manifest-v1',
+    decidedOn: '2026-08-21',
+  },
+  {
+    id: 'auth-map-steam-elden-ring-v1',
+    authoritativeGameId: 'auth-game-elden-ring',
+    provider: 'steam',
+    externalId: '1245620',
+    catalogGameId: 'steam-1245620',
+    version: 1,
+    decision: 'verified',
+    verificationRef: 'owner-approved-manifest-v1',
+    decidedOn: '2026-08-21',
+  },
+] as const
+
 describe('owner-authoritative MiMMa V1 manifest', () => {
   test('contains the exact ten approved rows, vectors, and source decimals', () => {
     expect(manifest.games).toHaveLength(10)
@@ -70,6 +334,10 @@ describe('owner-authoritative MiMMa V1 manifest', () => {
         score.macro,
       ]),
     ).toEqual(expectedGames)
+  })
+
+  test('projects every game and score field against independent literal expectations', () => {
+    expect(manifest.games).toEqual(expectedFullGames)
   })
 
   test('contains eight verified mappings and leaves League of Legends and Valorant unmapped', () => {
@@ -88,6 +356,10 @@ describe('owner-authoritative MiMMa V1 manifest', () => {
         )
         .map(({ id }) => id),
     ).toEqual(['auth-game-league-of-legends', 'auth-game-valorant'])
+  })
+
+  test('projects every mapping field against independent literal expectations', () => {
+    expect(manifest.mappings).toEqual(expectedFullMappings)
   })
 
   test('validates the exact V1 contract and locks the byte identity', () => {
@@ -138,20 +410,26 @@ describe('owner-authoritative MiMMa V1 manifest', () => {
   })
 
   test.each([
-    ['survey', { survey: true }],
-    ['nested response', { metadata: { response: 'raw' } }],
-    ['comment', { comment: 'not allowed' }],
-    ['hours', { hours: 10 }],
-    ['playtime', { playtime: 10 }],
-    ['respondent', { respondent: 'id' }],
-    ['raw payload', { rawPayload: {} }],
-  ])('rejects forbidden raw-data key: %s', (_label, forbidden) => {
+    ['SuRvEy', { SuRvEy: true }],
+    ['ReSpOnSe', { metadata: { ReSpOnSe: 'raw' } }],
+    ['AnSwEr', { metadata: { details: { AnSwEr: 'raw' } } }],
+    ['CoMmEnT', { CoMmEnT: 'not allowed' }],
+    ['ReViEwTeXt', { metadata: { ReViEwTeXt: 'not allowed' } }],
+    ['HoUrS', { HoUrS: 10 }],
+    ['PlAyTiMe', { PlAyTiMe: 10 }],
+    ['ReSpOnDeNt', { ReSpOnDeNt: 'id' }],
+    ['RaWPaYlOaD', { RaWPaYlOaD: {} }],
+  ])('rejects nested or mixed-case forbidden raw-data key: %s', (_label, forbidden) => {
     const changed = structuredClone(manifest) as unknown as Record<string, unknown>
     changed.metadata = forbidden
     expect(() => validateOwnerAuthoritativeManifest(changed)).toThrow(/forbidden/i)
   })
 
   test('rejects duplicate identities, scores, mappings, and incorrect counts', () => {
+    const duplicateGame = structuredClone(manifest)
+    duplicateGame.games[1].id = duplicateGame.games[0].id
+    expect(() => validateOwnerAuthoritativeManifest(duplicateGame)).toThrow(/duplicate game id/i)
+
     const duplicateIdentity = structuredClone(manifest)
     duplicateIdentity.games[1].identityKey = duplicateIdentity.games[0].identityKey
     expect(() => validateOwnerAuthoritativeManifest(duplicateIdentity)).toThrow(/duplicate/i)
@@ -163,6 +441,24 @@ describe('owner-authoritative MiMMa V1 manifest', () => {
     const duplicateMapping = structuredClone(manifest)
     duplicateMapping.mappings[1].id = duplicateMapping.mappings[0].id
     expect(() => validateOwnerAuthoritativeManifest(duplicateMapping)).toThrow(/duplicate/i)
+
+    const duplicateTitle = structuredClone(manifest)
+    duplicateTitle.games[1].canonicalTitle = duplicateTitle.games[0].canonicalTitle.toUpperCase()
+    expect(() => validateOwnerAuthoritativeManifest(duplicateTitle)).toThrow(
+      /duplicate canonical title/i,
+    )
+
+    const duplicateExternalId = structuredClone(manifest)
+    duplicateExternalId.mappings[1].externalId = duplicateExternalId.mappings[0].externalId
+    expect(() => validateOwnerAuthoritativeManifest(duplicateExternalId)).toThrow(
+      /duplicate Steam external id/i,
+    )
+
+    const duplicateCatalogId = structuredClone(manifest)
+    duplicateCatalogId.mappings[1].catalogGameId = duplicateCatalogId.mappings[0].catalogGameId
+    expect(() => validateOwnerAuthoritativeManifest(duplicateCatalogId)).toThrow(
+      /duplicate catalog game id/i,
+    )
 
     const wrongCount = structuredClone(manifest)
     wrongCount.games.pop()
@@ -185,6 +481,38 @@ describe('owner-authoritative MiMMa V1 manifest', () => {
     allHundred.games[0].score.meso = 100
     allHundred.games[0].score.macro = 100
     expect(() => validateOwnerAuthoritativeManifest(allHundred)).toThrow(/100|vector/i)
+  })
+
+  test('validator rejects stored floats even when the source decimal is otherwise valid', () => {
+    const storedFloat = structuredClone(manifest)
+    storedFloat.games[8].score.micro = 68.5
+    expect(() => validateOwnerAuthoritativeManifest(storedFloat)).toThrow(/integer/i)
+  })
+
+  test.each([
+    ['microOriginal', '68.50'],
+    ['mesoOriginal', '+77.1'],
+    ['macroOriginal', '1e1'],
+  ] as const)('validator rejects malformed %s values', (field, value) => {
+    const malformed = structuredClone(manifest)
+    malformed.games[8].score[field] = value
+    expect(() => validateOwnerAuthoritativeManifest(malformed)).toThrow()
+  })
+
+  test('rejects a valid JSON source whose root field order changed', () => {
+    const reordered = {
+      manifestVersion: manifest.manifestVersion,
+      schemaVersion: manifest.schemaVersion,
+      snapshot: manifest.snapshot,
+      rounding: manifest.rounding,
+      games: manifest.games,
+      mappings: manifest.mappings,
+    }
+    const reorderedSource = `${JSON.stringify(reordered, null, 2)}\n`
+    expect(JSON.parse(reorderedSource)).toEqual(manifest)
+    expect(() => assertOwnerAuthoritativeManifestIdentity(reorderedSource)).toThrow(
+      /identity mismatch/i,
+    )
   })
 
   test('renders deterministic SQL from validated data without reading files or D1', () => {
