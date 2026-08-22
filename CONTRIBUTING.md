@@ -123,20 +123,37 @@ The tracked production value is the release mode source of truth. Set the transi
 The release rejects a missing, invalid, duplicate, or mismatched mode before upload. The final
 generated config must contain the transient D1 ID and the reviewed Steam sign-in mode.
 The release verifies the target D1 identity, catalog state, and exactly `0001_schema.sql`,
-`0002_seed_beta_catalog.sql`, `0003_authoritative_mimma_seed.sql`, and
-`0004_identity_sessions.sql` in its migration history. Before running `release:production`, use
+`0002_seed_beta_catalog.sql`, `0003_authoritative_mimma_seed.sql`, `0004_identity_sessions.sql`, and
+`0005_owner_authoritative_mimma_v1.sql` in its migration history. Before running `release:production`, use
 the generated `.wrangler.production.jsonc` for the owner-confirmed database ID to apply the
 reviewed migration set remotely:
 
 ```powershell
 corepack pnpm node scripts/create-production-wrangler-config.mts
-corepack pnpm exec wrangler d1 migrations apply need-games-production --remote --config .wrangler.production.jsonc
+corepack pnpm exec wrangler d1 execute need-games-production --remote --file migrations/0005_owner_authoritative_mimma_v1.sql --config .wrangler.production.jsonc
 ```
 
 Review Wrangler's migration list before confirming it. The release command does not apply
-migrations; it fails closed if any of these four migrations is absent or if any later migration is
-present. A real D1 ID must never be committed, added to GitHub, or written to a release report.
+migrations; it fails closed if any of these five migrations is absent or if any later migration is
+present. Ordinary remote `d1 migrations apply` is not verified for the compound triggers in
+`0005`; use the owner-gated atomic file-ingestion procedure below. A real D1 ID must never be
+committed, added to GitHub, or written to a release report.
 The generated configuration is ignored and is the only release file that may contain the ID.
+
+### Owner-gated D1 authority migration procedure
+
+Before a separately approved production authority migration, the owner records the target
+database name and ID, captures a D1 Time Travel bookmark and a SQL export, and verifies the
+exact target and reviewed commit. The owner then ingests the reviewed trigger-bearing file with
+`wrangler d1 execute --remote --file` using the generated production configuration. This
+atomic file-ingestion step is required because a failed file execution restores the database;
+ordinary remote migration application has not been verified for this compound-trigger SQL.
+After ingestion, verify every allowlisted table, index, trigger, source hash, permanent row
+count, and permanent invariants for the frozen snapshot, eight mappings, two intentionally unmapped games, and the unchanged
+legacy score table. Only after those checks pass may the owner record migration history through
+the separately reviewed procedure, rerun the release verifier, and perform the read-only public
+smoke sequence. Keep the bookmark, export, and verification evidence intact on any failure;
+never delete historical authority rows or retry edited SQL without a new owner decision.
 
 Before each upload, the release reads the current production deployment and stores a rollback
 baseline under the ignored `.wrangler/production-release/` directory. Keep that file until the

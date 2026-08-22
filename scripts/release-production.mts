@@ -15,7 +15,11 @@ import {
 } from 'typescript'
 
 import { requiredProductionSecretNames } from './create-production-wrangler-config.mjs'
-import { assertProductionD1Verification, productionDatabaseName } from './verify-production-d1.mjs'
+import {
+  assertProductionD1Verification,
+  expectedProductionSchemaObjectNames,
+  productionDatabaseName,
+} from './verify-production-d1.mjs'
 
 const execFileAsync = promisify(execFile)
 const productionConfigPath = '.wrangler.production.jsonc'
@@ -629,6 +633,9 @@ async function captureJson(
 
 async function verifyProductionDatabase(databaseId: string, env: NodeJS.ProcessEnv): Promise<void> {
   const configArguments = ['--env', 'production', '--config', productionConfigPath]
+  const expectedSchemaObjectNames = expectedProductionSchemaObjectNames
+    .map((name) => `'${name}'`)
+    .join(', ')
   const info = await captureJson(
     'Read production D1 identity',
     wranglerCommand(['d1', 'info', productionDatabaseName, ...configArguments, '--json']),
@@ -646,20 +653,52 @@ async function verifyProductionDatabase(databaseId: string, env: NodeJS.ProcessE
       '--command',
       `SELECT dataset_version, schema_version FROM catalog_release_metadata;
 SELECT id, name FROM d1_migrations ORDER BY id;
-SELECT type, name, sql FROM sqlite_master WHERE name IN (
-  'authoritative_mimma_seeds',
-  'authoritative_mimma_seeds_prevent_delete',
-  'authoritative_mimma_seeds_prevent_insert',
-  'authoritative_mimma_seeds_prevent_update',
-  'sessions',
-  'sessions_expiry_idx',
-  'sessions_user_idx',
-  'steam_login_transactions',
-  'steam_login_transactions_expiry_idx',
-  'users'
-) ORDER BY name;
+SELECT type, name, sql FROM sqlite_master WHERE name IN (${expectedSchemaObjectNames}) ORDER BY name;
 SELECT
-  (SELECT COUNT(*) FROM authoritative_mimma_seeds) AS authoritative_seed_count;`,
+  (SELECT COUNT(*) FROM authoritative_mimma_seeds) AS authoritative_seed_count,
+  (SELECT COUNT(*) FROM authoritative_mimma_scores) AS legacy_score_count,
+  (SELECT COUNT(*) FROM authoritative_games) AS authoritative_game_count,
+  (SELECT COUNT(*) FROM authoritative_mimma_score_versions) AS authoritative_score_version_count,
+  (SELECT COUNT(*) FROM authoritative_snapshots) AS authoritative_snapshot_count,
+  (SELECT COUNT(*) FROM authoritative_snapshot_members) AS authoritative_snapshot_member_count,
+  (SELECT COUNT(*) FROM authoritative_game_mappings) AS authoritative_mapping_count,
+  (SELECT COUNT(*) FROM authoritative_snapshots WHERE state = 'frozen') AS frozen_snapshot_count,
+  (SELECT COUNT(*) FROM authoritative_games AS ag WHERE NOT EXISTS (
+    SELECT 1 FROM authoritative_game_mappings AS agm WHERE agm.game_id = ag.id
+  )) AS unmapped_authority_game_count;
+SELECT
+  id,
+  version,
+  state,
+  expected_member_count,
+  (SELECT COUNT(*) FROM authoritative_snapshot_members AS asm WHERE asm.snapshot_id = s.id) AS member_count,
+  (SELECT COUNT(DISTINCT game_id) FROM authoritative_snapshot_members AS asm WHERE asm.snapshot_id = s.id) AS distinct_game_count,
+  (SELECT COUNT(DISTINCT score_id) FROM authoritative_snapshot_members AS asm WHERE asm.snapshot_id = s.id) AS distinct_score_count,
+  source_hash
+FROM authoritative_snapshots AS s
+WHERE id = 'snapshot-owner-authoritative-mimma-v1' AND version = 1;
+SELECT game_id, provider, external_id, catalog_game_id, mapping_version, decision, source_hash
+FROM authoritative_game_mappings
+ORDER BY game_id, provider, mapping_version;
+SELECT ag.id AS game_id
+FROM authoritative_games AS ag
+LEFT JOIN authoritative_game_mappings AS agm ON agm.game_id = ag.id
+WHERE agm.id IS NULL
+ORDER BY ag.id;
+SELECT 'authoritative_games' AS source_table, COUNT(*) AS row_count,
+  COUNT(DISTINCT introduced_source_hash) AS source_hash_count,
+  MIN(introduced_source_hash) AS source_hash,
+  MAX(introduced_source_hash) AS source_hash_max
+FROM authoritative_games
+UNION ALL
+SELECT 'authoritative_mimma_score_versions', COUNT(*), COUNT(DISTINCT source_hash), MIN(source_hash), MAX(source_hash)
+FROM authoritative_mimma_score_versions
+UNION ALL
+SELECT 'authoritative_snapshots', COUNT(*), COUNT(DISTINCT source_hash), MIN(source_hash), MAX(source_hash)
+FROM authoritative_snapshots
+UNION ALL
+SELECT 'authoritative_game_mappings', COUNT(*), COUNT(DISTINCT source_hash), MIN(source_hash), MAX(source_hash)
+FROM authoritative_game_mappings;`,
     ]),
     env,
   )
