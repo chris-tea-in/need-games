@@ -659,15 +659,28 @@ SELECT
   (SELECT COUNT(*) FROM authoritative_games AS ag WHERE NOT EXISTS (
     SELECT 1 FROM authoritative_game_mappings AS agm WHERE agm.game_id = ag.id
   )) AS unmapped_authority_game_count;
+SELECT id, identity_key, canonical_title, introduced_manifest_version,
+  introduced_source_hash, created_on
+FROM authoritative_games
+ORDER BY id;
+SELECT id, game_id, version, micro_score, meso_score, macro_score,
+  micro_original_decimal, meso_original_decimal, macro_original_decimal,
+  decimal_scale, rounding_mode, source_manifest_version, source_hash,
+  provenance, approval_reason, approved_on
+FROM authoritative_mimma_score_versions
+ORDER BY game_id, version;
 SELECT
   id,
   version,
+  manifest_version,
+  source_hash,
   state,
   expected_member_count,
   (SELECT COUNT(*) FROM authoritative_snapshot_members AS asm WHERE asm.snapshot_id = s.id) AS member_count,
   (SELECT COUNT(DISTINCT game_id) FROM authoritative_snapshot_members AS asm WHERE asm.snapshot_id = s.id) AS distinct_game_count,
   (SELECT COUNT(DISTINCT score_id) FROM authoritative_snapshot_members AS asm WHERE asm.snapshot_id = s.id) AS distinct_score_count,
-  source_hash
+  created_on,
+  frozen_on
 FROM authoritative_snapshots AS s
 WHERE id = 'snapshot-owner-authoritative-mimma-v1' AND version = 1;
 SELECT game_id, score_id
@@ -675,7 +688,7 @@ FROM authoritative_snapshot_members
 WHERE snapshot_id = 'snapshot-owner-authoritative-mimma-v1'
 ORDER BY game_id;
 SELECT id, game_id, provider, external_id, catalog_game_id, mapping_version, decision,
-  verification_ref, supersedes_mapping_id, source_manifest_version, source_hash
+  verification_ref, supersedes_mapping_id, source_manifest_version, source_hash, decided_on
 FROM authoritative_game_mappings
 ORDER BY game_id, provider, mapping_version;
 SELECT ag.id AS game_id

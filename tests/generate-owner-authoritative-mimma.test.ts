@@ -115,7 +115,7 @@ describe('owner-authoritative MiMMa migration generator', () => {
     ).not.toThrow()
   })
 
-  test('creates the five additive tables, five indexes, and thirteen triggers in contract order', () => {
+  test('creates the five additive tables, five indexes, and fourteen triggers in contract order', () => {
     const sql = committedMigration()
     const tableNames = [...sql.matchAll(/CREATE TABLE (\w+)/g)].map((match) => match[1])
     const indexNames = [...sql.matchAll(/CREATE INDEX (\w+)/g)].map((match) => match[1])
@@ -141,6 +141,7 @@ describe('owner-authoritative MiMMa migration generator', () => {
       'authoritative_mimma_score_versions_prevent_update',
       'authoritative_mimma_score_versions_prevent_delete',
       'authoritative_snapshots_freeze_guard',
+      'authoritative_snapshots_prevent_frozen_insert',
       'authoritative_snapshots_prevent_frozen_update',
       'authoritative_snapshots_prevent_delete',
       'authoritative_snapshot_members_prevent_frozen_insert',
@@ -400,6 +401,8 @@ describe('owner-authoritative MiMMa migration generator', () => {
     const expectations: Record<string, string[]> = {
       authoritative_games: [
         'id TEXT PRIMARY KEY',
+        "id GLOB 'auth-game-*'",
+        "id NOT GLOB 'auth-game-steam-*'",
         'identity_key TEXT NOT NULL COLLATE NOCASE UNIQUE',
         'canonical_title TEXT NOT NULL COLLATE NOCASE UNIQUE',
         'introduced_manifest_version TEXT NOT NULL',
@@ -417,6 +420,9 @@ describe('owner-authoritative MiMMa migration generator', () => {
         "provenance TEXT NOT NULL CHECK (provenance = 'owner_authoritative')",
         'micro_score <> 0 OR meso_score <> 0 OR macro_score <> 0',
         'micro_score <> 100 OR meso_score <> 100 OR macro_score <> 100',
+        "micro_score = CAST((CAST(replace(micro_original_decimal, '.', '') AS INTEGER) + 5) / 10 AS INTEGER)",
+        "meso_score = CAST((CAST(replace(meso_original_decimal, '.', '') AS INTEGER) + 5) / 10 AS INTEGER)",
+        "macro_score = CAST((CAST(replace(macro_original_decimal, '.', '') AS INTEGER) + 5) / 10 AS INTEGER)",
       ],
       authoritative_snapshots: [
         'version INTEGER NOT NULL UNIQUE',

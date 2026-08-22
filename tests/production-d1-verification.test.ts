@@ -33,6 +33,152 @@ const expectedSnapshotMembers = [
   ['auth-game-valorant', 'auth-score-valorant-v1'],
 ] as const
 
+const expectedAuthorityIdentities = [
+  {
+    id: 'auth-game-apex-legends',
+    identity_key: 'apex-legends',
+    canonical_title: 'Apex Legends',
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+  {
+    id: 'auth-game-baldurs-gate-3',
+    identity_key: 'baldurs-gate-3',
+    canonical_title: "Baldur's Gate 3",
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+  {
+    id: 'auth-game-counter-strike-2',
+    identity_key: 'counter-strike-2',
+    canonical_title: 'Counter-Strike 2',
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+  {
+    id: 'auth-game-elden-ring',
+    identity_key: 'elden-ring',
+    canonical_title: 'ELDEN RING',
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+  {
+    id: 'auth-game-league-of-legends',
+    identity_key: 'league-of-legends',
+    canonical_title: 'League of Legends',
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+  {
+    id: 'auth-game-marvel-rivals',
+    identity_key: 'marvel-rivals',
+    canonical_title: 'Marvel Rivals',
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+  {
+    id: 'auth-game-monster-hunter-wilds',
+    identity_key: 'monster-hunter-wilds',
+    canonical_title: 'Monster Hunter Wilds',
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+  {
+    id: 'auth-game-palworld',
+    identity_key: 'palworld',
+    canonical_title: 'Palworld',
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+  {
+    id: 'auth-game-rainbow-six-siege',
+    identity_key: 'rainbow-six-siege',
+    canonical_title: "Tom Clancy's Rainbow Six Siege",
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+  {
+    id: 'auth-game-valorant',
+    identity_key: 'valorant',
+    canonical_title: 'Valorant',
+    introduced_manifest_version: 'owner-authoritative-mimma-v1',
+    introduced_source_hash: sourceHash,
+    created_on: '2026-08-21',
+  },
+] as const
+
+const expectedScoreVersions = [
+  ['auth-score-apex-legends-v1', 'auth-game-apex-legends', 1, 80, 80, 100, '80.0', '80.0', '100.0'],
+  [
+    'auth-score-baldurs-gate-3-v1',
+    'auth-game-baldurs-gate-3',
+    1,
+    20,
+    20,
+    100,
+    '20.0',
+    '20.0',
+    '100.0',
+  ],
+  [
+    'auth-score-counter-strike-2-v1',
+    'auth-game-counter-strike-2',
+    1,
+    100,
+    65,
+    80,
+    '100.0',
+    '65.0',
+    '80.0',
+  ],
+  ['auth-score-elden-ring-v1', 'auth-game-elden-ring', 1, 80, 100, 40, '80.0', '100.0', '40.0'],
+  [
+    'auth-score-league-of-legends-v1',
+    'auth-game-league-of-legends',
+    1,
+    69,
+    77,
+    100,
+    '68.6',
+    '77.1',
+    '100.0',
+  ],
+  ['auth-score-marvel-rivals-v1', 'auth-game-marvel-rivals', 1, 80, 60, 80, '80.0', '60.0', '80.0'],
+  [
+    'auth-score-monster-hunter-wilds-v1',
+    'auth-game-monster-hunter-wilds',
+    1,
+    80,
+    40,
+    60,
+    '80.0',
+    '40.0',
+    '60.0',
+  ],
+  ['auth-score-palworld-v1', 'auth-game-palworld', 1, 40, 20, 70, '40.0', '20.0', '70.0'],
+  [
+    'auth-score-rainbow-six-siege-v1',
+    'auth-game-rainbow-six-siege',
+    1,
+    80,
+    60,
+    80,
+    '80.0',
+    '60.0',
+    '80.0',
+  ],
+  ['auth-score-valorant-v1', 'auth-game-valorant', 1, 100, 73, 80, '100.0', '73.3', '80.0'],
+] as const
+
 const canonicalSchemaOracle = [
   {
     name: 'catalog_release_metadata',
@@ -142,12 +288,12 @@ const canonicalSchemaOracle = [
   {
     name: 'authoritative_games',
     type: 'table',
-    sql: `create table authoritative_games ( id text primary key not null check (id glob 'auth-game-*'), identity_key text not null collate nocase unique check ( length(identity_key) > 0 and identity_key not glob '*[^a-z0-9-]*' and identity_key not like '-%' and identity_key not like '%-' and identity_key not like '%--%' ), canonical_title text not null collate nocase unique check (length(trim(canonical_title)) > 0), introduced_manifest_version text not null check (length(trim(introduced_manifest_version)) > 0), introduced_source_hash text not null check ( length(introduced_source_hash) = 64 and introduced_source_hash not glob '*[^0-9a-f]*' ), created_on text not null check (created_on glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]') )`,
+    sql: `create table authoritative_games ( id text primary key not null check (id glob 'auth-game-*' and id not glob 'auth-game-steam-*'), identity_key text not null collate nocase unique check ( length(identity_key) > 0 and identity_key not glob '*[^a-z0-9-]*' and identity_key not like '-%' and identity_key not like '%-' and identity_key not like '%--%' ), canonical_title text not null collate nocase unique check (length(trim(canonical_title)) > 0), introduced_manifest_version text not null check (length(trim(introduced_manifest_version)) > 0), introduced_source_hash text not null check ( length(introduced_source_hash) = 64 and introduced_source_hash not glob '*[^0-9a-f]*' ), created_on text not null check (created_on glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]') )`,
   },
   {
     name: 'authoritative_mimma_score_versions',
     type: 'table',
-    sql: `create table authoritative_mimma_score_versions ( id text primary key not null, game_id text not null references authoritative_games(id) on delete restrict, version integer not null check (typeof(version) = 'integer' and version > 0), micro_score integer not null check (typeof(micro_score) = 'integer' and micro_score between 0 and 100), meso_score integer not null check (typeof(meso_score) = 'integer' and meso_score between 0 and 100), macro_score integer not null check (typeof(macro_score) = 'integer' and macro_score between 0 and 100), micro_original_decimal text not null check ( micro_original_decimal not glob '*[^0-9.]*' and length(micro_original_decimal) between 3 and 5 and instr(micro_original_decimal, '.') = length(micro_original_decimal) - 1 and (length(micro_original_decimal) = 3 or substr(micro_original_decimal, 1, 1) <> '0') and cast(replace(micro_original_decimal, '.', '') as integer) between 0 and 1000 ), meso_original_decimal text not null check ( meso_original_decimal not glob '*[^0-9.]*' and length(meso_original_decimal) between 3 and 5 and instr(meso_original_decimal, '.') = length(meso_original_decimal) - 1 and (length(meso_original_decimal) = 3 or substr(meso_original_decimal, 1, 1) <> '0') and cast(replace(meso_original_decimal, '.', '') as integer) between 0 and 1000 ), macro_original_decimal text not null check ( macro_original_decimal not glob '*[^0-9.]*' and length(macro_original_decimal) between 3 and 5 and instr(macro_original_decimal, '.') = length(macro_original_decimal) - 1 and (length(macro_original_decimal) = 3 or substr(macro_original_decimal, 1, 1) <> '0') and cast(replace(macro_original_decimal, '.', '') as integer) between 0 and 1000 ), decimal_scale integer not null check (decimal_scale = 1), rounding_mode text not null check (rounding_mode = 'half-up-to-integer-v1'), source_manifest_version text not null check (length(trim(source_manifest_version)) > 0), source_hash text not null check ( length(source_hash) = 64 and source_hash not glob '*[^0-9a-f]*' ), provenance text not null check (provenance = 'owner_authoritative'), approval_reason text not null check (approval_reason in ('initial-owner-snapshot', 'owner-correction', 'owner-restore')), approved_on text not null check (approved_on glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'), unique (game_id, version), unique (id, game_id), check (micro_score <> 0 or meso_score <> 0 or macro_score <> 0), check (micro_score <> 100 or meso_score <> 100 or macro_score <> 100) )`,
+    sql: `create table authoritative_mimma_score_versions ( id text primary key not null, game_id text not null references authoritative_games(id) on delete restrict, version integer not null check (typeof(version) = 'integer' and version > 0), micro_score integer not null check (typeof(micro_score) = 'integer' and micro_score between 0 and 100), meso_score integer not null check (typeof(meso_score) = 'integer' and meso_score between 0 and 100), macro_score integer not null check (typeof(macro_score) = 'integer' and macro_score between 0 and 100), micro_original_decimal text not null check ( micro_original_decimal not glob '*[^0-9.]*' and length(micro_original_decimal) between 3 and 5 and instr(micro_original_decimal, '.') = length(micro_original_decimal) - 1 and (length(micro_original_decimal) = 3 or substr(micro_original_decimal, 1, 1) <> '0') and cast(replace(micro_original_decimal, '.', '') as integer) between 0 and 1000 ), meso_original_decimal text not null check ( meso_original_decimal not glob '*[^0-9.]*' and length(meso_original_decimal) between 3 and 5 and instr(meso_original_decimal, '.') = length(meso_original_decimal) - 1 and (length(meso_original_decimal) = 3 or substr(meso_original_decimal, 1, 1) <> '0') and cast(replace(meso_original_decimal, '.', '') as integer) between 0 and 1000 ), macro_original_decimal text not null check ( macro_original_decimal not glob '*[^0-9.]*' and length(macro_original_decimal) between 3 and 5 and instr(macro_original_decimal, '.') = length(macro_original_decimal) - 1 and (length(macro_original_decimal) = 3 or substr(macro_original_decimal, 1, 1) <> '0') and cast(replace(macro_original_decimal, '.', '') as integer) between 0 and 1000 ), decimal_scale integer not null check (decimal_scale = 1), rounding_mode text not null check (rounding_mode = 'half-up-to-integer-v1'), source_manifest_version text not null check (length(trim(source_manifest_version)) > 0), source_hash text not null check ( length(source_hash) = 64 and source_hash not glob '*[^0-9a-f]*' ), provenance text not null check (provenance = 'owner_authoritative'), approval_reason text not null check (approval_reason in ('initial-owner-snapshot', 'owner-correction', 'owner-restore')), approved_on text not null check (approved_on glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'), unique (game_id, version), unique (id, game_id), check (micro_score <> 0 or meso_score <> 0 or macro_score <> 0), check (micro_score <> 100 or meso_score <> 100 or macro_score <> 100), check (micro_score = cast((cast(replace(micro_original_decimal, '.', '') as integer) + 5) / 10 as integer)), check (meso_score = cast((cast(replace(meso_original_decimal, '.', '') as integer) + 5) / 10 as integer)), check (macro_score = cast((cast(replace(macro_original_decimal, '.', '') as integer) + 5) / 10 as integer)) )`,
   },
   {
     name: 'authoritative_snapshots',
@@ -213,6 +359,11 @@ const canonicalSchemaOracle = [
     name: 'authoritative_snapshots_freeze_guard',
     type: 'trigger',
     sql: `create trigger authoritative_snapshots_freeze_guard before update on authoritative_snapshots when old.state = 'draft' and new.state = 'frozen' begin select raise(abort, 'snapshot freeze requires complete membership') where new.frozen_on is null or (select count(*) from authoritative_snapshot_members where snapshot_id = new.id) <> new.expected_member_count or (select count(distinct game_id) from authoritative_snapshot_members where snapshot_id = new.id) <> new.expected_member_count or (select count(distinct score_id) from authoritative_snapshot_members where snapshot_id = new.id) <> new.expected_member_count; select raise(abort, 'snapshot identity is immutable') where new.id <> old.id or new.version <> old.version or new.manifest_version <> old.manifest_version or new.source_hash <> old.source_hash or new.expected_member_count <> old.expected_member_count or new.created_on <> old.created_on; end`,
+  },
+  {
+    name: 'authoritative_snapshots_prevent_frozen_insert',
+    type: 'trigger',
+    sql: `create trigger authoritative_snapshots_prevent_frozen_insert before insert on authoritative_snapshots when new.state = 'frozen' begin select raise(abort, 'snapshots must be inserted as draft before freezing'); end`,
   },
   {
     name: 'authoritative_snapshots_prevent_frozen_update',
@@ -299,17 +450,53 @@ function validVerification(): VerificationFixture {
           },
         ],
       },
+      { results: [...expectedAuthorityIdentities] },
+      {
+        results: expectedScoreVersions.map(
+          ([
+            id,
+            game_id,
+            version,
+            micro_score,
+            meso_score,
+            macro_score,
+            micro_original_decimal,
+            meso_original_decimal,
+            macro_original_decimal,
+          ]) => ({
+            id,
+            game_id,
+            version,
+            micro_score,
+            meso_score,
+            macro_score,
+            micro_original_decimal,
+            meso_original_decimal,
+            macro_original_decimal,
+            decimal_scale: 1,
+            rounding_mode: 'half-up-to-integer-v1',
+            source_manifest_version: 'owner-authoritative-mimma-v1',
+            source_hash: sourceHash,
+            provenance: 'owner_authoritative',
+            approval_reason: 'initial-owner-snapshot',
+            approved_on: '2026-08-21',
+          }),
+        ),
+      },
       {
         results: [
           {
             id: 'snapshot-owner-authoritative-mimma-v1',
             version: 1,
+            manifest_version: 'owner-authoritative-mimma-v1',
+            source_hash: sourceHash,
             state: 'frozen',
             expected_member_count: 10,
             member_count: 10,
             distinct_game_count: 10,
             distinct_score_count: 10,
-            source_hash: sourceHash,
+            created_on: '2026-08-21',
+            frozen_on: '2026-08-21',
           },
         ],
       },
@@ -332,6 +519,7 @@ function validVerification(): VerificationFixture {
           supersedes_mapping_id: null,
           source_manifest_version: 'owner-authoritative-mimma-v1',
           source_hash: sourceHash,
+          decided_on: '2026-08-21',
         })),
       },
       { results: [{ game_id: 'auth-game-league-of-legends' }, { game_id: 'auth-game-valorant' }] },
@@ -373,7 +561,7 @@ function validVerification(): VerificationFixture {
 
 describe('production D1 verification', () => {
   test('keeps an independently authored exact SQL identity for every schema object', () => {
-    expect(canonicalSchemaOracle).toHaveLength(44)
+    expect(canonicalSchemaOracle).toHaveLength(45)
     expect(canonicalSchemaOracle[0].sql).toBe(
       "create table catalog_release_metadata ( dataset_version text primary key not null, schema_version integer not null check (typeof(schema_version) = 'integer' and schema_version > 0), generated_at text not null )",
     )
@@ -494,16 +682,43 @@ describe('production D1 verification', () => {
         fixture.queryResults[3].results[0].authoritative_game_count = 9
       },
       (fixture) => {
-        fixture.queryResults[4].results[0].state = 'draft'
+        fixture.queryResults[6].results[0].state = 'draft'
       },
       (fixture) => {
-        fixture.queryResults[6].results.pop()
+        fixture.queryResults[8].results.pop()
       },
       (fixture) => {
-        fixture.queryResults[7].results[0].game_id = 'auth-game-counter-strike-2'
+        fixture.queryResults[9].results[0].game_id = 'auth-game-counter-strike-2'
       },
       (fixture) => {
-        fixture.queryResults[8].results[0].source_hash = '0'.repeat(64)
+        fixture.queryResults[10].results[0].source_hash = '0'.repeat(64)
+      },
+    ]
+    for (const mutate of mutations) {
+      const fixture = validVerification()
+      mutate(fixture)
+      expect(() => assertProductionD1Verification(fixture)).toThrow(
+        /production D1 verification failed/i,
+      )
+    }
+  })
+
+  test('rejects altered identity, score, snapshot metadata, and mapping decision payloads', () => {
+    const mutations: Array<(fixture: VerificationFixture) => void> = [
+      (fixture) => {
+        fixture.queryResults[4].results[0].canonical_title = 'Changed title'
+      },
+      (fixture) => {
+        fixture.queryResults[5].results[0].micro_original_decimal = '80.1'
+      },
+      (fixture) => {
+        fixture.queryResults[5].results[0].micro_score = 81
+      },
+      (fixture) => {
+        fixture.queryResults[6].results[0].created_on = '2026-08-22'
+      },
+      (fixture) => {
+        fixture.queryResults[8].results[0].decided_on = '2026-08-22'
       },
     ]
     for (const mutate of mutations) {

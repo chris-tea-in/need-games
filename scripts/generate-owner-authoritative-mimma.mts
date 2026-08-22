@@ -478,7 +478,7 @@ function migrationSchemaStatements(): string[] {
 -- source_hash: ${EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256}
 
 CREATE TABLE authoritative_games (
-  id TEXT PRIMARY KEY NOT NULL CHECK (id GLOB 'auth-game-*'),
+  id TEXT PRIMARY KEY NOT NULL CHECK (id GLOB 'auth-game-*' AND id NOT GLOB 'auth-game-steam-*'),
   identity_key TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (
     length(identity_key) > 0 AND
     identity_key NOT GLOB '*[^a-z0-9-]*' AND
@@ -529,7 +529,10 @@ CREATE TABLE authoritative_games (
   UNIQUE (game_id, version),
   UNIQUE (id, game_id),
   CHECK (micro_score <> 0 OR meso_score <> 0 OR macro_score <> 0),
-  CHECK (micro_score <> 100 OR meso_score <> 100 OR macro_score <> 100)
+  CHECK (micro_score <> 100 OR meso_score <> 100 OR macro_score <> 100),
+  CHECK (micro_score = CAST((CAST(replace(micro_original_decimal, '.', '') AS INTEGER) + 5) / 10 AS INTEGER)),
+  CHECK (meso_score = CAST((CAST(replace(meso_original_decimal, '.', '') AS INTEGER) + 5) / 10 AS INTEGER)),
+  CHECK (macro_score = CAST((CAST(replace(macro_original_decimal, '.', '') AS INTEGER) + 5) / 10 AS INTEGER))
 );`,
     `CREATE TABLE authoritative_snapshots (
   id TEXT PRIMARY KEY NOT NULL,
@@ -608,6 +611,12 @@ BEGIN
   WHERE NEW.id <> OLD.id OR NEW.version <> OLD.version OR NEW.manifest_version <> OLD.manifest_version
     OR NEW.source_hash <> OLD.source_hash OR NEW.expected_member_count <> OLD.expected_member_count
     OR NEW.created_on <> OLD.created_on;
+END;`,
+    `CREATE TRIGGER authoritative_snapshots_prevent_frozen_insert
+BEFORE INSERT ON authoritative_snapshots
+WHEN NEW.state = 'frozen'
+BEGIN
+  SELECT RAISE(ABORT, 'snapshots must be inserted as draft before freezing');
 END;`,
     `CREATE TRIGGER authoritative_snapshots_prevent_frozen_update
 BEFORE UPDATE ON authoritative_snapshots

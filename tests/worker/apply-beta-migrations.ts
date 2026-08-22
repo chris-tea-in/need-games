@@ -52,6 +52,7 @@ export async function resetBetaDatabase(database: D1Database): Promise<void> {
     'authoritative_snapshot_members_prevent_update',
     'authoritative_snapshot_members_prevent_frozen_insert',
     'authoritative_snapshots_prevent_delete',
+    'authoritative_snapshots_prevent_frozen_insert',
     'authoritative_snapshots_prevent_frozen_update',
     'authoritative_snapshots_freeze_guard',
     'authoritative_mimma_score_versions_prevent_delete',
@@ -92,7 +93,9 @@ export async function resetBetaDatabase(database: D1Database): Promise<void> {
     'authoritative_mimma_seeds',
   ]
 
-  await database.batch(triggerNames.map((name) => database.prepare(`DROP TRIGGER ${name}`)))
+  await database.batch(
+    triggerNames.map((name) => database.prepare(`DROP TRIGGER IF EXISTS ${name}`)),
+  )
   await database.batch(indexNames.map((name) => database.prepare(`DROP INDEX ${name}`)))
   const mappingRows = await database
     .prepare('SELECT id FROM authoritative_game_mappings ORDER BY mapping_version DESC, id DESC')

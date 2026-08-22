@@ -394,6 +394,51 @@ describe('closed beta D1 schema', () => {
     await expect(
       insertScoreVersion('invalid-all-score', 'auth-game-counter-strike-2', 2, 100, 100, 100),
     ).rejects.toThrow()
+    const insertInvalidRounding = (
+      id: string,
+      micro: number,
+      meso: number,
+      macro: number,
+      microOriginal: string,
+      mesoOriginal: string,
+      macroOriginal: string,
+    ) =>
+      env.NEED_GAMES_DB.prepare(
+        `INSERT INTO authoritative_mimma_score_versions (
+          id, game_id, version, micro_score, meso_score, macro_score,
+          micro_original_decimal, meso_original_decimal, macro_original_decimal,
+          decimal_scale, rounding_mode, source_manifest_version, source_hash,
+          provenance, approval_reason, approved_on
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(
+          id,
+          'auth-game-counter-strike-2',
+          2,
+          micro,
+          meso,
+          macro,
+          microOriginal,
+          mesoOriginal,
+          macroOriginal,
+          1,
+          'half-up-to-integer-v1',
+          'owner-authoritative-mimma-v1',
+          sourceHash,
+          'owner_authoritative',
+          'owner-correction',
+          '2026-08-21',
+        )
+        .run()
+    await expect(
+      insertInvalidRounding('invalid-rounding-68-5', 68, 20, 30, '68.5', '20.0', '30.0'),
+    ).rejects.toThrow()
+    await expect(
+      insertInvalidRounding('invalid-rounding-meso-68-5', 20, 68, 30, '20.0', '68.5', '30.0'),
+    ).rejects.toThrow()
+    await expect(
+      insertInvalidRounding('invalid-rounding-macro-68-5', 20, 30, 68, '20.0', '30.0', '68.5'),
+    ).rejects.toThrow()
     await insertScoreVersion(
       'auth-score-counter-strike-2-v2',
       'auth-game-counter-strike-2',
@@ -439,6 +484,22 @@ describe('closed beta D1 schema', () => {
         )
         .run(),
     ).rejects.toThrow()
+    await expect(
+      env.NEED_GAMES_DB.prepare(
+        `INSERT INTO authoritative_games
+         (id, identity_key, canonical_title, introduced_manifest_version, introduced_source_hash, created_on)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(
+          'auth-game-steam-730',
+          'steam-730',
+          'Provider-bearing authority key',
+          'test',
+          sourceHash,
+          '2026-08-21',
+        )
+        .run(),
+    ).rejects.toThrow()
   })
 
   test('only freezes complete draft snapshots and enforces contiguous mapping supersession', async () => {
@@ -454,6 +515,24 @@ describe('closed beta D1 schema', () => {
       ['auth-game-league-of-legends', 'auth-score-league-of-legends-v1'],
       ['auth-game-valorant', 'auth-score-valorant-v1'],
     ]
+    await expect(
+      env.NEED_GAMES_DB.prepare(
+        `INSERT INTO authoritative_snapshots
+         (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(
+          'snapshot-direct-frozen',
+          3,
+          'test',
+          sourceHash,
+          10,
+          'frozen',
+          '2026-08-21',
+          '2026-08-21',
+        )
+        .run(),
+    ).rejects.toThrow('snapshots must be inserted as draft before freezing')
     await env.NEED_GAMES_DB.prepare(
       `INSERT INTO authoritative_snapshots
        (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
@@ -612,6 +691,7 @@ describe('closed beta D1 schema', () => {
       'authoritative_snapshot_members_prevent_update',
       'authoritative_snapshot_members_prevent_frozen_insert',
       'authoritative_snapshots_prevent_delete',
+      'authoritative_snapshots_prevent_frozen_insert',
       'authoritative_snapshots_prevent_frozen_update',
       'authoritative_snapshots_freeze_guard',
       'authoritative_mimma_score_versions_prevent_delete',

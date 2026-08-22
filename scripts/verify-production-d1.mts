@@ -14,6 +14,77 @@ export const expectedProductionMigrations = [
 
 const authoritativeRecordHash = 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65'
 
+const expectedAuthorityIdentities = [
+  ['auth-game-apex-legends', 'apex-legends', 'Apex Legends'],
+  ['auth-game-baldurs-gate-3', 'baldurs-gate-3', "Baldur's Gate 3"],
+  ['auth-game-counter-strike-2', 'counter-strike-2', 'Counter-Strike 2'],
+  ['auth-game-elden-ring', 'elden-ring', 'ELDEN RING'],
+  ['auth-game-league-of-legends', 'league-of-legends', 'League of Legends'],
+  ['auth-game-marvel-rivals', 'marvel-rivals', 'Marvel Rivals'],
+  ['auth-game-monster-hunter-wilds', 'monster-hunter-wilds', 'Monster Hunter Wilds'],
+  ['auth-game-palworld', 'palworld', 'Palworld'],
+  ['auth-game-rainbow-six-siege', 'rainbow-six-siege', "Tom Clancy's Rainbow Six Siege"],
+  ['auth-game-valorant', 'valorant', 'Valorant'],
+] as const
+
+const expectedScoreVersions = [
+  ['auth-score-apex-legends-v1', 'auth-game-apex-legends', 80, 80, 100, '80.0', '80.0', '100.0'],
+  [
+    'auth-score-baldurs-gate-3-v1',
+    'auth-game-baldurs-gate-3',
+    20,
+    20,
+    100,
+    '20.0',
+    '20.0',
+    '100.0',
+  ],
+  [
+    'auth-score-counter-strike-2-v1',
+    'auth-game-counter-strike-2',
+    100,
+    65,
+    80,
+    '100.0',
+    '65.0',
+    '80.0',
+  ],
+  ['auth-score-elden-ring-v1', 'auth-game-elden-ring', 80, 100, 40, '80.0', '100.0', '40.0'],
+  [
+    'auth-score-league-of-legends-v1',
+    'auth-game-league-of-legends',
+    69,
+    77,
+    100,
+    '68.6',
+    '77.1',
+    '100.0',
+  ],
+  ['auth-score-marvel-rivals-v1', 'auth-game-marvel-rivals', 80, 60, 80, '80.0', '60.0', '80.0'],
+  [
+    'auth-score-monster-hunter-wilds-v1',
+    'auth-game-monster-hunter-wilds',
+    80,
+    40,
+    60,
+    '80.0',
+    '40.0',
+    '60.0',
+  ],
+  ['auth-score-palworld-v1', 'auth-game-palworld', 40, 20, 70, '40.0', '20.0', '70.0'],
+  [
+    'auth-score-rainbow-six-siege-v1',
+    'auth-game-rainbow-six-siege',
+    80,
+    60,
+    80,
+    '80.0',
+    '60.0',
+    '80.0',
+  ],
+  ['auth-score-valorant-v1', 'auth-game-valorant', 100, 73, 80, '100.0', '73.3', '80.0'],
+] as const
+
 const expectedMigrationSourceHashes: Record<string, string> = {
   '0001_schema.sql': '751a94bbaa163c92f074ba49c0216884901ae088db1c5260fd2ec1425dc4b961',
   '0002_seed_beta_catalog.sql': '897e30cb9961132245af3f4cc98b92d217ebbcbfb3d745b1d1f09f998b2628e4',
@@ -21,7 +92,7 @@ const expectedMigrationSourceHashes: Record<string, string> = {
     '425a56ae640a2b00c8505a51388402ece135417c1b52e8e2f60b8f5800b6f265',
   '0004_identity_sessions.sql': '643def4fc16805e84914918c67759adbc61cf9d17a5dfdcd6ed4a53d8a7a45f3',
   '0005_owner_authoritative_mimma_v1.sql':
-    'eac92f7978dc1e793ef45a51e99aa2ac803c41f2bd131abd5fc14ca0077fe0f3',
+    'f1c61a0e5ec4a2219b6658e840eb112e17f60e5813a0d290089eea0218850717',
 }
 
 interface ExpectedSchemaObjectContract {
@@ -115,7 +186,8 @@ const expectedProductionSchemaObjectContracts: readonly ExpectedSchemaObjectCont
   {
     name: 'authoritative_games',
     type: 'table',
-    sqlFragment: "id text primary key not null check (id glob 'auth-game-*')",
+    sqlFragment:
+      "id text primary key not null check (id glob 'auth-game-*' and id not glob 'auth-game-steam-*')",
   },
   {
     name: 'authoritative_mimma_score_versions',
@@ -186,6 +258,11 @@ const expectedProductionSchemaObjectContracts: readonly ExpectedSchemaObjectCont
     name: 'authoritative_snapshots_freeze_guard',
     type: 'trigger',
     sqlFragment: 'before update on authoritative_snapshots',
+  },
+  {
+    name: 'authoritative_snapshots_prevent_frozen_insert',
+    type: 'trigger',
+    sqlFragment: 'before insert on authoritative_snapshots',
   },
   {
     name: 'authoritative_snapshots_prevent_frozen_update',
@@ -340,6 +417,10 @@ function requireResultRows(
   )
 }
 
+function rowMatchesExpected(row: JsonRecord, expected: Record<string, unknown>): boolean {
+  return Object.entries(expected).every(([key, value]) => row[key] === value)
+}
+
 function assertProductionDatabaseId(databaseId: string): void {
   const normalizedDatabaseId = databaseId.toLowerCase()
   if (
@@ -445,17 +526,67 @@ function assertAuthorityState(queryResults: unknown): void {
     }
   }
 
-  const snapshotRows = requireResultRows(queryResults, 4, 'frozen snapshot')
+  const identityRows = requireResultRows(queryResults, 4, 'authoritative identities')
+  if (
+    identityRows.length !== expectedAuthorityIdentities.length ||
+    identityRows.some((row, index) => {
+      const [id, identityKey, title] = expectedAuthorityIdentities[index]
+      return !rowMatchesExpected(row, {
+        id,
+        identity_key: identityKey,
+        canonical_title: title,
+        introduced_manifest_version: 'owner-authoritative-mimma-v1',
+        introduced_source_hash: authoritativeRecordHash,
+        created_on: '2026-08-21',
+      })
+    })
+  ) {
+    throw new Error('Production D1 verification failed: authority identities are incomplete.')
+  }
+
+  const scoreRows = requireResultRows(queryResults, 5, 'authoritative score versions')
+  if (
+    scoreRows.length !== expectedScoreVersions.length ||
+    scoreRows.some((row, index) => {
+      const [id, gameId, micro, meso, macro, microOriginal, mesoOriginal, macroOriginal] =
+        expectedScoreVersions[index]
+      return !rowMatchesExpected(row, {
+        id,
+        game_id: gameId,
+        version: 1,
+        micro_score: micro,
+        meso_score: meso,
+        macro_score: macro,
+        micro_original_decimal: microOriginal,
+        meso_original_decimal: mesoOriginal,
+        macro_original_decimal: macroOriginal,
+        decimal_scale: 1,
+        rounding_mode: 'half-up-to-integer-v1',
+        source_manifest_version: 'owner-authoritative-mimma-v1',
+        source_hash: authoritativeRecordHash,
+        provenance: 'owner_authoritative',
+        approval_reason: 'initial-owner-snapshot',
+        approved_on: '2026-08-21',
+      })
+    })
+  ) {
+    throw new Error('Production D1 verification failed: authority score versions are incomplete.')
+  }
+
+  const snapshotRows = requireResultRows(queryResults, 6, 'frozen snapshot')
   if (
     snapshotRows.length !== 1 ||
     snapshotRows[0].id !== 'snapshot-owner-authoritative-mimma-v1' ||
     snapshotRows[0].version !== 1 ||
+    snapshotRows[0].manifest_version !== 'owner-authoritative-mimma-v1' ||
     snapshotRows[0].state !== 'frozen' ||
     snapshotRows[0].expected_member_count !== 10 ||
     snapshotRows[0].member_count !== 10 ||
     snapshotRows[0].distinct_game_count !== 10 ||
     snapshotRows[0].distinct_score_count !== 10 ||
-    snapshotRows[0].source_hash !== authoritativeRecordHash
+    snapshotRows[0].source_hash !== authoritativeRecordHash ||
+    snapshotRows[0].created_on !== '2026-08-21' ||
+    snapshotRows[0].frozen_on !== '2026-08-21'
   ) {
     throw new Error('Production D1 verification failed: frozen snapshot state is incomplete.')
   }
@@ -472,7 +603,7 @@ function assertAuthorityState(queryResults: unknown): void {
     ['auth-game-rainbow-six-siege', 'auth-score-rainbow-six-siege-v1'],
     ['auth-game-valorant', 'auth-score-valorant-v1'],
   ] as const
-  const memberRows = requireResultRows(queryResults, 5, 'frozen snapshot members')
+  const memberRows = requireResultRows(queryResults, 7, 'frozen snapshot members')
   const actualSnapshotMembers = memberRows.map((row) => [row.game_id, row.score_id])
   if (
     memberRows.length !== expectedSnapshotMembers.length ||
@@ -583,7 +714,7 @@ function assertAuthorityState(queryResults: unknown): void {
       source_manifest_version: 'owner-authoritative-mimma-v1',
     },
   ] as const
-  const mappingRows = requireResultRows(queryResults, 6, 'authority mappings')
+  const mappingRows = requireResultRows(queryResults, 8, 'authority mappings')
   if (
     mappingRows.length !== expectedMappings.length ||
     mappingRows.some(
@@ -598,13 +729,14 @@ function assertAuthorityState(queryResults: unknown): void {
         row.verification_ref !== expectedMappings[index].verification_ref ||
         row.supersedes_mapping_id !== expectedMappings[index].supersedes_mapping_id ||
         row.source_manifest_version !== expectedMappings[index].source_manifest_version ||
-        row.source_hash !== authoritativeRecordHash,
+        row.source_hash !== authoritativeRecordHash ||
+        row.decided_on !== '2026-08-21',
     )
   ) {
     throw new Error('Production D1 verification failed: authority mappings are incomplete.')
   }
 
-  const unmappedRows = requireResultRows(queryResults, 7, 'unmapped authority games')
+  const unmappedRows = requireResultRows(queryResults, 9, 'unmapped authority games')
   const unmappedIds = unmappedRows.map((row) => row.game_id).sort()
   if (
     unmappedIds.length !== 2 ||
@@ -616,7 +748,7 @@ function assertAuthorityState(queryResults: unknown): void {
     )
   }
 
-  const provenanceRows = requireResultRows(queryResults, 8, 'authority provenance')
+  const provenanceRows = requireResultRows(queryResults, 10, 'authority provenance')
   const expectedProvenance = new Map([
     ['authoritative_games', 10],
     ['authoritative_mimma_score_versions', 10],
