@@ -5,9 +5,81 @@ import { findCatalogGames, findGameBySlug } from '../../src/worker/repositories/
 import { getCatalogReleaseMetadata } from '../../src/worker/repositories/catalog-release.js'
 import {
   findScoredSimilarityCandidates,
-  getCurrentAuthoritativeScore,
+  getFrozenAuthoritativeSnapshot,
+  getMappedAuthoritativeScoreFromLatestSnapshot,
 } from '../../src/worker/repositories/authoritative-scores.js'
 import { applyBetaMigrations } from './apply-beta-migrations.js'
+
+const sourceHash = 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65'
+
+async function insertScoreVersion(
+  id: string,
+  gameId: string,
+  version: number,
+  micro: number,
+  meso: number,
+  macro: number,
+): Promise<void> {
+  await env.NEED_GAMES_DB.prepare(
+    `INSERT INTO authoritative_mimma_score_versions (
+      id, game_id, version, micro_score, meso_score, macro_score,
+      micro_original_decimal, meso_original_decimal, macro_original_decimal,
+      decimal_scale, rounding_mode, source_manifest_version, source_hash,
+      provenance, approval_reason, approved_on
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      id,
+      gameId,
+      version,
+      micro,
+      meso,
+      macro,
+      `${micro}.0`,
+      `${meso}.0`,
+      `${macro}.0`,
+      1,
+      'half-up-to-integer-v1',
+      'owner-authoritative-mimma-v1',
+      sourceHash,
+      'owner_authoritative',
+      'owner-correction',
+      '2026-08-21',
+    )
+    .run()
+}
+
+async function insertMapping(
+  id: string,
+  gameId: string,
+  externalId: string,
+  catalogGameId: string,
+  version: number,
+  decision: 'verified' | 'rejected' | 'revoked',
+  supersedes: string,
+): Promise<void> {
+  await env.NEED_GAMES_DB.prepare(
+    `INSERT INTO authoritative_game_mappings (
+      id, game_id, provider, external_id, catalog_game_id, mapping_version,
+      decision, verification_ref, supersedes_mapping_id, source_manifest_version,
+      source_hash, decided_on) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      id,
+      gameId,
+      'steam',
+      externalId,
+      catalogGameId,
+      version,
+      decision,
+      'owner-approved-test',
+      supersedes,
+      'owner-authoritative-mimma-v1',
+      sourceHash,
+      '2026-08-21',
+    )
+    .run()
+}
 
 describe('catalog repositories', () => {
   beforeAll(async () => {
@@ -40,61 +112,274 @@ describe('catalog repositories', () => {
     })
   })
 
-  test('uses the highest approved score version as the similarity candidate', async () => {
+  test('reads exact score and provenance through the latest frozen snapshot and mapping', async () => {
+    await expect(
+      getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-730'),
+    ).resolves.toEqual({
+      gameId: 'auth-game-counter-strike-2',
+      snapshotId: 'snapshot-owner-authoritative-mimma-v1',
+      snapshotVersion: 1,
+      scoreId: 'auth-score-counter-strike-2-v1',
+      scoreVersion: 1,
+      macroScore: 80,
+      mesoScore: 65,
+      microScore: 100,
+    })
+    await expect(
+      getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-1085660'),
+    ).resolves.toBeNull()
+    await expect(
+      getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-284160'),
+    ).resolves.toBeNull()
+  })
+
+  test('reads all ten frozen members including intentionally unmapped identities', async () => {
+    await expect(getFrozenAuthoritativeSnapshot(env.NEED_GAMES_DB)).resolves.toEqual({
+      snapshotId: 'snapshot-owner-authoritative-mimma-v1',
+      snapshotVersion: 1,
+      members: [
+        expect.objectContaining({
+          gameId: 'auth-game-counter-strike-2',
+          scoreId: 'auth-score-counter-strike-2-v1',
+          catalogGameId: 'steam-730',
+          steamAppId: 730,
+        }),
+        expect.objectContaining({
+          gameId: 'auth-game-palworld',
+          scoreId: 'auth-score-palworld-v1',
+          catalogGameId: 'steam-1623730',
+          steamAppId: 1623730,
+        }),
+        expect.objectContaining({
+          gameId: 'auth-game-marvel-rivals',
+          scoreId: 'auth-score-marvel-rivals-v1',
+          catalogGameId: 'steam-2767030',
+          steamAppId: 2767030,
+        }),
+        expect.objectContaining({
+          gameId: 'auth-game-apex-legends',
+          scoreId: 'auth-score-apex-legends-v1',
+          catalogGameId: 'steam-1172470',
+          steamAppId: 1172470,
+        }),
+        expect.objectContaining({
+          gameId: 'auth-game-rainbow-six-siege',
+          scoreId: 'auth-score-rainbow-six-siege-v1',
+          catalogGameId: 'steam-359550',
+          steamAppId: 359550,
+        }),
+        expect.objectContaining({
+          gameId: 'auth-game-baldurs-gate-3',
+          scoreId: 'auth-score-baldurs-gate-3-v1',
+          catalogGameId: 'steam-1086940',
+          steamAppId: 1086940,
+        }),
+        expect.objectContaining({
+          gameId: 'auth-game-monster-hunter-wilds',
+          scoreId: 'auth-score-monster-hunter-wilds-v1',
+          catalogGameId: 'steam-2246340',
+          steamAppId: 2246340,
+        }),
+        expect.objectContaining({
+          gameId: 'auth-game-elden-ring',
+          scoreId: 'auth-score-elden-ring-v1',
+          catalogGameId: 'steam-1245620',
+          steamAppId: 1245620,
+        }),
+        expect.objectContaining({
+          gameId: 'auth-game-league-of-legends',
+          scoreId: 'auth-score-league-of-legends-v1',
+          catalogGameId: null,
+          steamAppId: null,
+        }),
+        expect.objectContaining({
+          gameId: 'auth-game-valorant',
+          scoreId: 'auth-score-valorant-v1',
+          catalogGameId: null,
+          steamAppId: null,
+        }),
+      ],
+    })
+  })
+
+  test('uses the V1 snapshot score rather than a later appended score version', async () => {
+    await insertScoreVersion('auth-score-palworld-v2', 'auth-game-palworld', 2, 50, 60, 70)
+    await expect(
+      getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-1623730'),
+    ).resolves.toMatchObject({ scoreId: 'auth-score-palworld-v1', scoreVersion: 1, microScore: 40 })
+  })
+
+  test('lets a later frozen snapshot select a new score without rewriting V1', async () => {
+    await insertScoreVersion(
+      'auth-score-counter-strike-2-v2',
+      'auth-game-counter-strike-2',
+      2,
+      55,
+      66,
+      77,
+    )
     await env.NEED_GAMES_DB.prepare(
-      `INSERT INTO authoritative_mimma_scores (
-        id, game_id, version, micro_score, meso_score, macro_score,
-        provenance, approval_reason, approved_at, version_metadata_json, approval_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO authoritative_snapshots
+       (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
     )
       .bind(
-        'palworld-score-v1',
-        'steam-1623730',
-        1,
-        20,
-        30,
-        40,
-        'owner_authoritative',
-        'Initial authoritative score',
-        '2026-08-14T00:00:00Z',
-        '{}',
-        'approved',
+        'snapshot-owner-authoritative-mimma-v2',
+        2,
+        'owner-authoritative-mimma-v2',
+        sourceHash,
+        10,
+        'draft',
+        '2026-08-21',
       )
       .run()
-    await env.NEED_GAMES_DB.prepare(
-      `INSERT INTO authoritative_mimma_scores (
-        id, game_id, version, micro_score, meso_score, macro_score,
-        provenance, approval_reason, approved_at, version_metadata_json, approval_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-      .bind(
-        'palworld-score-v2',
-        'steam-1623730',
-        2,
-        50,
-        60,
-        70,
-        'owner_authoritative',
-        'Corrected authoritative score',
-        '2026-08-14T00:01:00Z',
-        '{}',
-        'approved',
+    const members = [
+      ['auth-game-counter-strike-2', 'auth-score-counter-strike-2-v2'],
+      ['auth-game-palworld', 'auth-score-palworld-v1'],
+      ['auth-game-marvel-rivals', 'auth-score-marvel-rivals-v1'],
+      ['auth-game-apex-legends', 'auth-score-apex-legends-v1'],
+      ['auth-game-rainbow-six-siege', 'auth-score-rainbow-six-siege-v1'],
+      ['auth-game-baldurs-gate-3', 'auth-score-baldurs-gate-3-v1'],
+      ['auth-game-monster-hunter-wilds', 'auth-score-monster-hunter-wilds-v1'],
+      ['auth-game-elden-ring', 'auth-score-elden-ring-v1'],
+      ['auth-game-league-of-legends', 'auth-score-league-of-legends-v1'],
+      ['auth-game-valorant', 'auth-score-valorant-v1'],
+    ]
+    for (const [gameId, scoreId] of members) {
+      await env.NEED_GAMES_DB.prepare(
+        'INSERT INTO authoritative_snapshot_members (snapshot_id, game_id, score_id) VALUES (?, ?, ?)',
       )
+        .bind('snapshot-owner-authoritative-mimma-v2', gameId, scoreId)
+        .run()
+    }
+    await env.NEED_GAMES_DB.prepare(
+      'UPDATE authoritative_snapshots SET state = ?, frozen_on = ? WHERE id = ?',
+    )
+      .bind('frozen', '2026-08-21', 'snapshot-owner-authoritative-mimma-v2')
       .run()
 
+    await expect(
+      getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-730'),
+    ).resolves.toMatchObject({
+      snapshotId: 'snapshot-owner-authoritative-mimma-v2',
+      snapshotVersion: 2,
+      scoreId: 'auth-score-counter-strike-2-v2',
+      scoreVersion: 2,
+      microScore: 55,
+    })
+    const v1 = await env.NEED_GAMES_DB.prepare(
+      'SELECT score_id FROM authoritative_snapshot_members WHERE snapshot_id = ? AND game_id = ?',
+    )
+      .bind('snapshot-owner-authoritative-mimma-v1', 'auth-game-counter-strike-2')
+      .first<{ score_id: string }>()
+    expect(v1?.score_id).toBe('auth-score-counter-strike-2-v1')
+  })
+
+  test('finds mapped candidates from the frozen snapshot in deterministic catalog order', async () => {
     const candidates = await findScoredSimilarityCandidates(env.NEED_GAMES_DB, 'steam-730')
 
     expect(candidates).toEqual([
-      expect.objectContaining({ gameId: 'steam-1623730', microScore: 50, version: 2 }),
+      expect.objectContaining({
+        gameId: 'auth-game-apex-legends',
+        title: 'Apex Legends',
+        steamAppId: 1172470,
+        scoreVersion: 1,
+      }),
+      expect.objectContaining({
+        gameId: 'auth-game-baldurs-gate-3',
+        title: "Baldur's Gate 3",
+        steamAppId: 1086940,
+        scoreVersion: 1,
+      }),
+      expect.objectContaining({
+        gameId: 'auth-game-elden-ring',
+        title: 'ELDEN RING',
+        steamAppId: 1245620,
+        scoreVersion: 1,
+      }),
+      expect.objectContaining({
+        gameId: 'auth-game-marvel-rivals',
+        title: 'Marvel Rivals',
+        steamAppId: 2767030,
+        scoreVersion: 1,
+      }),
+      expect.objectContaining({
+        gameId: 'auth-game-monster-hunter-wilds',
+        title: 'Monster Hunter Wilds',
+        steamAppId: 2246340,
+        scoreVersion: 1,
+      }),
+      expect.objectContaining({
+        gameId: 'auth-game-palworld',
+        title: 'Palworld',
+        steamAppId: 1623730,
+        scoreVersion: 1,
+      }),
+      expect.objectContaining({
+        gameId: 'auth-game-rainbow-six-siege',
+        title: "Tom Clancy's Rainbow Six Siege",
+        steamAppId: 359550,
+        scoreVersion: 1,
+      }),
     ])
-    await expect(getCurrentAuthoritativeScore(env.NEED_GAMES_DB, 'steam-1623730')).resolves.toEqual(
-      {
-        gameId: 'steam-1623730',
-        macroScore: 70,
-        mesoScore: 60,
-        microScore: 50,
-        version: 2,
-      },
+  })
+
+  test('treats a latest rejected mapping as unmapped without deleting its history', async () => {
+    await insertMapping(
+      'auth-map-steam-palworld-v2',
+      'auth-game-palworld',
+      '1623730',
+      'steam-1623730',
+      2,
+      'revoked',
+      'auth-map-steam-palworld-v1',
+    )
+    await expect(
+      getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-1623730'),
+    ).resolves.toBeNull()
+    await expect(
+      env.NEED_GAMES_DB.prepare(
+        'SELECT id, decision FROM authoritative_game_mappings WHERE game_id = ? ORDER BY mapping_version',
+      )
+        .bind('auth-game-palworld')
+        .all(),
+    ).resolves.toMatchObject({
+      results: [
+        { id: 'auth-map-steam-palworld-v1', decision: 'verified' },
+        { id: 'auth-map-steam-palworld-v2', decision: 'revoked' },
+      ],
+    })
+  })
+
+  test('fails closed when latest verified mappings collide on provider identity', async () => {
+    await insertMapping(
+      'auth-map-steam-palworld-v3',
+      'auth-game-palworld',
+      '730',
+      'steam-730',
+      3,
+      'verified',
+      'auth-map-steam-palworld-v2',
+    )
+    await insertMapping(
+      'auth-map-steam-marvel-rivals-v2',
+      'auth-game-marvel-rivals',
+      '730',
+      'steam-730',
+      2,
+      'verified',
+      'auth-map-steam-marvel-rivals-v1',
+    )
+    await expect(
+      getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-730'),
+    ).resolves.toBeNull()
+    await expect(
+      getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-1623730'),
+    ).resolves.toBeNull()
+    await expect(
+      findScoredSimilarityCandidates(env.NEED_GAMES_DB, 'steam-730'),
+    ).resolves.not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ gameId: 'auth-game-palworld' })]),
     )
   })
 })
