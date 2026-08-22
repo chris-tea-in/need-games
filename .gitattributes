@@ -1,0 +1,4 @@
+# Keep byte-identity inputs and generated artifacts stable on every platform.
+data/authoritative-records/*.json text eol=lf
+migrations/*.sql text eol=lf
+worker-configuration.d.ts text eol=lf
