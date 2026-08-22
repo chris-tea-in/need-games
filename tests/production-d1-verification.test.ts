@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 
 import {
   assertProductionD1Verification,
-  expectedProductionSchemaObjects,
   type ProductionD1VerificationInput,
   productionDatabaseName,
 } from '../scripts/verify-production-d1.mjs'
@@ -34,152 +33,228 @@ const expectedSnapshotMembers = [
   ['auth-game-valorant', 'auth-score-valorant-v1'],
 ] as const
 
-const schemaObjects = [
-  ['catalog_release_metadata', 'table', 'dataset_version text primary key not null'],
-  ['games', 'table', 'steam_app_id integer not null'],
-  ['authoritative_mimma_scores', 'table', 'approval_status text not null'],
-  ['games_slug_lookup_idx', 'index', 'create index games_slug_lookup_idx'],
-  ['games_steam_app_id_lookup_idx', 'index', 'create index games_steam_app_id_lookup_idx'],
-  ['games_catalog_title_idx', 'index', 'create index games_catalog_title_idx'],
-  ['games_catalog_review_count_idx', 'index', 'create index games_catalog_review_count_idx'],
-  [
-    'authoritative_mimma_scores_game_version_idx',
-    'index',
-    'create index authoritative_mimma_scores_game_version_idx',
-  ],
-  [
-    'authoritative_mimma_scores_latest_approved_idx',
-    'index',
-    'create index authoritative_mimma_scores_latest_approved_idx',
-  ],
-  [
-    'authoritative_mimma_scores_prevent_update',
-    'trigger',
-    'before update on authoritative_mimma_scores',
-  ],
-  [
-    'authoritative_mimma_scores_prevent_delete',
-    'trigger',
-    'before delete on authoritative_mimma_scores',
-  ],
-  [
-    'authoritative_mimma_seeds',
-    'table',
-    "provenance text check (provenance = 'authoritative_sample_seed')",
-  ],
-  [
-    'authoritative_mimma_seeds_prevent_update',
-    'trigger',
-    'before update on authoritative_mimma_seeds',
-  ],
-  [
-    'authoritative_mimma_seeds_prevent_delete',
-    'trigger',
-    'before delete on authoritative_mimma_seeds',
-  ],
-  [
-    'authoritative_mimma_seeds_prevent_insert',
-    'trigger',
-    'before insert on authoritative_mimma_seeds',
-  ],
-  ['users', 'table', 'length(steam_id) = 17'],
-  ['steam_login_transactions', 'table', 'steam_response_nonce text unique'],
-  ['sessions', 'table', 'references users(id) on delete cascade'],
-  [
-    'steam_login_transactions_expiry_idx',
-    'index',
-    'create index steam_login_transactions_expiry_idx',
-  ],
-  ['sessions_expiry_idx', 'index', 'create index sessions_expiry_idx'],
-  ['sessions_user_idx', 'index', 'create index sessions_user_idx'],
-  ['authoritative_games', 'table', "id text primary key not null check (id glob 'auth-game-*')"],
-  [
-    'authoritative_mimma_score_versions',
-    'table',
-    'references authoritative_games(id) on delete restrict',
-  ],
-  ['authoritative_snapshots', 'table', "state text not null check (state in ('draft', 'frozen'))"],
-  ['authoritative_snapshot_members', 'table', 'foreign key (score_id, game_id)'],
-  ['authoritative_game_mappings', 'table', 'references games(id) on delete restrict'],
-  [
-    'authoritative_mimma_score_versions_game_version_idx',
-    'index',
-    'create index authoritative_mimma_score_versions_game_version_idx',
-  ],
-  [
-    'authoritative_snapshots_state_version_idx',
-    'index',
-    'create index authoritative_snapshots_state_version_idx',
-  ],
-  [
-    'authoritative_game_mappings_game_provider_version_idx',
-    'index',
-    'create index authoritative_game_mappings_game_provider_version_idx',
-  ],
-  [
-    'authoritative_game_mappings_provider_external_version_idx',
-    'index',
-    'create index authoritative_game_mappings_provider_external_version_idx',
-  ],
-  [
-    'authoritative_game_mappings_catalog_version_idx',
-    'index',
-    'create index authoritative_game_mappings_catalog_version_idx',
-  ],
-  ['authoritative_games_prevent_update', 'trigger', 'before update on authoritative_games'],
-  ['authoritative_games_prevent_delete', 'trigger', 'before delete on authoritative_games'],
-  [
-    'authoritative_mimma_score_versions_prevent_update',
-    'trigger',
-    'before update on authoritative_mimma_score_versions',
-  ],
-  [
-    'authoritative_mimma_score_versions_prevent_delete',
-    'trigger',
-    'before delete on authoritative_mimma_score_versions',
-  ],
-  ['authoritative_snapshots_freeze_guard', 'trigger', 'before update on authoritative_snapshots'],
-  [
-    'authoritative_snapshots_prevent_frozen_update',
-    'trigger',
-    'before update on authoritative_snapshots',
-  ],
-  ['authoritative_snapshots_prevent_delete', 'trigger', 'before delete on authoritative_snapshots'],
-  [
-    'authoritative_snapshot_members_prevent_frozen_insert',
-    'trigger',
-    'before insert on authoritative_snapshot_members',
-  ],
-  [
-    'authoritative_snapshot_members_prevent_update',
-    'trigger',
-    'before update on authoritative_snapshot_members',
-  ],
-  [
-    'authoritative_snapshot_members_prevent_delete',
-    'trigger',
-    'before delete on authoritative_snapshot_members',
-  ],
-  [
-    'authoritative_game_mappings_prevent_update',
-    'trigger',
-    'before update on authoritative_game_mappings',
-  ],
-  [
-    'authoritative_game_mappings_prevent_delete',
-    'trigger',
-    'before delete on authoritative_game_mappings',
-  ],
-  [
-    'authoritative_game_mappings_insert_guard',
-    'trigger',
-    'before insert on authoritative_game_mappings',
-  ],
+const canonicalSchemaOracle = [
+  {
+    name: 'catalog_release_metadata',
+    type: 'table',
+    sql: `create table catalog_release_metadata ( dataset_version text primary key not null, schema_version integer not null check (typeof(schema_version) = 'integer' and schema_version > 0), generated_at text not null )`,
+  },
+  {
+    name: 'games',
+    type: 'table',
+    sql: `create table games ( id text primary key not null, slug text not null collate nocase unique, steam_app_id integer not null unique check (typeof(steam_app_id) = 'integer' and steam_app_id > 0), title text not null, steam_title text not null, short_description text not null, source_tags_json text not null check (json_valid(source_tags_json) and json_type(source_tags_json) = 'array'), review_category text not null, review_count integer not null check (typeof(review_count) = 'integer' and review_count >= 0), review_scope text not null, catalog_status text not null check (catalog_status = 'main_catalog'), source_app_details_url text not null, source_store_page_url text not null, source_fetched_at text not null, title_mapping_note text )`,
+  },
+  {
+    name: 'authoritative_mimma_scores',
+    type: 'table',
+    sql: `create table authoritative_mimma_scores ( id text primary key not null, game_id text not null references games(id) on delete restrict, version integer not null check (typeof(version) = 'integer' and version > 0), micro_score integer not null check (typeof(micro_score) = 'integer' and micro_score between 0 and 100), meso_score integer not null check (typeof(meso_score) = 'integer' and meso_score between 0 and 100), macro_score integer not null check (typeof(macro_score) = 'integer' and macro_score between 0 and 100), provenance text not null check (provenance = 'owner_authoritative'), approval_reason text not null, approved_at text not null, version_metadata_json text not null check (json_valid(version_metadata_json)), approval_status text not null check (approval_status = 'approved'), check (micro_score <> 0 or meso_score <> 0 or macro_score <> 0), check (micro_score <> 100 or meso_score <> 100 or macro_score <> 100), unique (game_id, version) )`,
+  },
+  {
+    name: 'games_slug_lookup_idx',
+    type: 'index',
+    sql: 'create index games_slug_lookup_idx on games(slug)',
+  },
+  {
+    name: 'games_steam_app_id_lookup_idx',
+    type: 'index',
+    sql: 'create index games_steam_app_id_lookup_idx on games(steam_app_id)',
+  },
+  {
+    name: 'games_catalog_title_idx',
+    type: 'index',
+    sql: 'create index games_catalog_title_idx on games(catalog_status, title collate nocase, steam_app_id)',
+  },
+  {
+    name: 'games_catalog_review_count_idx',
+    type: 'index',
+    sql: 'create index games_catalog_review_count_idx on games(catalog_status, review_count desc, title collate nocase, steam_app_id)',
+  },
+  {
+    name: 'authoritative_mimma_scores_game_version_idx',
+    type: 'index',
+    sql: 'create index authoritative_mimma_scores_game_version_idx on authoritative_mimma_scores(game_id, version)',
+  },
+  {
+    name: 'authoritative_mimma_scores_latest_approved_idx',
+    type: 'index',
+    sql: 'create index authoritative_mimma_scores_latest_approved_idx on authoritative_mimma_scores(game_id, approval_status, version desc)',
+  },
+  {
+    name: 'authoritative_mimma_scores_prevent_update',
+    type: 'trigger',
+    sql: `create trigger authoritative_mimma_scores_prevent_update before update on authoritative_mimma_scores begin select raise(abort, 'authoritative score history is immutable'); end`,
+  },
+  {
+    name: 'authoritative_mimma_scores_prevent_delete',
+    type: 'trigger',
+    sql: `create trigger authoritative_mimma_scores_prevent_delete before delete on authoritative_mimma_scores begin select raise(abort, 'authoritative score history cannot be deleted'); end`,
+  },
+  {
+    name: 'authoritative_mimma_seeds',
+    type: 'table',
+    sql: `create table authoritative_mimma_seeds ( id text primary key not null, conceptual_name text not null collate nocase unique, micro_score integer not null check (typeof(micro_score) = 'integer' and micro_score between 0 and 100), meso_score integer not null check (typeof(meso_score) = 'integer' and meso_score between 0 and 100), macro_score integer not null check (typeof(macro_score) = 'integer' and macro_score between 0 and 100), provenance text not null check (provenance = 'authoritative_sample_seed'), dataset_version text not null check (dataset_version = 'authoritative-mimma-seed-v1'), created_at text not null, check ( (micro_score = 100 and meso_score = 0 and macro_score = 0) or (micro_score = 0 and meso_score = 100 and macro_score = 0) or (micro_score = 0 and meso_score = 0 and macro_score = 100) ) )`,
+  },
+  {
+    name: 'authoritative_mimma_seeds_prevent_update',
+    type: 'trigger',
+    sql: `create trigger authoritative_mimma_seeds_prevent_update before update on authoritative_mimma_seeds begin select raise(abort, 'authoritative mimma seeds are immutable'); end`,
+  },
+  {
+    name: 'authoritative_mimma_seeds_prevent_delete',
+    type: 'trigger',
+    sql: `create trigger authoritative_mimma_seeds_prevent_delete before delete on authoritative_mimma_seeds begin select raise(abort, 'authoritative mimma seeds cannot be deleted'); end`,
+  },
+  {
+    name: 'authoritative_mimma_seeds_prevent_insert',
+    type: 'trigger',
+    sql: `create trigger authoritative_mimma_seeds_prevent_insert before insert on authoritative_mimma_seeds begin select raise(abort, 'authoritative mimma seed set is immutable'); end`,
+  },
+  {
+    name: 'users',
+    type: 'table',
+    sql: `create table users ( id text primary key not null, steam_id text not null unique check (length(steam_id) = 17 and steam_id not glob '*[^0-9]*'), steam_display_name text check ( steam_display_name is null or ( length(steam_display_name) between 1 and 64 and steam_display_name = trim(steam_display_name) ) ), profile_lookup_status text not null check (profile_lookup_status in ('verified', 'unavailable')), profile_checked_at integer not null check (typeof(profile_checked_at) = 'integer' and profile_checked_at >= 0), created_at integer not null check (typeof(created_at) = 'integer' and created_at >= 0), check (created_at <= profile_checked_at), check (profile_lookup_status <> 'verified' or steam_display_name is not null) )`,
+  },
+  {
+    name: 'steam_login_transactions',
+    type: 'table',
+    sql: `create table steam_login_transactions ( token_hash text primary key not null check (length(token_hash) = 64 and token_hash not glob '*[^0-9a-f]*'), return_path text not null check (substr(return_path, 1, 1) = '/' and substr(return_path, 1, 2) <> '//'), created_at integer not null check (typeof(created_at) = 'integer' and created_at >= 0), expires_at integer not null check (typeof(expires_at) = 'integer' and expires_at > created_at), consumed_at integer check ( consumed_at is null or (typeof(consumed_at) = 'integer' and consumed_at >= created_at) ), steam_response_nonce text unique check ( steam_response_nonce is null or length(steam_response_nonce) between 1 and 512 ) )`,
+  },
+  {
+    name: 'sessions',
+    type: 'table',
+    sql: `create table sessions ( token_hash text primary key not null check (length(token_hash) = 64 and token_hash not glob '*[^0-9a-f]*'), user_id text not null references users(id) on delete cascade, created_at integer not null check (typeof(created_at) = 'integer' and created_at >= 0), expires_at integer not null check (typeof(expires_at) = 'integer' and expires_at > created_at), revoked_at integer check ( revoked_at is null or (typeof(revoked_at) = 'integer' and revoked_at >= created_at) ) )`,
+  },
+  {
+    name: 'steam_login_transactions_expiry_idx',
+    type: 'index',
+    sql: 'create index steam_login_transactions_expiry_idx on steam_login_transactions(expires_at)',
+  },
+  {
+    name: 'sessions_expiry_idx',
+    type: 'index',
+    sql: 'create index sessions_expiry_idx on sessions(expires_at)',
+  },
+  {
+    name: 'sessions_user_idx',
+    type: 'index',
+    sql: 'create index sessions_user_idx on sessions(user_id, expires_at)',
+  },
+  {
+    name: 'authoritative_games',
+    type: 'table',
+    sql: `create table authoritative_games ( id text primary key not null check (id glob 'auth-game-*'), identity_key text not null collate nocase unique check ( length(identity_key) > 0 and identity_key not glob '*[^a-z0-9-]*' and identity_key not like '-%' and identity_key not like '%-' and identity_key not like '%--%' ), canonical_title text not null collate nocase unique check (length(trim(canonical_title)) > 0), introduced_manifest_version text not null check (length(trim(introduced_manifest_version)) > 0), introduced_source_hash text not null check ( length(introduced_source_hash) = 64 and introduced_source_hash not glob '*[^0-9a-f]*' ), created_on text not null check (created_on glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]') )`,
+  },
+  {
+    name: 'authoritative_mimma_score_versions',
+    type: 'table',
+    sql: `create table authoritative_mimma_score_versions ( id text primary key not null, game_id text not null references authoritative_games(id) on delete restrict, version integer not null check (typeof(version) = 'integer' and version > 0), micro_score integer not null check (typeof(micro_score) = 'integer' and micro_score between 0 and 100), meso_score integer not null check (typeof(meso_score) = 'integer' and meso_score between 0 and 100), macro_score integer not null check (typeof(macro_score) = 'integer' and macro_score between 0 and 100), micro_original_decimal text not null check ( micro_original_decimal not glob '*[^0-9.]*' and length(micro_original_decimal) between 3 and 5 and instr(micro_original_decimal, '.') = length(micro_original_decimal) - 1 and (length(micro_original_decimal) = 3 or substr(micro_original_decimal, 1, 1) <> '0') and cast(replace(micro_original_decimal, '.', '') as integer) between 0 and 1000 ), meso_original_decimal text not null check ( meso_original_decimal not glob '*[^0-9.]*' and length(meso_original_decimal) between 3 and 5 and instr(meso_original_decimal, '.') = length(meso_original_decimal) - 1 and (length(meso_original_decimal) = 3 or substr(meso_original_decimal, 1, 1) <> '0') and cast(replace(meso_original_decimal, '.', '') as integer) between 0 and 1000 ), macro_original_decimal text not null check ( macro_original_decimal not glob '*[^0-9.]*' and length(macro_original_decimal) between 3 and 5 and instr(macro_original_decimal, '.') = length(macro_original_decimal) - 1 and (length(macro_original_decimal) = 3 or substr(macro_original_decimal, 1, 1) <> '0') and cast(replace(macro_original_decimal, '.', '') as integer) between 0 and 1000 ), decimal_scale integer not null check (decimal_scale = 1), rounding_mode text not null check (rounding_mode = 'half-up-to-integer-v1'), source_manifest_version text not null check (length(trim(source_manifest_version)) > 0), source_hash text not null check ( length(source_hash) = 64 and source_hash not glob '*[^0-9a-f]*' ), provenance text not null check (provenance = 'owner_authoritative'), approval_reason text not null check (approval_reason in ('initial-owner-snapshot', 'owner-correction', 'owner-restore')), approved_on text not null check (approved_on glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'), unique (game_id, version), unique (id, game_id), check (micro_score <> 0 or meso_score <> 0 or macro_score <> 0), check (micro_score <> 100 or meso_score <> 100 or macro_score <> 100) )`,
+  },
+  {
+    name: 'authoritative_snapshots',
+    type: 'table',
+    sql: `create table authoritative_snapshots ( id text primary key not null, version integer not null unique check (typeof(version) = 'integer' and version > 0), manifest_version text not null check (length(trim(manifest_version)) > 0), source_hash text not null check ( length(source_hash) = 64 and source_hash not glob '*[^0-9a-f]*' ), expected_member_count integer not null check (typeof(expected_member_count) = 'integer' and expected_member_count > 0), state text not null check (state in ('draft', 'frozen')), created_on text not null check (created_on glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'), frozen_on text, check ((state = 'draft' and frozen_on is null) or (state = 'frozen' and frozen_on is not null and frozen_on glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]')) )`,
+  },
+  {
+    name: 'authoritative_snapshot_members',
+    type: 'table',
+    sql: `create table authoritative_snapshot_members ( snapshot_id text not null references authoritative_snapshots(id) on delete restrict, game_id text not null references authoritative_games(id) on delete restrict, score_id text not null, primary key (snapshot_id, game_id), unique (snapshot_id, score_id), foreign key (score_id, game_id) references authoritative_mimma_score_versions(id, game_id) on delete restrict )`,
+  },
+  {
+    name: 'authoritative_game_mappings',
+    type: 'table',
+    sql: `create table authoritative_game_mappings ( id text primary key not null, game_id text not null references authoritative_games(id) on delete restrict, provider text not null check (length(provider) > 0 and provider = lower(provider) and provider not glob '*[^a-z0-9_-]*'), external_id text not null check (length(external_id) > 0), catalog_game_id text not null references games(id) on delete restrict, mapping_version integer not null check (typeof(mapping_version) = 'integer' and mapping_version > 0), decision text not null check (decision in ('verified', 'rejected', 'revoked')), verification_ref text not null check (length(trim(verification_ref)) > 0), supersedes_mapping_id text references authoritative_game_mappings(id) on delete restrict, source_manifest_version text not null check (length(trim(source_manifest_version)) > 0), source_hash text not null check ( length(source_hash) = 64 and source_hash not glob '*[^0-9a-f]*' ), decided_on text not null check (decided_on glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'), unique (game_id, provider, mapping_version), unique (id, game_id, provider, mapping_version) )`,
+  },
+  {
+    name: 'authoritative_mimma_score_versions_game_version_idx',
+    type: 'index',
+    sql: 'create index authoritative_mimma_score_versions_game_version_idx on authoritative_mimma_score_versions(game_id, version desc)',
+  },
+  {
+    name: 'authoritative_snapshots_state_version_idx',
+    type: 'index',
+    sql: 'create index authoritative_snapshots_state_version_idx on authoritative_snapshots(state, version desc)',
+  },
+  {
+    name: 'authoritative_game_mappings_game_provider_version_idx',
+    type: 'index',
+    sql: 'create index authoritative_game_mappings_game_provider_version_idx on authoritative_game_mappings(game_id, provider, mapping_version desc)',
+  },
+  {
+    name: 'authoritative_game_mappings_provider_external_version_idx',
+    type: 'index',
+    sql: 'create index authoritative_game_mappings_provider_external_version_idx on authoritative_game_mappings(provider, external_id, mapping_version desc)',
+  },
+  {
+    name: 'authoritative_game_mappings_catalog_version_idx',
+    type: 'index',
+    sql: 'create index authoritative_game_mappings_catalog_version_idx on authoritative_game_mappings(catalog_game_id, mapping_version desc)',
+  },
+  {
+    name: 'authoritative_games_prevent_update',
+    type: 'trigger',
+    sql: `create trigger authoritative_games_prevent_update before update on authoritative_games begin select raise(abort, 'authoritative games are immutable'); end`,
+  },
+  {
+    name: 'authoritative_games_prevent_delete',
+    type: 'trigger',
+    sql: `create trigger authoritative_games_prevent_delete before delete on authoritative_games begin select raise(abort, 'authoritative games cannot be deleted'); end`,
+  },
+  {
+    name: 'authoritative_mimma_score_versions_prevent_update',
+    type: 'trigger',
+    sql: `create trigger authoritative_mimma_score_versions_prevent_update before update on authoritative_mimma_score_versions begin select raise(abort, 'authoritative score versions are immutable'); end`,
+  },
+  {
+    name: 'authoritative_mimma_score_versions_prevent_delete',
+    type: 'trigger',
+    sql: `create trigger authoritative_mimma_score_versions_prevent_delete before delete on authoritative_mimma_score_versions begin select raise(abort, 'authoritative score versions cannot be deleted'); end`,
+  },
+  {
+    name: 'authoritative_snapshots_freeze_guard',
+    type: 'trigger',
+    sql: `create trigger authoritative_snapshots_freeze_guard before update on authoritative_snapshots when old.state = 'draft' and new.state = 'frozen' begin select raise(abort, 'snapshot freeze requires complete membership') where new.frozen_on is null or (select count(*) from authoritative_snapshot_members where snapshot_id = new.id) <> new.expected_member_count or (select count(distinct game_id) from authoritative_snapshot_members where snapshot_id = new.id) <> new.expected_member_count or (select count(distinct score_id) from authoritative_snapshot_members where snapshot_id = new.id) <> new.expected_member_count; select raise(abort, 'snapshot identity is immutable') where new.id <> old.id or new.version <> old.version or new.manifest_version <> old.manifest_version or new.source_hash <> old.source_hash or new.expected_member_count <> old.expected_member_count or new.created_on <> old.created_on; end`,
+  },
+  {
+    name: 'authoritative_snapshots_prevent_frozen_update',
+    type: 'trigger',
+    sql: `create trigger authoritative_snapshots_prevent_frozen_update before update on authoritative_snapshots when old.state = 'frozen' or not (old.state = 'draft' and new.state = 'frozen') begin select raise(abort, 'authoritative snapshots are immutable'); end`,
+  },
+  {
+    name: 'authoritative_snapshots_prevent_delete',
+    type: 'trigger',
+    sql: `create trigger authoritative_snapshots_prevent_delete before delete on authoritative_snapshots begin select raise(abort, 'authoritative snapshots cannot be deleted'); end`,
+  },
+  {
+    name: 'authoritative_snapshot_members_prevent_frozen_insert',
+    type: 'trigger',
+    sql: `create trigger authoritative_snapshot_members_prevent_frozen_insert before insert on authoritative_snapshot_members when (select state from authoritative_snapshots where id = new.snapshot_id) <> 'draft' begin select raise(abort, 'snapshot members can only be inserted into a draft'); end`,
+  },
+  {
+    name: 'authoritative_snapshot_members_prevent_update',
+    type: 'trigger',
+    sql: `create trigger authoritative_snapshot_members_prevent_update before update on authoritative_snapshot_members begin select raise(abort, 'authoritative snapshot members are immutable'); end`,
+  },
+  {
+    name: 'authoritative_snapshot_members_prevent_delete',
+    type: 'trigger',
+    sql: `create trigger authoritative_snapshot_members_prevent_delete before delete on authoritative_snapshot_members begin select raise(abort, 'authoritative snapshot members cannot be deleted'); end`,
+  },
+  {
+    name: 'authoritative_game_mappings_prevent_update',
+    type: 'trigger',
+    sql: `create trigger authoritative_game_mappings_prevent_update before update on authoritative_game_mappings begin select raise(abort, 'authoritative mapping history is immutable'); end`,
+  },
+  {
+    name: 'authoritative_game_mappings_prevent_delete',
+    type: 'trigger',
+    sql: `create trigger authoritative_game_mappings_prevent_delete before delete on authoritative_game_mappings begin select raise(abort, 'authoritative mapping history cannot be deleted'); end`,
+  },
+  {
+    name: 'authoritative_game_mappings_insert_guard',
+    type: 'trigger',
+    sql: `create trigger authoritative_game_mappings_insert_guard before insert on authoritative_game_mappings begin select raise(abort, 'steam mapping does not match catalog identity') where new.provider = 'steam' and not exists ( select 1 from games as g where g.id = new.catalog_game_id and cast(g.steam_app_id as text) = new.external_id ); select raise(abort, 'mapping versions must be contiguous') where new.mapping_version <> coalesce(( select max(mapping_version) + 1 from authoritative_game_mappings where game_id = new.game_id and provider = new.provider ), 1); select raise(abort, 'mapping version 1 cannot supersede a row') where new.mapping_version = 1 and new.supersedes_mapping_id is not null; select raise(abort, 'mapping supersession must name the prior same-game row') where new.mapping_version > 1 and not exists ( select 1 from authoritative_game_mappings as prior where prior.id = new.supersedes_mapping_id and prior.game_id = new.game_id and prior.provider = new.provider and prior.mapping_version = new.mapping_version - 1 ); end`,
+  },
 ] as const
-
-const canonicalSchemaSqlByName = new Map(
-  expectedProductionSchemaObjects.map(({ name, sql }) => [name, sql]),
-)
 
 type VerificationRow = Record<string, unknown>
 type VerificationFixture = ProductionD1VerificationInput & {
@@ -203,10 +278,10 @@ function validVerification(): VerificationFixture {
         ],
       },
       {
-        results: schemaObjects.map(([name, type]) => ({
+        results: canonicalSchemaOracle.map(({ name, type, sql }) => ({
           name,
           type,
-          sql: canonicalSchemaSqlByName.get(name),
+          sql,
         })),
       },
       {
@@ -297,6 +372,13 @@ function validVerification(): VerificationFixture {
 }
 
 describe('production D1 verification', () => {
+  test('keeps an independently authored exact SQL identity for every schema object', () => {
+    expect(canonicalSchemaOracle).toHaveLength(44)
+    expect(canonicalSchemaOracle[0].sql).toBe(
+      "create table catalog_release_metadata ( dataset_version text primary key not null, schema_version integer not null check (typeof(schema_version) = 'integer' and schema_version > 0), generated_at text not null )",
+    )
+  })
+
   test('accepts the exact owner-authoritative schema, release, counts, and mapping state', () => {
     expect(() => assertProductionD1Verification(validVerification())).not.toThrow()
   })
