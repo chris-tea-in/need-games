@@ -276,6 +276,91 @@ describe('owner-authoritative MiMMa migration generator', () => {
     }
   })
 
+  test('preflight matrix preserves seeded conflicts and leaves no migration rows', () => {
+    const sourceHash = EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256
+    const conflictFixtures: Array<
+      [string, (database: DatabaseSync) => void, keyof ReturnType<typeof ownerTableCounts>]
+    > = [
+      [
+        'identity collision',
+        (database) =>
+          database.exec(
+            `INSERT INTO authoritative_games (id, identity_key, canonical_title, introduced_manifest_version, introduced_source_hash, created_on) VALUES ('auth-game-conflicting', 'counter-strike-2', 'Different title', 'owner-authoritative-mimma-v1', '${sourceHash}', '2026-08-21')`,
+          ),
+        'authoritative_games',
+      ],
+      [
+        'score game/version collision',
+        (database) => {
+          database.exec('PRAGMA foreign_keys = OFF')
+          database.exec(
+            `INSERT INTO authoritative_mimma_score_versions (id, game_id, version, micro_score, meso_score, macro_score, micro_original_decimal, meso_original_decimal, macro_original_decimal, decimal_scale, rounding_mode, source_manifest_version, source_hash, provenance, approval_reason, approved_on) VALUES ('conflicting-score', 'auth-game-counter-strike-2', 1, 1, 2, 3, '1.0', '2.0', '3.0', 1, 'half-up-to-integer-v1', 'owner-authoritative-mimma-v1', '${sourceHash}', 'owner_authoritative', 'owner-correction', '2026-08-21')`,
+          )
+          database.exec('PRAGMA foreign_keys = ON')
+        },
+        'authoritative_mimma_score_versions',
+      ],
+      [
+        'snapshot version collision',
+        (database) =>
+          database.exec(
+            `INSERT INTO authoritative_snapshots (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on) VALUES ('conflicting-snapshot', 1, 'owner-authoritative-mimma-v1', '${sourceHash}', 1, 'draft', '2026-08-21', NULL)`,
+          ),
+        'authoritative_snapshots',
+      ],
+      [
+        'snapshot member key collision',
+        (database) => {
+          database.exec('PRAGMA foreign_keys = OFF')
+          database.exec(
+            `INSERT INTO authoritative_snapshot_members (snapshot_id, game_id, score_id) VALUES ('snapshot-owner-authoritative-mimma-v1', 'auth-game-counter-strike-2', 'auth-score-counter-strike-2-v1')`,
+          )
+          database.exec('PRAGMA foreign_keys = ON')
+        },
+        'authoritative_snapshot_members',
+      ],
+      [
+        'mapping game/provider/version collision',
+        (database) => {
+          database.exec('PRAGMA foreign_keys = OFF')
+          database.exec(
+            `INSERT INTO authoritative_game_mappings (id, game_id, provider, external_id, catalog_game_id, mapping_version, decision, verification_ref, supersedes_mapping_id, source_manifest_version, source_hash, decided_on) VALUES ('conflicting-mapping', 'auth-game-counter-strike-2', 'steam', '730', 'steam-730', 1, 'verified', 'owner-approved-manifest-v1', NULL, 'owner-authoritative-mimma-v1', '${sourceHash}', '2026-08-21')`,
+          )
+          database.exec('PRAGMA foreign_keys = ON')
+        },
+        'authoritative_game_mappings',
+      ],
+    ]
+
+    for (const [label, fixture, seededTable] of conflictFixtures) {
+      const database = databaseBeforeOwnerMigration()
+      expect(() => runUntilPreflightFails(database, fixture), label).not.toThrow()
+      const counts = ownerTableCounts(database)
+      expect(counts[seededTable], label).toBe(1)
+      expect(
+        Object.entries(counts)
+          .filter(([table]) => table !== seededTable)
+          .every(([, count]) => count === 0),
+        label,
+      ).toBe(true)
+    }
+  })
+
+  test('preflight SQL names every insert-conflict key class', () => {
+    const sql = committedMigration()
+    for (const required of [
+      'identity_key',
+      'canonical_title',
+      'game_id, version',
+      'version = 1',
+      'snapshot_id',
+      'mapping_version',
+      'provider',
+    ]) {
+      expect(sql, required).toContain(required)
+    }
+  })
+
   test('asserts provenance independently on every generated authority row', () => {
     const sql = committedMigration()
     const hash = EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256

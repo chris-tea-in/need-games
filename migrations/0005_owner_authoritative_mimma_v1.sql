@@ -218,17 +218,29 @@ END;
 --> statement-breakpoint
 -- owner-authoritative migration preflight
 -- abs(INT64_MIN) deliberately aborts this statement when any preflight predicate fails.
-WITH expected_catalog(catalog_game_id, external_id) AS (VALUES ('steam-730', '730'), ('steam-1623730', '1623730'), ('steam-2767030', '2767030'), ('steam-1172470', '1172470'), ('steam-359550', '359550'), ('steam-1086940', '1086940'), ('steam-2246340', '2246340'), ('steam-1245620', '1245620'))
+WITH expected_catalog(catalog_game_id, external_id) AS (VALUES ('steam-730', '730'), ('steam-1623730', '1623730'), ('steam-2767030', '2767030'), ('steam-1172470', '1172470'), ('steam-359550', '359550'), ('steam-1086940', '1086940'), ('steam-2246340', '2246340'), ('steam-1245620', '1245620')),
+expected_score_versions(game_id, score_version) AS (VALUES ('auth-game-counter-strike-2', 1), ('auth-game-palworld', 1), ('auth-game-marvel-rivals', 1), ('auth-game-apex-legends', 1), ('auth-game-rainbow-six-siege', 1), ('auth-game-baldurs-gate-3', 1), ('auth-game-monster-hunter-wilds', 1), ('auth-game-elden-ring', 1), ('auth-game-league-of-legends', 1), ('auth-game-valorant', 1)),
+expected_mapping_versions(game_id, provider, mapping_version) AS (VALUES ('auth-game-counter-strike-2', 'steam', 1), ('auth-game-palworld', 'steam', 1), ('auth-game-marvel-rivals', 'steam', 1), ('auth-game-apex-legends', 'steam', 1), ('auth-game-rainbow-six-siege', 'steam', 1), ('auth-game-baldurs-gate-3', 'steam', 1), ('auth-game-monster-hunter-wilds', 'steam', 1), ('auth-game-elden-ring', 'steam', 1))
 SELECT abs(CASE WHEN
   (SELECT COUNT(*) FROM expected_catalog AS expected
     INNER JOIN games AS catalog ON catalog.id = expected.catalog_game_id
       AND CAST(catalog.steam_app_id AS TEXT) = expected.external_id) <> 8
   OR EXISTS (SELECT 1 FROM authoritative_mimma_scores)
-  OR EXISTS (SELECT 1 FROM authoritative_games WHERE id IN ('auth-game-counter-strike-2', 'auth-game-palworld', 'auth-game-marvel-rivals', 'auth-game-apex-legends', 'auth-game-rainbow-six-siege', 'auth-game-baldurs-gate-3', 'auth-game-monster-hunter-wilds', 'auth-game-elden-ring', 'auth-game-league-of-legends', 'auth-game-valorant'))
-  OR EXISTS (SELECT 1 FROM authoritative_mimma_score_versions WHERE id IN ('auth-score-counter-strike-2-v1', 'auth-score-palworld-v1', 'auth-score-marvel-rivals-v1', 'auth-score-apex-legends-v1', 'auth-score-rainbow-six-siege-v1', 'auth-score-baldurs-gate-3-v1', 'auth-score-monster-hunter-wilds-v1', 'auth-score-elden-ring-v1', 'auth-score-league-of-legends-v1', 'auth-score-valorant-v1'))
-  OR EXISTS (SELECT 1 FROM authoritative_snapshots WHERE id = 'snapshot-owner-authoritative-mimma-v1')
+  OR EXISTS (SELECT 1 FROM authoritative_games
+    WHERE id IN ('auth-game-counter-strike-2', 'auth-game-palworld', 'auth-game-marvel-rivals', 'auth-game-apex-legends', 'auth-game-rainbow-six-siege', 'auth-game-baldurs-gate-3', 'auth-game-monster-hunter-wilds', 'auth-game-elden-ring', 'auth-game-league-of-legends', 'auth-game-valorant') OR identity_key IN ('counter-strike-2', 'palworld', 'marvel-rivals', 'apex-legends', 'rainbow-six-siege', 'baldurs-gate-3', 'monster-hunter-wilds', 'elden-ring', 'league-of-legends', 'valorant')
+      OR canonical_title IN ('Counter-Strike 2', 'Palworld', 'Marvel Rivals', 'Apex Legends', 'Tom Clancy''s Rainbow Six Siege', 'Baldur''s Gate 3', 'Monster Hunter Wilds', 'ELDEN RING', 'League of Legends', 'Valorant'))
+  OR EXISTS (SELECT 1 FROM authoritative_mimma_score_versions AS existing
+    WHERE existing.id IN ('auth-score-counter-strike-2-v1', 'auth-score-palworld-v1', 'auth-score-marvel-rivals-v1', 'auth-score-apex-legends-v1', 'auth-score-rainbow-six-siege-v1', 'auth-score-baldurs-gate-3-v1', 'auth-score-monster-hunter-wilds-v1', 'auth-score-elden-ring-v1', 'auth-score-league-of-legends-v1', 'auth-score-valorant-v1')
+      OR EXISTS (SELECT 1 FROM expected_score_versions AS expected
+        WHERE existing.game_id = expected.game_id AND existing.version = expected.score_version))
+  OR EXISTS (SELECT 1 FROM authoritative_snapshots
+    WHERE id = 'snapshot-owner-authoritative-mimma-v1' OR version = 1)
   OR EXISTS (SELECT 1 FROM authoritative_snapshot_members WHERE snapshot_id = 'snapshot-owner-authoritative-mimma-v1')
-  OR EXISTS (SELECT 1 FROM authoritative_game_mappings WHERE id IN ('auth-map-steam-counter-strike-2-v1', 'auth-map-steam-palworld-v1', 'auth-map-steam-marvel-rivals-v1', 'auth-map-steam-apex-legends-v1', 'auth-map-steam-rainbow-six-siege-v1', 'auth-map-steam-baldurs-gate-3-v1', 'auth-map-steam-monster-hunter-wilds-v1', 'auth-map-steam-elden-ring-v1'))
+  OR EXISTS (SELECT 1 FROM authoritative_game_mappings AS existing
+    WHERE existing.id IN ('auth-map-steam-counter-strike-2-v1', 'auth-map-steam-palworld-v1', 'auth-map-steam-marvel-rivals-v1', 'auth-map-steam-apex-legends-v1', 'auth-map-steam-rainbow-six-siege-v1', 'auth-map-steam-baldurs-gate-3-v1', 'auth-map-steam-monster-hunter-wilds-v1', 'auth-map-steam-elden-ring-v1')
+      OR EXISTS (SELECT 1 FROM expected_mapping_versions AS expected
+        WHERE existing.game_id = expected.game_id AND existing.provider = expected.provider
+          AND existing.mapping_version = expected.mapping_version))
   THEN -9223372036854775808 ELSE 0 END) AS owner_authoritative_migration_preflight;
 --> statement-breakpoint
 INSERT INTO authoritative_games (id, identity_key, canonical_title, introduced_manifest_version, introduced_source_hash, created_on) VALUES ('auth-game-counter-strike-2', 'counter-strike-2', 'Counter-Strike 2', 'owner-authoritative-mimma-v1', 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65', '2026-08-21');

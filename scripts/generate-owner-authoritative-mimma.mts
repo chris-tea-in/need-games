@@ -663,22 +663,45 @@ function renderDataStatements(manifest: OwnerAuthoritativeManifestV1): string[] 
     .map((mapping) => `(${sqlString(mapping.catalogGameId)}, ${sqlString(mapping.externalId)})`)
     .join(', ')
   const expectedGameIds = manifest.games.map((game) => sqlString(game.id)).join(', ')
+  const expectedIdentityKeys = manifest.games.map((game) => sqlString(game.identityKey)).join(', ')
+  const expectedTitles = manifest.games.map((game) => sqlString(game.canonicalTitle)).join(', ')
   const expectedScoreIds = manifest.games.map((game) => sqlString(game.score.id)).join(', ')
+  const expectedScoreVersions = manifest.games
+    .map((game) => `(${sqlString(game.id)}, ${game.score.version})`)
+    .join(', ')
   const expectedMappingIds = manifest.mappings.map((mapping) => sqlString(mapping.id)).join(', ')
+  const expectedMappingVersions = manifest.mappings
+    .map(
+      (mapping) =>
+        `(${sqlString(mapping.authoritativeGameId)}, ${sqlString(mapping.provider)}, ${mapping.version})`,
+    )
+    .join(', ')
   const statements: string[] = [
     `-- owner-authoritative migration preflight
 -- abs(INT64_MIN) deliberately aborts this statement when any preflight predicate fails.
-WITH expected_catalog(catalog_game_id, external_id) AS (VALUES ${expectedCatalogPairs})
+WITH expected_catalog(catalog_game_id, external_id) AS (VALUES ${expectedCatalogPairs}),
+expected_score_versions(game_id, score_version) AS (VALUES ${expectedScoreVersions}),
+expected_mapping_versions(game_id, provider, mapping_version) AS (VALUES ${expectedMappingVersions})
 SELECT abs(CASE WHEN
   (SELECT COUNT(*) FROM expected_catalog AS expected
     INNER JOIN games AS catalog ON catalog.id = expected.catalog_game_id
       AND CAST(catalog.steam_app_id AS TEXT) = expected.external_id) <> ${manifest.mappings.length}
   OR EXISTS (SELECT 1 FROM authoritative_mimma_scores)
-  OR EXISTS (SELECT 1 FROM authoritative_games WHERE id IN (${expectedGameIds}))
-  OR EXISTS (SELECT 1 FROM authoritative_mimma_score_versions WHERE id IN (${expectedScoreIds}))
-  OR EXISTS (SELECT 1 FROM authoritative_snapshots WHERE id = ${sqlString(SNAPSHOT_ID)})
+  OR EXISTS (SELECT 1 FROM authoritative_games
+    WHERE id IN (${expectedGameIds}) OR identity_key IN (${expectedIdentityKeys})
+      OR canonical_title IN (${expectedTitles}))
+  OR EXISTS (SELECT 1 FROM authoritative_mimma_score_versions AS existing
+    WHERE existing.id IN (${expectedScoreIds})
+      OR EXISTS (SELECT 1 FROM expected_score_versions AS expected
+        WHERE existing.game_id = expected.game_id AND existing.version = expected.score_version))
+  OR EXISTS (SELECT 1 FROM authoritative_snapshots
+    WHERE id = ${sqlString(SNAPSHOT_ID)} OR version = 1)
   OR EXISTS (SELECT 1 FROM authoritative_snapshot_members WHERE snapshot_id = ${sqlString(SNAPSHOT_ID)})
-  OR EXISTS (SELECT 1 FROM authoritative_game_mappings WHERE id IN (${expectedMappingIds}))
+  OR EXISTS (SELECT 1 FROM authoritative_game_mappings AS existing
+    WHERE existing.id IN (${expectedMappingIds})
+      OR EXISTS (SELECT 1 FROM expected_mapping_versions AS expected
+        WHERE existing.game_id = expected.game_id AND existing.provider = expected.provider
+          AND existing.mapping_version = expected.mapping_version))
   THEN -9223372036854775808 ELSE 0 END) AS owner_authoritative_migration_preflight;`,
   ]
   for (const game of manifest.games) {
