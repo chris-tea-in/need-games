@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { resolve } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 
 import { describe, expect, test } from 'vitest'
 
@@ -10,6 +11,7 @@ import {
   assertMigrationArtifactMatches,
   parseOwnerAuthoritativeManifest,
   renderOwnerAuthoritativeMimmaSql,
+  validateOwnerAuthoritativeCatalogMappings,
 } from '../scripts/generate-owner-authoritative-mimma.mjs'
 
 const root = resolve(import.meta.dirname, '..')
@@ -23,6 +25,78 @@ function normalizeLineEndings(value: string): string {
 
 function committedMigration(): string {
   return normalizeLineEndings(readFileSync(migrationPath, 'utf8'))
+}
+
+const expectedCatalogRows = [
+  { id: 'steam-730', steamAppId: 730 },
+  { id: 'steam-1623730', steamAppId: 1623730 },
+  { id: 'steam-2767030', steamAppId: 2767030 },
+  { id: 'steam-1172470', steamAppId: 1172470 },
+  { id: 'steam-359550', steamAppId: 359550 },
+  { id: 'steam-1086940', steamAppId: 1086940 },
+  { id: 'steam-2246340', steamAppId: 2246340 },
+  { id: 'steam-1245620', steamAppId: 1245620 },
+] as const
+const MANIFEST_VERSION_LITERAL = 'owner-authoritative-mimma-v1'
+
+function migrationStatements(): string[] {
+  return committedMigration()
+    .split('--> statement-breakpoint')
+    .map((statement) => statement.trim())
+    .filter(Boolean)
+}
+
+function databaseBeforeOwnerMigration(): DatabaseSync {
+  const database = new DatabaseSync(':memory:')
+  database.exec('PRAGMA foreign_keys = ON')
+  for (const migration of [
+    '0001_schema.sql',
+    '0002_seed_beta_catalog.sql',
+    '0003_authoritative_mimma_seed.sql',
+    '0004_identity_sessions.sql',
+  ]) {
+    for (const statement of readFileSync(resolve(root, 'migrations', migration), 'utf8')
+      .split('--> statement-breakpoint')
+      .map((part) => part.trim())
+      .filter(Boolean)) {
+      database.exec(statement)
+    }
+  }
+  return database
+}
+
+function ownerTableCounts(database: DatabaseSync): Record<string, number> {
+  return Object.fromEntries(
+    [
+      'authoritative_games',
+      'authoritative_mimma_score_versions',
+      'authoritative_snapshots',
+      'authoritative_snapshot_members',
+      'authoritative_game_mappings',
+    ].map((table) => [
+      table,
+      Number(
+        (database.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get() as { count: number })
+          .count,
+      ),
+    ]),
+  )
+}
+
+function runUntilPreflightFails(
+  database: DatabaseSync,
+  beforePreflight: (database: DatabaseSync) => void,
+): void {
+  const statements = migrationStatements()
+  const preflightIndex = statements.findIndex((statement) =>
+    statement.includes('owner-authoritative migration preflight'),
+  )
+  expect(preflightIndex).toBeGreaterThan(0)
+  for (const statement of statements.slice(0, preflightIndex)) database.exec(statement)
+  beforePreflight(database)
+  expect(() => database.exec(statements[preflightIndex])).toThrow(
+    /overflow|preflight|catalog|legacy|conflict/i,
+  )
 }
 
 describe('owner-authoritative MiMMa migration generator', () => {
@@ -99,7 +173,7 @@ describe('owner-authoritative MiMMa migration generator', () => {
     expect(sql).not.toMatch(/\bALTER\b/i)
     expect(sql).not.toMatch(/\b(?:INSERT|UPDATE|DELETE)\s+INTO?\s+authoritative_mimma_scores\b/i)
     expect(sql).not.toMatch(/authoritative_mimma_scores\s*\(/i)
-    expect(sql).toContain('SELECT COUNT(*) FROM authoritative_mimma_scores')
+    expect(sql).toContain('EXISTS (SELECT 1 FROM authoritative_mimma_scores)')
   })
 
   test('keeps excluded catalog members and raw data outside the generated SQL', () => {
@@ -125,7 +199,7 @@ describe('owner-authoritative MiMMa migration generator', () => {
   test('uses statement breakpoints and validates every V1 Steam catalog identity', () => {
     const sql = committedMigration()
 
-    expect(sql).toContain('-- verify catalog Steam identities before authority inserts')
+    expect(sql).toContain('-- owner-authoritative migration preflight')
     for (const [catalogGameId, appId] of [
       ['steam-730', '730'],
       ['steam-1623730', '1623730'],
@@ -141,6 +215,157 @@ describe('owner-authoritative MiMMa migration generator', () => {
     }
     expect(sql.split('--> statement-breakpoint').length).toBeGreaterThan(25)
     expect(sql.split('--> statement-breakpoint\r\n')).toHaveLength(1)
+  })
+
+  test.each([
+    ['missing catalog row', expectedCatalogRows.slice(1)],
+    [
+      'wrong Steam App ID',
+      expectedCatalogRows.map((row, index) => (index === 0 ? { ...row, steamAppId: 731 } : row)),
+    ],
+    ['duplicate catalog row', [...expectedCatalogRows, expectedCatalogRows[0]]],
+    [
+      'invalid Steam App ID',
+      expectedCatalogRows.map((row, index) => (index === 0 ? { ...row, steamAppId: 0 } : row)),
+    ],
+  ])('rejects %s before rendering authority data', (_label, catalogRows) => {
+    const manifest = parseOwnerAuthoritativeManifest(readFileSync(manifestPath, 'utf8'))
+    expect(() => validateOwnerAuthoritativeCatalogMappings(manifest, catalogRows)).toThrow()
+  })
+
+  test('aborts before the first authority write for every catalog preflight failure', () => {
+    const failures: Array<[string, (database: DatabaseSync) => void]> = [
+      [
+        'missing catalog row',
+        (database) => database.exec("DELETE FROM games WHERE id = 'steam-730'"),
+      ],
+      [
+        'mismatched catalog row',
+        (database) => database.exec("UPDATE games SET steam_app_id = 731 WHERE id = 'steam-730'"),
+      ],
+      [
+        'non-empty legacy score table',
+        (database) =>
+          database.exec(
+            "INSERT INTO authoritative_mimma_scores (id, game_id, version, micro_score, meso_score, macro_score, provenance, approval_reason, approved_at, version_metadata_json, approval_status) VALUES ('legacy-conflict', 'steam-730', 1, 1, 2, 3, 'owner_authoritative', 'test', '2026-08-21', '{}', 'approved')",
+          ),
+      ],
+      [
+        'conflicting V1 authority row',
+        (database) =>
+          database.exec(
+            "INSERT INTO authoritative_games (id, identity_key, canonical_title, introduced_manifest_version, introduced_source_hash, created_on) VALUES ('auth-game-counter-strike-2', 'counter-strike-2', 'Conflict', 'owner-authoritative-mimma-v1', 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65', '2026-08-21')",
+          ),
+      ],
+    ]
+
+    for (const [label, beforePreflight] of failures) {
+      const database = databaseBeforeOwnerMigration()
+      expect(() => runUntilPreflightFails(database, beforePreflight), label).not.toThrow()
+      const counts = ownerTableCounts(database)
+      if (label === 'conflicting V1 authority row') {
+        expect(counts.authoritative_games).toBe(1)
+        expect(
+          Object.entries(counts)
+            .filter(([table]) => table !== 'authoritative_games')
+            .every(([, count]) => count === 0),
+        ).toBe(true)
+      } else {
+        expect(Object.values(counts).every((count) => count === 0)).toBe(true)
+      }
+    }
+  })
+
+  test('asserts provenance independently on every generated authority row', () => {
+    const sql = committedMigration()
+    const hash = EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256
+    const gameRows = sql.match(/INSERT INTO authoritative_games \([\s\S]*?;/g) ?? []
+    const scoreRows = sql.match(/INSERT INTO authoritative_mimma_score_versions \([\s\S]*?;/g) ?? []
+    const snapshotRows = sql.match(/INSERT INTO authoritative_snapshots \([\s\S]*?;/g) ?? []
+    const mappingRows = sql.match(/INSERT INTO authoritative_game_mappings \([\s\S]*?;/g) ?? []
+
+    expect(gameRows).toHaveLength(10)
+    expect(scoreRows).toHaveLength(10)
+    expect(snapshotRows).toHaveLength(1)
+    expect(mappingRows).toHaveLength(8)
+    for (const row of gameRows) {
+      expect(row).toContain(`'${MANIFEST_VERSION_LITERAL}'`)
+      expect(row).toContain(`'${hash}'`)
+      expect(row).toContain("'2026-08-21'")
+    }
+    for (const row of scoreRows) {
+      expect(row).toContain(`'${MANIFEST_VERSION_LITERAL}'`)
+      expect(row).toContain(`'${hash}'`)
+      expect(row).toContain("'owner_authoritative'")
+    }
+    for (const row of snapshotRows) {
+      expect(row).toContain(`'${MANIFEST_VERSION_LITERAL}'`)
+      expect(row).toContain(`'${hash}'`)
+    }
+    for (const row of mappingRows) {
+      expect(row).toContain(`'${MANIFEST_VERSION_LITERAL}'`)
+      expect(row).toContain(`'${hash}'`)
+    }
+  })
+
+  test('checks each required DDL column and invariant independently', () => {
+    const sql = committedMigration()
+    const ddl = (table: string): string =>
+      sql.match(new RegExp(`CREATE TABLE ${table} \\(([\\s\\S]*?)\\n\\);`))?.[1] ?? ''
+    const expectations: Record<string, string[]> = {
+      authoritative_games: [
+        'id TEXT PRIMARY KEY',
+        'identity_key TEXT NOT NULL COLLATE NOCASE UNIQUE',
+        'canonical_title TEXT NOT NULL COLLATE NOCASE UNIQUE',
+        'introduced_manifest_version TEXT NOT NULL',
+        'introduced_source_hash TEXT NOT NULL',
+        'created_on TEXT NOT NULL',
+        "id GLOB 'auth-game-*'",
+        'length(trim(canonical_title)) > 0',
+      ],
+      authoritative_mimma_score_versions: [
+        'game_id TEXT NOT NULL REFERENCES authoritative_games(id) ON DELETE RESTRICT',
+        'UNIQUE (game_id, version)',
+        'UNIQUE (id, game_id)',
+        'decimal_scale INTEGER NOT NULL CHECK (decimal_scale = 1)',
+        "rounding_mode TEXT NOT NULL CHECK (rounding_mode = 'half-up-to-integer-v1')",
+        "provenance TEXT NOT NULL CHECK (provenance = 'owner_authoritative')",
+        'micro_score <> 0 OR meso_score <> 0 OR macro_score <> 0',
+        'micro_score <> 100 OR meso_score <> 100 OR macro_score <> 100',
+      ],
+      authoritative_snapshots: [
+        'version INTEGER NOT NULL UNIQUE',
+        'expected_member_count INTEGER NOT NULL',
+        "state TEXT NOT NULL CHECK (state IN ('draft', 'frozen'))",
+        "state = 'draft' AND frozen_on IS NULL",
+        "state = 'frozen' AND frozen_on IS NOT NULL",
+      ],
+      authoritative_snapshot_members: [
+        'PRIMARY KEY (snapshot_id, game_id)',
+        'UNIQUE (snapshot_id, score_id)',
+        'FOREIGN KEY (score_id, game_id) REFERENCES authoritative_mimma_score_versions(id, game_id) ON DELETE RESTRICT',
+      ],
+      authoritative_game_mappings: [
+        'catalog_game_id TEXT NOT NULL REFERENCES games(id) ON DELETE RESTRICT',
+        'mapping_version INTEGER NOT NULL',
+        "decision TEXT NOT NULL CHECK (decision IN ('verified', 'rejected', 'revoked'))",
+        'supersedes_mapping_id TEXT REFERENCES authoritative_game_mappings(id) ON DELETE RESTRICT',
+        'UNIQUE (game_id, provider, mapping_version)',
+        'UNIQUE (id, game_id, provider, mapping_version)',
+      ],
+    }
+    for (const [table, snippets] of Object.entries(expectations)) {
+      const tableDdl = ddl(table)
+      expect(tableDdl, table).not.toBe('')
+      for (const snippet of snippets) expect(tableDdl, `${table}: ${snippet}`).toContain(snippet)
+    }
+  })
+
+  test('escapes apostrophes in owner titles as valid SQL literals', () => {
+    const sql = committedMigration()
+    expect(sql).toContain("'Tom Clancy''s Rainbow Six Siege'")
+    expect(sql).toContain("'Baldur''s Gate 3'")
+    expect(sql).not.toContain("'Tom Clancy's Rainbow Six Siege'")
   })
 
   test('default mode detects drift and --write is the only artifact-writing mode', () => {

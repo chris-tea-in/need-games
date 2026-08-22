@@ -659,10 +659,27 @@ END;`,
 }
 
 function renderDataStatements(manifest: OwnerAuthoritativeManifestV1): string[] {
+  const expectedCatalogPairs = manifest.mappings
+    .map((mapping) => `(${sqlString(mapping.catalogGameId)}, ${sqlString(mapping.externalId)})`)
+    .join(', ')
+  const expectedGameIds = manifest.games.map((game) => sqlString(game.id)).join(', ')
+  const expectedScoreIds = manifest.games.map((game) => sqlString(game.score.id)).join(', ')
+  const expectedMappingIds = manifest.mappings.map((mapping) => sqlString(mapping.id)).join(', ')
   const statements: string[] = [
-    '-- verify catalog Steam identities before authority inserts',
-    `SELECT id, steam_app_id FROM games WHERE id IN (${manifest.mappings.map((mapping) => sqlString(mapping.catalogGameId)).join(', ')}) ORDER BY id;`,
-    'SELECT COUNT(*) FROM authoritative_mimma_scores;',
+    `-- owner-authoritative migration preflight
+-- abs(INT64_MIN) deliberately aborts this statement when any preflight predicate fails.
+WITH expected_catalog(catalog_game_id, external_id) AS (VALUES ${expectedCatalogPairs})
+SELECT abs(CASE WHEN
+  (SELECT COUNT(*) FROM expected_catalog AS expected
+    INNER JOIN games AS catalog ON catalog.id = expected.catalog_game_id
+      AND CAST(catalog.steam_app_id AS TEXT) = expected.external_id) <> ${manifest.mappings.length}
+  OR EXISTS (SELECT 1 FROM authoritative_mimma_scores)
+  OR EXISTS (SELECT 1 FROM authoritative_games WHERE id IN (${expectedGameIds}))
+  OR EXISTS (SELECT 1 FROM authoritative_mimma_score_versions WHERE id IN (${expectedScoreIds}))
+  OR EXISTS (SELECT 1 FROM authoritative_snapshots WHERE id = ${sqlString(SNAPSHOT_ID)})
+  OR EXISTS (SELECT 1 FROM authoritative_snapshot_members WHERE snapshot_id = ${sqlString(SNAPSHOT_ID)})
+  OR EXISTS (SELECT 1 FROM authoritative_game_mappings WHERE id IN (${expectedMappingIds}))
+  THEN -9223372036854775808 ELSE 0 END) AS owner_authoritative_migration_preflight;`,
   ]
   for (const game of manifest.games) {
     statements.push(
