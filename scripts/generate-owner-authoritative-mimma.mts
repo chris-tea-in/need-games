@@ -105,6 +105,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value)
+}
+
 function assertRecord(value: unknown, name: string): asserts value is Record<string, unknown> {
   if (!isRecord(value)) throw new Error(`${name} must be an object`)
 }
@@ -134,7 +138,11 @@ function assertInteger(value: unknown, name: string): asserts value is number {
   }
 }
 
-function assertExactString(value: unknown, expected: string, name: string): void {
+function assertExactString(
+  value: unknown,
+  expected: string,
+  name: string,
+): asserts value is string {
   assertString(value, name)
   if (value !== expected) throw new Error(`${name} must be ${expected}`)
 }
@@ -284,9 +292,9 @@ export function validateOwnerAuthoritativeManifest(
   if (value.rounding.decimalScale !== 1) throw new Error('manifest.rounding.decimalScale must be 1')
   assertExactString(value.rounding.mode, ROUNDING_MODE, 'manifest.rounding.mode')
 
-  if (!Array.isArray(value.games)) throw new Error('manifest.games must be an array')
+  if (!isUnknownArray(value.games)) throw new Error('manifest.games must be an array')
   if (value.games.length !== 10) throw new Error('manifest must contain exactly ten games')
-  if (!Array.isArray(value.mappings)) throw new Error('manifest.mappings must be an array')
+  if (!isUnknownArray(value.mappings)) throw new Error('manifest.mappings must be an array')
   if (value.mappings.length !== 8) throw new Error('manifest must contain exactly eight mappings')
 
   assertUnique(
@@ -337,7 +345,10 @@ export function validateOwnerAuthoritativeManifest(
     assertScore(game.score, gameId, expected)
   })
 
-  const gameIds = new Set(value.games.map((game) => game.id))
+  const gameIds = new Set<string>()
+  for (const game of value.games) {
+    if (isRecord(game) && typeof game.id === 'string') gameIds.add(game.id)
+  }
   assertUnique(
     value.mappings.map((mapping) =>
       isRecord(mapping) && typeof mapping.id === 'string' ? mapping.id : '',
@@ -375,26 +386,28 @@ export function validateOwnerAuthoritativeManifest(
       `manifest.mappings[${index}]`,
     )
     const [expectedGameId, expectedExternalId, expectedCatalogGameId] = expected
+    assertString(mapping.id, `manifest.mappings[${index}].id`)
+    const mappingId = mapping.id
     assertExactString(
       mapping.id,
       `auth-map-steam-${expectedGameId.slice('auth-game-'.length)}-v1`,
-      `${mapping.id}.id`,
+      `${mappingId}.id`,
     )
     assertExactString(
       mapping.authoritativeGameId,
       expectedGameId,
-      `${mapping.id}.authoritativeGameId`,
+      `${mappingId}.authoritativeGameId`,
     )
     if (!gameIds.has(mapping.authoritativeGameId))
-      throw new Error(`${mapping.id} references unknown game`)
-    assertExactString(mapping.provider, 'steam', `${mapping.id}.provider`)
-    assertExactString(mapping.externalId, expectedExternalId, `${mapping.id}.externalId`)
-    assertExactString(mapping.catalogGameId, expectedCatalogGameId, `${mapping.id}.catalogGameId`)
-    assertInteger(mapping.version, `${mapping.id}.version`)
-    if (mapping.version !== 1) throw new Error(`${mapping.id}.version must be 1`)
-    assertExactString(mapping.decision, 'verified', `${mapping.id}.decision`)
-    assertExactString(mapping.verificationRef, VERIFICATION_REF, `${mapping.id}.verificationRef`)
-    assertExactString(mapping.decidedOn, APPROVED_ON, `${mapping.id}.decidedOn`)
+      throw new Error(`${mappingId} references unknown game`)
+    assertExactString(mapping.provider, 'steam', `${mappingId}.provider`)
+    assertExactString(mapping.externalId, expectedExternalId, `${mappingId}.externalId`)
+    assertExactString(mapping.catalogGameId, expectedCatalogGameId, `${mappingId}.catalogGameId`)
+    assertInteger(mapping.version, `${mappingId}.version`)
+    if (mapping.version !== 1) throw new Error(`${mappingId}.version must be 1`)
+    assertExactString(mapping.decision, 'verified', `${mappingId}.decision`)
+    assertExactString(mapping.verificationRef, VERIFICATION_REF, `${mappingId}.verificationRef`)
+    assertExactString(mapping.decidedOn, APPROVED_ON, `${mappingId}.decidedOn`)
   })
 }
 
@@ -416,7 +429,7 @@ export function parseOwnerAuthoritativeManifest(source: string): OwnerAuthoritat
   try {
     value = JSON.parse(source)
   } catch (error) {
-    throw new Error(`Owner-authoritative MiMMa manifest is not valid JSON: ${String(error)}`)
+    throw new Error('Owner-authoritative MiMMa manifest is not valid JSON', { cause: error })
   }
   validateOwnerAuthoritativeManifest(value)
   return value
