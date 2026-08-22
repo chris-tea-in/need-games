@@ -64,6 +64,7 @@ const defaultCommands = [
   pnpmCommand('Type check', ['typecheck']),
   pnpmCommand('Generated catalog artifacts', ['catalog:check']),
   pnpmCommand('Generated MiMMa seed artifact', ['mimma-seed:check']),
+  pnpmCommand('Generated owner-authoritative record', ['authoritative-record:check']),
   pnpmCommand('Coverage tests', ['test:coverage']),
   pnpmCommand('Production build', ['build']),
   pnpmCommand('Worker type check', ['typecheck:worker']),

@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": "owner-authoritative-mimma-v1",
+  "snapshot": {
+    "id": "snapshot-owner-authoritative-mimma-v1",
+    "version": 1,
+    "approvedOn": "2026-08-21"
+  },
+  "rounding": {
+    "decimalScale": 1,
+    "mode": "half-up-to-integer-v1"
+  },
+  "games": [
+    {
+      "id": "auth-game-counter-strike-2",
+      "identityKey": "counter-strike-2",
+      "canonicalTitle": "Counter-Strike 2",
+      "score": {
+        "id": "auth-score-counter-strike-2-v1",
+        "version": 1,
+        "microOriginal": "100.0",
+        "mesoOriginal": "65.0",
+        "macroOriginal": "80.0",
+        "micro": 100,
+        "meso": 65,
+        "macro": 80,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    },
+    {
+      "id": "auth-game-palworld",
+      "identityKey": "palworld",
+      "canonicalTitle": "Palworld",
+      "score": {
+        "id": "auth-score-palworld-v1",
+        "version": 1,
+        "microOriginal": "40.0",
+        "mesoOriginal": "20.0",
+        "macroOriginal": "70.0",
+        "micro": 40,
+        "meso": 20,
+        "macro": 70,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    },
+    {
+      "id": "auth-game-marvel-rivals",
+      "identityKey": "marvel-rivals",
+      "canonicalTitle": "Marvel Rivals",
+      "score": {
+        "id": "auth-score-marvel-rivals-v1",
+        "version": 1,
+        "microOriginal": "80.0",
+        "mesoOriginal": "60.0",
+        "macroOriginal": "80.0",
+        "micro": 80,
+        "meso": 60,
+        "macro": 80,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    },
+    {
+      "id": "auth-game-apex-legends",
+      "identityKey": "apex-legends",
+      "canonicalTitle": "Apex Legends",
+      "score": {
+        "id": "auth-score-apex-legends-v1",
+        "version": 1,
+        "microOriginal": "80.0",
+        "mesoOriginal": "80.0",
+        "macroOriginal": "100.0",
+        "micro": 80,
+        "meso": 80,
+        "macro": 100,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    },
+    {
+      "id": "auth-game-rainbow-six-siege",
+      "identityKey": "rainbow-six-siege",
+      "canonicalTitle": "Tom Clancy's Rainbow Six Siege",
+      "score": {
+        "id": "auth-score-rainbow-six-siege-v1",
+        "version": 1,
+        "microOriginal": "80.0",
+        "mesoOriginal": "60.0",
+        "macroOriginal": "80.0",
+        "micro": 80,
+        "meso": 60,
+        "macro": 80,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    },
+    {
+      "id": "auth-game-baldurs-gate-3",
+      "identityKey": "baldurs-gate-3",
+      "canonicalTitle": "Baldur's Gate 3",
+      "score": {
+        "id": "auth-score-baldurs-gate-3-v1",
+        "version": 1,
+        "microOriginal": "20.0",
+        "mesoOriginal": "20.0",
+        "macroOriginal": "100.0",
+        "micro": 20,
+        "meso": 20,
+        "macro": 100,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    },
+    {
+      "id": "auth-game-monster-hunter-wilds",
+      "identityKey": "monster-hunter-wilds",
+      "canonicalTitle": "Monster Hunter Wilds",
+      "score": {
+        "id": "auth-score-monster-hunter-wilds-v1",
+        "version": 1,
+        "microOriginal": "80.0",
+        "mesoOriginal": "40.0",
+        "macroOriginal": "60.0",
+        "micro": 80,
+        "meso": 40,
+        "macro": 60,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    },
+    {
+      "id": "auth-game-elden-ring",
+      "identityKey": "elden-ring",
+      "canonicalTitle": "ELDEN RING",
+      "score": {
+        "id": "auth-score-elden-ring-v1",
+        "version": 1,
+        "microOriginal": "80.0",
+        "mesoOriginal": "100.0",
+        "macroOriginal": "40.0",
+        "micro": 80,
+        "meso": 100,
+        "macro": 40,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    },
+    {
+      "id": "auth-game-league-of-legends",
+      "identityKey": "league-of-legends",
+      "canonicalTitle": "League of Legends",
+      "score": {
+        "id": "auth-score-league-of-legends-v1",
+        "version": 1,
+        "microOriginal": "68.6",
+        "mesoOriginal": "77.1",
+        "macroOriginal": "100.0",
+        "micro": 69,
+        "meso": 77,
+        "macro": 100,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    },
+    {
+      "id": "auth-game-valorant",
+      "identityKey": "valorant",
+      "canonicalTitle": "Valorant",
+      "score": {
+        "id": "auth-score-valorant-v1",
+        "version": 1,
+        "microOriginal": "100.0",
+        "mesoOriginal": "73.3",
+        "macroOriginal": "80.0",
+        "micro": 100,
+        "meso": 73,
+        "macro": 80,
+        "approvalReason": "initial-owner-snapshot",
+        "approvedOn": "2026-08-21"
+      }
+    }
+  ],
+  "mappings": [
+    {
+      "id": "auth-map-steam-counter-strike-2-v1",
+      "authoritativeGameId": "auth-game-counter-strike-2",
+      "provider": "steam",
+      "externalId": "730",
+      "catalogGameId": "steam-730",
+      "version": 1,
+      "decision": "verified",
+      "verificationRef": "owner-approved-manifest-v1",
+      "decidedOn": "2026-08-21"
+    },
+    {
+      "id": "auth-map-steam-palworld-v1",
+      "authoritativeGameId": "auth-game-palworld",
+      "provider": "steam",
+      "externalId": "1623730",
+      "catalogGameId": "steam-1623730",
+      "version": 1,
+      "decision": "verified",
+      "verificationRef": "owner-approved-manifest-v1",
+      "decidedOn": "2026-08-21"
+    },
+    {
+      "id": "auth-map-steam-marvel-rivals-v1",
+      "authoritativeGameId": "auth-game-marvel-rivals",
+      "provider": "steam",
+      "externalId": "2767030",
+      "catalogGameId": "steam-2767030",
+      "version": 1,
+      "decision": "verified",
+      "verificationRef": "owner-approved-manifest-v1",
+      "decidedOn": "2026-08-21"
+    },
+    {
+      "id": "auth-map-steam-apex-legends-v1",
+      "authoritativeGameId": "auth-game-apex-legends",
+      "provider": "steam",
+      "externalId": "1172470",
+      "catalogGameId": "steam-1172470",
+      "version": 1,
+      "decision": "verified",
+      "verificationRef": "owner-approved-manifest-v1",
+      "decidedOn": "2026-08-21"
+    },
+    {
+      "id": "auth-map-steam-rainbow-six-siege-v1",
+      "authoritativeGameId": "auth-game-rainbow-six-siege",
+      "provider": "steam",
+      "externalId": "359550",
+      "catalogGameId": "steam-359550",
+      "version": 1,
+      "decision": "verified",
+      "verificationRef": "owner-approved-manifest-v1",
+      "decidedOn": "2026-08-21"
+    },
+    {
+      "id": "auth-map-steam-baldurs-gate-3-v1",
+      "authoritativeGameId": "auth-game-baldurs-gate-3",
+      "provider": "steam",
+      "externalId": "1086940",
+      "catalogGameId": "steam-1086940",
+      "version": 1,
+      "decision": "verified",
+      "verificationRef": "owner-approved-manifest-v1",
+      "decidedOn": "2026-08-21"
+    },
+    {
+      "id": "auth-map-steam-monster-hunter-wilds-v1",
+      "authoritativeGameId": "auth-game-monster-hunter-wilds",
+      "provider": "steam",
+      "externalId": "2246340",
+      "catalogGameId": "steam-2246340",
+      "version": 1,
+      "decision": "verified",
+      "verificationRef": "owner-approved-manifest-v1",
+      "decidedOn": "2026-08-21"
+    },
+    {
+      "id": "auth-map-steam-elden-ring-v1",
+      "authoritativeGameId": "auth-game-elden-ring",
+      "provider": "steam",
+      "externalId": "1245620",
+      "catalogGameId": "steam-1245620",
+      "version": 1,
+      "decision": "verified",
+      "verificationRef": "owner-approved-manifest-v1",
+      "decidedOn": "2026-08-21"
+    }
+  ]
+}

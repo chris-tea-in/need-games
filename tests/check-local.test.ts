@@ -99,6 +99,17 @@ describe('check:local wrapper', () => {
     )
   })
 
+  test('checks the generated owner-authoritative record after the seed and before coverage', () => {
+    const source = readFileSync(scriptUrl, 'utf8')
+    const seed = source.indexOf("'Generated MiMMa seed artifact'")
+    const ownerRecord = source.indexOf("'Generated owner-authoritative record'")
+    const coverage = source.indexOf("'Coverage tests'")
+
+    expect(seed).toBeGreaterThan(-1)
+    expect(ownerRecord).toBeGreaterThan(seed)
+    expect(ownerRecord).toBeLessThan(coverage)
+  })
+
   test('force-kills an unresponsive Worker after graceful shutdown times out', async () => {
     const checkLocalUrl = new URL('../scripts/check-local.mjs?stop-worker-test', import.meta.url)
     const checkLocal = (await import(checkLocalUrl.href)) as {

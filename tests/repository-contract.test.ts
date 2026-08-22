@@ -68,6 +68,7 @@ describe('repository package contract', () => {
       'check:local': 'node scripts/check-local.mjs',
       'catalog:check': 'node scripts/generate-catalog-artifacts.mts',
       'mimma-seed:check': 'node scripts/generate-authoritative-mimma-seed.mts',
+      'authoritative-record:check': 'node scripts/generate-owner-authoritative-mimma.mts',
       'release:check': 'node scripts/assert-release-d1-id.mts',
       'release:production': 'node scripts/release-production.mts',
       predeploy: 'pnpm release:check',
@@ -164,12 +165,18 @@ describe('repository automation contract', () => {
     expect(contributing).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false')
     expect(contributing).toContain('contains no `.dev.vars`, `.env`, Worker output')
     expect(contributing).toMatch(
-      /exactly `0001_schema\.sql`,\s+`0002_seed_beta_catalog\.sql`, `0003_authoritative_mimma_seed\.sql`, and\s+`0004_identity_sessions\.sql`/,
+      /exactly `0001_schema\.sql`,\s+`0002_seed_beta_catalog\.sql`, `0003_authoritative_mimma_seed\.sql`, `0004_identity_sessions\.sql`, and\s+`0005_owner_authoritative_mimma_v1\.sql`/,
     )
     expect(contributing).toContain(
-      'wrangler d1 migrations apply need-games-production --remote --config .wrangler.production.jsonc',
+      'wrangler d1 execute need-games-production --remote --file migrations/0005_owner_authoritative_mimma_v1.sql --config .wrangler.production.jsonc',
     )
     expect(contributing).toMatch(/The release command does not apply\s+migrations/)
+    expect(contributing).toMatch(/compound triggers/i)
+    expect(contributing).toMatch(/Time Travel bookmark/i)
+    expect(contributing).toMatch(/SQL export/i)
+    expect(contributing).toMatch(/atomic/i)
+    expect(contributing).toMatch(/migration history/i)
+    expect(contributing).toMatch(/permanent invariants/i)
     expect(contributing).toMatch(
       /first production deployment has no recoverable\s+pre-deploy baseline/i,
     )
@@ -267,7 +274,16 @@ describe('repository automation contract', () => {
 
     expect(workflow).toContain('pnpm catalog:check')
     expect(workflow).toContain('pnpm mimma-seed:check')
+    expect(workflow).toContain('pnpm authoritative-record:check')
     expect(workflow).toContain('pnpm test:worker')
+  })
+
+  test('runs the owner-authoritative artifact check after the seed check in CI', () => {
+    const workflow = readAutomationFile(ciWorkflowUrl)
+    expect(workflow.indexOf('pnpm mimma-seed:check')).toBeGreaterThan(-1)
+    expect(workflow.indexOf('pnpm authoritative-record:check')).toBeGreaterThan(
+      workflow.indexOf('pnpm mimma-seed:check'),
+    )
   })
 
   test('blocks pull requests that leak a real D1 database ID into tracked configuration', () => {

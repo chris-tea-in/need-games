@@ -74,6 +74,9 @@ jobs:
       - name: Check generated MiMMa seed artifact
         run: pnpm mimma-seed:check
 
+      - name: Check generated owner-authoritative record
+        run: pnpm authoritative-record:check
+
       - name: Run Worker and D1 tests
         run: pnpm test:worker
 
