@@ -142,7 +142,10 @@ The release rejects a missing, invalid, duplicate, or mismatched mode before upl
 generated config must contain the transient D1 ID and the reviewed Steam sign-in mode.
 The release verifies the target D1 identity, catalog state, and exactly `0001_schema.sql`,
 `0002_seed_beta_catalog.sql`, `0003_authoritative_mimma_seed.sql`, `0004_identity_sessions.sql`, and
-`0005_owner_authoritative_mimma_v1.sql` in its migration history. Before running `release:production`, use
+`0005_owner_authoritative_mimma_v1.sql` in its migration history. That list, each migration's content
+hash, and the catalog and owner-authoritative data files live in `scripts/release-manifest.mts`. The
+verifier derives its expected authority rows from the hash-pinned record, so a new migration or data
+release updates the manifest and the data instead of the verifier. Before running `release:production`, use
 the generated `.wrangler.production.jsonc` for the owner-confirmed database ID to apply the
 reviewed migration set remotely:
 

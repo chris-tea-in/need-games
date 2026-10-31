@@ -16,6 +16,7 @@ import {
 
 import { requiredProductionSecretNames } from './create-production-wrangler-config.mjs'
 import { assertProductionD1Verification, productionDatabaseName } from './verify-production-d1.mjs'
+import { readReleasedCatalog } from './release-manifest.mts'
 
 const execFileAsync = promisify(execFile)
 const productionConfigPath = '.wrangler.production.jsonc'
@@ -34,8 +35,9 @@ const cloudflareViteConfigPathVariable = 'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH'
 const cloudflareLoadDotEnvVariable = 'CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV'
 const knownGamePath = '/api/games/counter-strike-2'
 const unscoredGamePath = '/api/games/destiny-2'
-const expectedCatalogVersion = 'catalog-release-v1'
-const expectedCatalogSize = 10
+const releasedCatalog = readReleasedCatalog()
+const expectedCatalogVersion = releasedCatalog.datasetVersion
+const expectedCatalogSize = releasedCatalog.gameCount
 const wranglerTrafficPercentageEpsilon = 1e-3
 
 interface Command {
