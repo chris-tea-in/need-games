@@ -77,6 +77,9 @@ several judgments. How they were produced is not recorded.
 
 ### Open calibration questions for the owner
 
+`docs/MIMMA_RESCORING_2026-10-31.md` compares the v1 scores with three independent scorings and
+answers each question below with that evidence.
+
 - No anchor sits below 20 on any axis. Each axis needs a 0 or 10 anchor. `data/surnex-dataset.csv`
   lists games rated high on one axis and low on the others (for example Beat Saber: high Micro, low
   Meso, low Macro). Those are good candidates to score as low anchors.
