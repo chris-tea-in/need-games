@@ -105,7 +105,7 @@ describe('read-only catalog routes', () => {
     expect(detail.game).toMatchObject({ authoritativeScore: null, slug: 'destiny-2' })
   })
 
-  test('ranks the other scored games by MiMMa distance for a scored game', async () => {
+  test('ranks the close scored games by MiMMa distance and shared tags', async () => {
     const response = await SELF.fetch('https://need-games.test/api/games/counter-strike-2/similar')
 
     expect(response.status).toBe(200)
@@ -117,12 +117,11 @@ describe('read-only catalog routes', () => {
       game: { id: 'steam-730', slug: 'counter-strike-2', title: 'Counter-Strike 2' },
     })
     const similarGames = (body as SimilarGamesResponse).similarGames
-    expect(similarGames.map((game) => [game.slug, game.distance])).toEqual([
-      ['marvel-rivals', 20.62],
-      ['tom-clancys-rainbow-six-siege', 20.62],
-      ['apex-legends', 32.02],
-      ['monster-hunter-wilds', 37.75],
-      ['elden-ring', 56.79],
+    expect(similarGames.map((game) => [game.slug, game.distance, game.sharedTags])).toEqual([
+      ['tom-clancys-rainbow-six-siege', 20.62, ['FPS', 'Shooter', 'Multiplayer']],
+      ['marvel-rivals', 20.62, ['Multiplayer']],
+      ['apex-legends', 32.02, ['FPS', 'Shooter', 'Multiplayer']],
+      ['monster-hunter-wilds', 37.75, ['Multiplayer', 'Action']],
     ])
     expect(similarGames.map((game) => game.slug)).not.toContain('destiny-2')
     expect(similarGames.map((game) => game.slug)).not.toContain('counter-strike-2')

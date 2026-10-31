@@ -1104,6 +1104,12 @@ select option {
   font-variant-numeric: tabular-nums;
 }
 
+.similar-tags {
+  margin-top: 0.2rem;
+  color: var(--text-3);
+  font-size: 0.8125rem;
+}
+
 .shelf-status {
   border-top: 1px solid var(--rule);
   color: var(--text-2);

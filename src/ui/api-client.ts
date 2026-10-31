@@ -140,15 +140,20 @@ function snapshotSimilarGames(slug: string): SimilarGamesLoadResult {
             score: game.authoritativeScore,
             slug: game.slug,
             steamAppId: game.steamAppId,
+            tags: game.tags,
             title: game.title,
           },
         ],
   )
-  const games = rankSimilarGames(selected.authoritativeScore, candidates).map(
-    ({ authoritativeScore, distance, id, slug: candidateSlug, steamAppId, title }) => ({
+  const games = rankSimilarGames(
+    { score: selected.authoritativeScore, tags: selected.tags },
+    candidates,
+  ).map(
+    ({ authoritativeScore, distance, id, sharedTags, slug: candidateSlug, steamAppId, title }) => ({
       authoritativeScore,
       distance,
       id,
+      sharedTags,
       slug: candidateSlug,
       steamAppId,
       title,

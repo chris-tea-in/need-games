@@ -21,6 +21,7 @@ describe('similar games client', () => {
           authoritativeScore: { macro: 80, meso: 60, micro: 80, snapshotVersion: 1 },
           distance: 20.62,
           id: 'steam-2767030',
+          sharedTags: ['Multiplayer'],
           slug: 'marvel-rivals',
           steamAppId: 2767030,
           title: 'Marvel Rivals',
@@ -72,12 +73,11 @@ describe('similar games client', () => {
 
     expect(result).toMatchObject({ kind: 'data', source: 'snapshot' })
     if (result.kind === 'data') {
-      expect(result.games.map((game) => game.slug)).toEqual([
-        'marvel-rivals',
-        'tom-clancys-rainbow-six-siege',
-        'apex-legends',
-        'monster-hunter-wilds',
-        'elden-ring',
+      expect(result.games.map((game) => [game.slug, game.sharedTags])).toEqual([
+        ['tom-clancys-rainbow-six-siege', ['FPS', 'Shooter', 'Multiplayer']],
+        ['marvel-rivals', ['Multiplayer']],
+        ['apex-legends', ['FPS', 'Shooter', 'Multiplayer']],
+        ['monster-hunter-wilds', ['Multiplayer', 'Action']],
       ])
     }
   })

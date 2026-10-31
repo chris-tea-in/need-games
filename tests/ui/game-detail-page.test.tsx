@@ -34,7 +34,7 @@ describe('GameDetailPage', () => {
 
     expect(markup).toContain('Score unavailable')
     expect(markup).not.toContain('mimma-graph')
-    expect(markup).not.toContain('Similar games')
+    expect(markup).not.toContain('Plays like')
   })
 
   test('lists similar games with links in ranked order', () => {
@@ -47,6 +47,7 @@ describe('GameDetailPage', () => {
               authoritativeScore: { macro: 80, meso: 60, micro: 80, snapshotVersion: 1 },
               distance: 20.62,
               id: 'steam-2767030',
+              sharedTags: ['Multiplayer'],
               slug: 'marvel-rivals',
               steamAppId: 2767030,
               title: 'Marvel Rivals',
@@ -55,6 +56,7 @@ describe('GameDetailPage', () => {
               authoritativeScore: { macro: 100, meso: 80, micro: 80, snapshotVersion: 1 },
               distance: 32.02,
               id: 'steam-1172470',
+              sharedTags: [],
               slug: 'apex-legends',
               steamAppId: 1172470,
               title: 'Apex Legends',
@@ -65,16 +67,21 @@ describe('GameDetailPage', () => {
       />,
     )
 
-    expect(markup).toContain('Similar games')
+    expect(markup).toContain('Plays like Counter-Strike 2')
     expect(markup).toContain('href="/games/marvel-rivals"')
     expect(markup.indexOf('Marvel Rivals')).toBeLessThan(markup.indexOf('Apex Legends'))
     expect(markup).toContain('Micro 80, Meso 60, Macro 80')
+    expect(markup).toContain('Shares Multiplayer')
+    expect(markup.match(/Shares /g)).toHaveLength(1)
   })
 
   test.each([
     [{ kind: 'loading' } as const, 'Finding similar games'],
     [{ kind: 'error' } as const, 'Similar games are unavailable right now.'],
-    [{ games: [], kind: 'data' } as const, 'No other scored games are in the catalog yet.'],
+    [
+      { games: [], kind: 'data' } as const,
+      'No scored game in the catalog plays close enough to Counter-Strike 2 yet.',
+    ],
   ])('shows the %o similar-games state', (similarGames, message) => {
     const markup = renderToStaticMarkup(
       <GameDetailPage game={snapshotGame('counter-strike-2')} similarGames={similarGames} />,

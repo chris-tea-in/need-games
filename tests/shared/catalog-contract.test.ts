@@ -15,6 +15,7 @@ function similarGame(overrides: Record<string, unknown> = {}) {
     authoritativeScore: score,
     distance: 20.62,
     id: 'steam-2767030',
+    sharedTags: ['Multiplayer'],
     slug: 'marvel-rivals',
     steamAppId: 2767030,
     title: 'Marvel Rivals',
@@ -62,6 +63,8 @@ describe('similar games contract', () => {
     ['a negative distance', similarGame({ distance: -1 })],
     ['a non-finite distance', similarGame({ distance: Number.POSITIVE_INFINITY })],
     ['a missing slug', similarGame({ slug: undefined })],
+    ['missing shared tags', similarGame({ sharedTags: undefined })],
+    ['a non-string shared tag', similarGame({ sharedTags: [1] })],
     ['an unscored entry', similarGame({ authoritativeScore: null })],
   ])('rejects %s', (_label, entry) => {
     expect(isSimilarGamesResponse({ ...response, similarGames: [entry] })).toBe(false)

@@ -63,6 +63,8 @@ export interface SimilarGame {
   /** Euclidean distance between the two scores on the 0-100 axes, rounded to two decimals. */
   distance: number
   id: string
+  /** The selected game's Steam tags that this game also has, in the selected game's order. */
+  sharedTags: readonly string[]
   slug: string
   steamAppId: number
   title: string
@@ -228,6 +230,8 @@ function isSimilarGame(value: unknown): value is SimilarGame {
     typeof value.distance === 'number' &&
     Number.isFinite(value.distance) &&
     value.distance >= 0 &&
+    Array.isArray(value.sharedTags) &&
+    value.sharedTags.every((tag) => typeof tag === 'string') &&
     isAuthoritativeScoreSummary(value.authoritativeScore)
   )
 }

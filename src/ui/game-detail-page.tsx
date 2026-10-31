@@ -66,7 +66,11 @@ function SimilarGamesSection({ game, view }: { game: GameDetail; view: SimilarGa
   } else if (view.kind === 'error') {
     content = <p className="shelf-status">Similar games are unavailable right now.</p>
   } else if (view.games.length === 0) {
-    content = <p className="shelf-status">No other scored games are in the catalog yet.</p>
+    content = (
+      <p className="shelf-status">
+        No scored game in the catalog plays close enough to {game.title} yet.
+      </p>
+    )
   } else {
     const reference = game.authoritativeScore ?? undefined
     content = (
@@ -82,6 +86,9 @@ function SimilarGamesSection({ game, view }: { game: GameDetail; view: SimilarGa
               <a href={`/games/${similar.slug}`}>{similar.title}</a>
             </h3>
             <p className="similar-scores">{profileSummary(similar.authoritativeScore)}</p>
+            {similar.sharedTags.length > 0 ? (
+              <p className="similar-tags">Shares {similar.sharedTags.join(', ')}</p>
+            ) : null}
           </li>
         ))}
       </ol>
@@ -93,8 +100,9 @@ function SimilarGamesSection({ game, view }: { game: GameDetail; view: SimilarGa
       <header className="similar-games-header">
         <h2 id="similar-games-heading">Plays like {game.title}</h2>
         <p>
-          Similar games, closest MiMMa profile first. The{' '}
-          <span className="reference-mark">orange tick</span> on each strip is {game.title}.
+          Scored games with a MiMMa profile close to this one. Shared Steam tags decide the order
+          between near matches. The <span className="reference-mark">orange tick</span> on each
+          strip is {game.title}.
         </p>
       </header>
       {content}

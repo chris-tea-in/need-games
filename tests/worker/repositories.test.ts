@@ -372,6 +372,9 @@ describe('catalog repositories', () => {
 
   test('finds mapped candidates from the frozen snapshot in deterministic catalog order', async () => {
     const candidates = await findScoredSimilarityCandidates(env.NEED_GAMES_DB, 'steam-730')
+    const apexTags = candidates.find((candidate) => candidate.title === 'Apex Legends')?.tags
+
+    expect(apexTags).toContain('Battle Royale')
 
     expect(candidates).toEqual([
       expect.objectContaining({
