@@ -72,9 +72,10 @@ Worker tests, the build, Worker types, and the local Worker smoke test.
   (M4.1).
 - A6: `AUTH_START_RATE_LIMITER` allows 10 sign-in starts per client IP per minute, in both
   environments, before any D1 write; over the limit returns 429 `rate_limited`.
-- Partly done: A11 (CONTRIBUTING now says coverage measures the Node suite only;
-  `passWithNoTests` is unchanged) and A14 (`allowImportingTsExtensions` is on and new scripts
-  import `.mts` directly; the two `.mjs` shims remain).
+- Cleanup on branch `chore/backlog-cleanup` (based on `feat/backlog-next-steps`): A10, A11, A12,
+  A13, A14, A15, and A16. `/favicon.ico` and `/favicon.svg` now serve icons, API responses carry
+  `X-Content-Type-Options: nosniff`, game pages set their own title, and the release contract test
+  checks commands, headings, and the manifest's migration names instead of prose.
 
 ## Decisions needed (owner)
 
@@ -280,26 +281,26 @@ P3
 - [x] A9 Use `AUTH_ROUTES` in `src/worker/router.ts:18-25`, and `CATALOG_SCHEMA_VERSION` in
       `router.ts:34`, `:38` and `routes/similar-games.ts:13`. (quick win, S) (F12)
   - Done when: no auth path string or schema version literal remains in the router.
-- [ ] A10 Derive the cookie `Max-Age` values from the session-contract lifetimes. (quick win, S)
+- [x] A10 Derive the cookie `Max-Age` values from the session-contract lifetimes. (quick win, S)
       (F13)
   - Done when: each lifetime is defined once, in `src/shared/session-contract.ts`.
-- [ ] A11 Say in CONTRIBUTING that `test:coverage` covers the Node suite only, or add Worker
+- [x] A11 Say in CONTRIBUTING that `test:coverage` covers the Node suite only, or add Worker
       coverage. Set `passWithNoTests: false` in `vitest.worker.config.ts`. (S) (F14)
   - Done when: a reader of the coverage report knows what it measures, and an empty Worker suite
     fails.
-- [ ] A12 Set `X-Content-Type-Options: nosniff` in `jsonResponse` (`src/worker/http.ts:15-21`).
+- [x] A12 Set `X-Content-Type-Options: nosniff` in `jsonResponse` (`src/worker/http.ts:15-21`).
       (quick win, S) (F15)
   - Done when: a Worker test asserts the header on a catalog response.
-- [ ] A13 Add a favicon and a meta description, and set `document.title` per game
+- [x] A13 Add a favicon and a meta description, and set `document.title` per game
       (`src/ui/App.tsx:121-123`). (S) (F16)
   - Done when: `/favicon.ico` returns an image, and a game page's title names the game.
-- [ ] A14 Replace the `.mjs` re-export shims with direct `.mts` imports through
+- [x] A14 Replace the `.mjs` re-export shims with direct `.mts` imports through
       `allowImportingTsExtensions`. (S) (F16)
   - Done when: both shims are deleted, and `release:check` plus the release entrypoint tests pass.
-- [ ] A15 In `tests/repository-contract.test.ts:128-222`, assert commands and variable names instead
+- [x] A15 In `tests/repository-contract.test.ts:128-222`, assert commands and variable names instead
       of prose phrases. (S) (F16)
   - Done when: rewording a CONTRIBUTING sentence without changing a command needs no test edit.
-- [ ] A16 Share the UI formatters (`src/ui/catalog-page.tsx:15-17`,
+- [x] A16 Share the UI formatters (`src/ui/catalog-page.tsx:15-17`,
       `src/ui/game-detail-page.tsx:10-19`, `src/ui/offline-notice.tsx:7-10`). (S) (F16)
   - Done when: each format is defined once.
 - [ ] A17 Delete the stale remote branches `chore/remove-surnex-source-urls` and

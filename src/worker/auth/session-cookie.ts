@@ -1,8 +1,10 @@
+import {
+  SESSION_LIFETIME_SECONDS,
+  STEAM_LOGIN_TRANSACTION_LIFETIME_SECONDS,
+} from '../../shared/session-contract.js'
+
 export const SESSION_COOKIE_NAME = '__Host-myplayprint_session'
 export const LOGIN_TRANSACTION_COOKIE_NAME = '__Host-myplayprint_login_transaction'
-
-export const SESSION_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
-export const LOGIN_TRANSACTION_COOKIE_MAX_AGE_SECONDS = 10 * 60
 
 const cookieNamePattern = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/
 const cookieOctetPattern = /^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$/
@@ -51,14 +53,14 @@ function serializeClearedHostCookie(name: string): string {
 }
 
 export function serializeSessionCookie(token: string): string {
-  return serializeHostCookie(SESSION_COOKIE_NAME, token, SESSION_COOKIE_MAX_AGE_SECONDS)
+  return serializeHostCookie(SESSION_COOKIE_NAME, token, SESSION_LIFETIME_SECONDS)
 }
 
 export function serializeLoginTransactionCookie(token: string): string {
   return serializeHostCookie(
     LOGIN_TRANSACTION_COOKIE_NAME,
     token,
-    LOGIN_TRANSACTION_COOKIE_MAX_AGE_SECONDS,
+    STEAM_LOGIN_TRANSACTION_LIFETIME_SECONDS,
   )
 }
 

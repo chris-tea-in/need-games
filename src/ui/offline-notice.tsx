@@ -1,13 +1,12 @@
+import { formatDateTime } from './format.js'
+
 interface OfflineNoticeProps {
   datasetVersion: string
   generatedAt: string
 }
 
 export function OfflineNotice({ datasetVersion, generatedAt }: OfflineNoticeProps) {
-  const freshness = new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(generatedAt))
+  const freshness = formatDateTime(generatedAt)
 
   return (
     <aside className="offline-notice" aria-label="Degraded catalog data notice">

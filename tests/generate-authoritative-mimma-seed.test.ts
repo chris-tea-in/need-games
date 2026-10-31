@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, test } from 'vitest'
 
-import { assertArtifactMatches } from '../scripts/generate-authoritative-mimma-seed.mjs'
+import { assertArtifactMatches } from '../scripts/generate-authoritative-mimma-seed.mts'
 
 const temporaryDirectories: string[] = []
 

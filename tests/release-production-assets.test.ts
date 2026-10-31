@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import { describe, expect, test } from 'vitest'
 
-import { assertProductionAssetBoundary } from '../scripts/release-production.mjs'
+import { assertProductionAssetBoundary } from '../scripts/release-production.mts'
 
 interface CandidateOptions {
   additionalDatabases?: ReadonlyArray<Record<string, string>>

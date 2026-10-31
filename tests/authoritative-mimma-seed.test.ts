@@ -7,7 +7,7 @@ import {
   buildAuthoritativeMimmaSeeds,
   parseSurnexCsv,
   renderAuthoritativeMimmaSeedMigration,
-} from '../scripts/generate-authoritative-mimma-seed.mjs'
+} from '../scripts/generate-authoritative-mimma-seed.mts'
 
 const source = readFileSync(new URL('../data/surnex-dataset.csv', import.meta.url), 'utf8')
 

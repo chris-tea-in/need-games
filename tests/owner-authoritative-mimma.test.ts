@@ -11,9 +11,9 @@ import {
   renderOwnerAuthoritativeMimmaSql,
   roundDecimalHalfUp,
   validateOwnerAuthoritativeManifest,
-} from '../scripts/generate-owner-authoritative-mimma.mjs'
+} from '../scripts/generate-owner-authoritative-mimma.mts'
 
-import type { OwnerAuthoritativeManifestV1 } from '../scripts/generate-owner-authoritative-mimma.mjs'
+import type { OwnerAuthoritativeManifestV1 } from '../scripts/generate-owner-authoritative-mimma.mts'
 
 const manifestPath = new URL(
   '../data/authoritative-records/owner-authoritative-mimma-v1.json',

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import type { GameDetail, SimilarGame } from '../shared/catalog-contract.js'
+import { formatCount, formatDateTime } from './format.js'
 import { MimmaGraph } from './mimma-graph.js'
 
 export type SimilarGamesView =
@@ -11,17 +12,6 @@ interface GameDetailPageProps {
   game: GameDetail
   /** Omit for unscored games; similar games need an authoritative score. */
   similarGames?: SimilarGamesView
-}
-
-function formatReviewCount(count: number): string {
-  return new Intl.NumberFormat().format(count)
-}
-
-function formatFetchedAt(timestamp: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp))
 }
 
 function ScorePanel({ game }: { game: GameDetail }) {
@@ -107,7 +97,7 @@ export function GameDetailPage({ authControl, game, similarGames }: GameDetailPa
         <section className="card game-content" aria-labelledby="game-summary-heading">
           <p className="badge review-category">{game.review.category}</p>
           <p className="review-count">
-            {formatReviewCount(game.review.count)} Steam reviews <span>· {game.review.scope}</span>
+            {formatCount(game.review.count)} Steam reviews <span>· {game.review.scope}</span>
           </p>
           <h2 id="game-summary-heading">About this game</h2>
           <p className="game-description">{game.shortDescription}</p>
@@ -120,7 +110,7 @@ export function GameDetailPage({ authControl, game, similarGames }: GameDetailPa
             </div>
             <div>
               <dt>Steam metadata fetched</dt>
-              <dd>{formatFetchedAt(game.provenance.fetchedAt)}</dd>
+              <dd>{formatDateTime(game.provenance.fetchedAt)}</dd>
             </div>
           </dl>
         </section>

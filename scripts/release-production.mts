@@ -14,8 +14,8 @@ import {
   type PropertyAssignment,
 } from 'typescript'
 
-import { requiredProductionSecretNames } from './create-production-wrangler-config.mjs'
-import { assertProductionD1Verification, productionDatabaseName } from './verify-production-d1.mjs'
+import { requiredProductionSecretNames } from './create-production-wrangler-config.mts'
+import { assertProductionD1Verification, productionDatabaseName } from './verify-production-d1.mts'
 import { readReleasedCatalog } from './release-manifest.mts'
 
 const execFileAsync = promisify(execFile)

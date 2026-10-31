@@ -4,7 +4,7 @@ import {
   assertProductionD1Verification,
   type ProductionD1VerificationInput,
   productionDatabaseName,
-} from '../scripts/verify-production-d1.mjs'
+} from '../scripts/verify-production-d1.mts'
 
 const productionDatabaseId = '11111111-1111-4111-8111-111111111111'
 const sourceHash = 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65'

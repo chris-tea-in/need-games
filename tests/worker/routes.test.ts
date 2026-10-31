@@ -90,6 +90,13 @@ describe('read-only catalog routes', () => {
     })
   })
 
+  test('marks JSON API responses nosniff, because static asset headers do not cover them', async () => {
+    for (const path of ['/api/catalog', '/api/games/apex-legends', '/api/games/not-a-game']) {
+      const response = await SELF.fetch(`https://need-games.test${path}`)
+      expect(response.headers.get('x-content-type-options'), path).toBe('nosniff')
+    }
+  })
+
   test('returns null for a catalog game without an authoritative score', async () => {
     const detail = await responseJson(
       await SELF.fetch('https://need-games.test/api/games/destiny-2'),

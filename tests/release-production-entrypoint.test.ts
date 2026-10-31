@@ -25,7 +25,7 @@ describe('production release entrypoint', () => {
       'utf8',
     )
     expect(source).not.toMatch(/['"]migrations['"]|d1 migrations apply/i)
-    expect(source).toContain('verify-production-d1.mjs')
+    expect(source).toContain('verify-production-d1.mts')
   })
 
   test('queries every non-internal schema object so unexpected objects cannot be hidden', () => {

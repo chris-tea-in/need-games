@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 
 import type { CatalogResponse } from '../shared/catalog-contract.js'
 import { catalogSortOptions, selectCatalogGames, type CatalogSort } from './catalog-state.js'
+import { formatCount } from './format.js'
 
 interface CatalogPageProps {
   catalog: CatalogResponse
@@ -10,10 +11,6 @@ interface CatalogPageProps {
   onSortChange: (sort: CatalogSort) => void
   query: string
   sort: CatalogSort
-}
-
-function formatReviewCount(count: number): string {
-  return new Intl.NumberFormat().format(count)
 }
 
 export function CatalogPage({
@@ -77,7 +74,7 @@ export function CatalogPage({
               <h2>
                 <a href={`/games/${game.slug}`}>{game.title}</a>
               </h2>
-              <p className="review-count">{formatReviewCount(game.review.count)} reviews</p>
+              <p className="review-count">{formatCount(game.review.count)} reviews</p>
               <ul className="tag-list" aria-label={`${game.title} tags`}>
                 {game.tags.map((tag) => (
                   <li key={tag}>{tag}</li>

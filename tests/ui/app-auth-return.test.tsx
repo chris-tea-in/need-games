@@ -96,6 +96,7 @@ describe('App authentication return integration', () => {
     })
 
     expect(container.querySelector('h1')?.textContent).toBe('Counter-Strike 2')
+    expect(document.title).toBe('Counter-Strike 2 | Need Games')
     expect(container.querySelector('[role="dialog"]')).toBeNull()
     expect(container.querySelector('[role="alert"]')).toBeNull()
   })

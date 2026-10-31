@@ -12,7 +12,7 @@ import {
   parseOwnerAuthoritativeManifest,
   renderOwnerAuthoritativeMimmaSql,
   validateOwnerAuthoritativeCatalogMappings,
-} from '../scripts/generate-owner-authoritative-mimma.mjs'
+} from '../scripts/generate-owner-authoritative-mimma.mts'
 
 const root = resolve(import.meta.dirname, '..')
 const manifestPath = resolve(root, 'data/authoritative-records/owner-authoritative-mimma-v1.json')

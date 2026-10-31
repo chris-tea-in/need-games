@@ -138,9 +138,15 @@ export function App() {
     }
   }, [slug])
 
+  const detailTitle = detailState.kind === 'data' ? detailState.data.game.title : undefined
   useEffect(() => {
-    document.title = slug === undefined ? 'Need Games catalog' : 'Need Games game detail'
-  }, [slug])
+    if (slug === undefined) {
+      document.title = 'Need Games catalog'
+    } else {
+      document.title =
+        detailTitle === undefined ? 'Need Games game detail' : `${detailTitle} | Need Games`
+    }
+  }, [slug, detailTitle])
 
   let content: ReactNode
 

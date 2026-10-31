@@ -16,6 +16,8 @@ export function jsonResponse<T>(body: T, options: JsonResponseOptions = {}): Res
   const headers = new Headers(options.headers)
   headers.set('Content-Type', jsonContentType)
   headers.set('Cache-Control', options.cacheControl ?? 'no-store')
+  // public/_headers covers static assets only; Worker responses set their own.
+  headers.set('X-Content-Type-Options', 'nosniff')
 
   return new Response(JSON.stringify(body), { headers, status: options.status ?? 200 })
 }

@@ -11,7 +11,7 @@ import {
   assertUnscoredSimilarGamesResponse,
   readOnlySmokeTest,
   requestProductionJson,
-} from '../scripts/release-production.mjs'
+} from '../scripts/release-production.mts'
 
 const productionOrigin = 'https://myplayprint.e9k.workers.dev'
 

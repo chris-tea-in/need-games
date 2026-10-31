@@ -4,7 +4,7 @@ type SecretListAssertion = (secretList: unknown) => void
 
 describe('production authentication secret boundary', () => {
   test('requires both encrypted auth secret names and rejects value-bearing output', async () => {
-    const productionRelease = (await import('../scripts/release-production.mjs')) as Record<
+    const productionRelease = (await import('../scripts/release-production.mts')) as Record<
       string,
       unknown
     >

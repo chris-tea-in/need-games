@@ -7,7 +7,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import {
   assertArtifactMatches,
   scoresFromAuthoritativeRecord,
-} from '../scripts/generate-catalog-artifacts.mjs'
+} from '../scripts/generate-catalog-artifacts.mts'
 
 const temporaryDirectories: string[] = []
 
