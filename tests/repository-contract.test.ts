@@ -259,6 +259,15 @@ describe('repository automation contract', () => {
     )
   })
 
+  test('declares the sign-in rate limiter for local and production, which do not inherit bindings', () => {
+    const config = readAutomationFile(new URL('../wrangler.jsonc', import.meta.url))
+
+    expect(config.match(/"name": "AUTH_START_RATE_LIMITER"/g)).toHaveLength(2)
+    expect(
+      config.indexOf('"name": "AUTH_START_RATE_LIMITER"', config.indexOf('"production"')),
+    ).toBeGreaterThan(-1)
+  })
+
   test('checks generated Worker types in CI', () => {
     expect(readAutomationFile(ciWorkflowUrl)).toContain('run: pnpm typecheck:worker')
   })

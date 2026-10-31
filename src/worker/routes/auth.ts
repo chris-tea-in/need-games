@@ -52,6 +52,8 @@ const AUTH_FAILURE_MESSAGE = 'Authentication failed. Please try again later.'
 const AUTH_UNAVAILABLE_MESSAGE = 'Authentication is temporarily unavailable.'
 const SIGN_IN_DISABLED_MESSAGE = 'Steam sign-in is currently unavailable.'
 const LOGOUT_INVALID_MESSAGE = 'The logout request is invalid.'
+const RATE_LIMITED_MESSAGE = 'Too many sign-in attempts. Please wait a minute and try again.'
+const RATE_LIMIT_RETRY_AFTER_SECONDS = '60'
 const SAFE_RETURN_PATH_MAX_LENGTH = 200
 const CLEANUP_LIMIT = 25
 
@@ -63,6 +65,8 @@ export interface AuthEnvironment {
   PRODUCTION_ORIGIN?: string
   CSRF_HMAC_SECRET?: string
   STEAM_WEB_API_KEY?: string
+  /** Optional so injected test environments can omit it; wrangler.jsonc declares it everywhere. */
+  AUTH_START_RATE_LIMITER?: RateLimit
 }
 
 export interface AuthEvent {
@@ -73,6 +77,7 @@ export interface AuthEvent {
     | 'session_created'
     | 'logout'
     | 'identity_unavailable'
+    | 'rate_limited'
   code?: AuthResultCode
   profileStatus?: ProfileLookupStatus
   httpStatus?: number
@@ -147,6 +152,8 @@ function messageFor(code: AuthResultCode): string {
       return LOGOUT_INVALID_MESSAGE
     case 'identity_storage_unavailable':
       return AUTH_UNAVAILABLE_MESSAGE
+    case 'rate_limited':
+      return RATE_LIMITED_MESSAGE
     default:
       return AUTH_FAILURE_MESSAGE
   }
@@ -297,6 +304,32 @@ function classifyAssertionError(error: unknown): AuthResultCode {
   return 'invalid_steam_assertion'
 }
 
+/**
+ * Limit sign-in starts per client IP before any D1 work, because each start writes a login
+ * transaction row. A limiter failure lets the request through so sign-in survives an outage.
+ */
+async function withinStartRateLimit(
+  request: Request,
+  env: AuthEnvironment,
+  log: (event: AuthEvent) => void,
+): Promise<boolean> {
+  if (env.AUTH_START_RATE_LIMITER === undefined) {
+    return true
+  }
+
+  const clientAddress = request.headers.get('CF-Connecting-IP') ?? 'unknown'
+  try {
+    const outcome = await env.AUTH_START_RATE_LIMITER.limit({ key: `steam-start:${clientAddress}` })
+    if (!outcome.success) {
+      log({ event: 'rate_limited', code: 'rate_limited' })
+    }
+    return outcome.success
+  } catch {
+    log({ event: 'identity_unavailable', reason: 'rate_limiter_failed' })
+    return true
+  }
+}
+
 async function startSteamAuthentication(
   request: Request,
   env: AuthEnvironment,
@@ -310,6 +343,9 @@ async function startSteamAuthentication(
   }
   if (origin === null || new URL(request.url).origin !== origin.origin) {
     return authErrorResponse('authentication_failed', 400)
+  }
+  if (!(await withinStartRateLimit(request, env, log))) {
+    return authErrorResponse('rate_limited', 429, { 'Retry-After': RATE_LIMIT_RETRY_AFTER_SECONDS })
   }
 
   const requestedReturn = new URL(request.url).searchParams.getAll('return')
