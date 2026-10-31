@@ -61,6 +61,7 @@ function viteCommand(label, args) {
 const defaultCommands = [
   pnpmCommand('Format check', ['format:check']),
   pnpmCommand('Lint', ['lint']),
+  pnpmCommand('Tracked release configuration', ['release:check']),
   pnpmCommand('Type check', ['typecheck']),
   pnpmCommand('Generated catalog artifacts', ['catalog:check']),
   pnpmCommand('Generated MiMMa seed artifact', ['mimma-seed:check']),

@@ -52,6 +52,9 @@ jobs:
       - name: Check types
         run: pnpm typecheck
 
+      - name: Check generated Worker types
+        run: pnpm typecheck:worker
+
   tests:
     name: Tests
     runs-on: ubuntu-24.04

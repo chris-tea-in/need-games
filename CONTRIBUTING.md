@@ -38,26 +38,43 @@ corepack pnpm install --frozen-lockfile
 Never edit `pnpm-lock.yaml` manually. Change dependencies through pnpm and commit the resulting
 manifest and lockfile together.
 
-## Required checks
+## Run the app locally
 
-Run the same commands locally that GitHub Actions runs on a pull request:
+The app is a Vite single-page app served by a Cloudflare Worker with a local D1 database. Use Node
+`24.18.0` or later in the 24 line (see `.node-version`).
 
 ```powershell
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm build
+corepack pnpm install --frozen-lockfile
+corepack pnpm exec wrangler d1 migrations apply NEED_GAMES_DB --local
+corepack pnpm dev
+```
+
+Open `http://localhost:5173/`. The migration step creates and seeds the local database under the
+ignored `.wrangler/` directory; rerun it after pulling new migrations. Without it, the catalog API
+returns 503 and the page shows a "Showing saved catalog data" banner, because the UI falls back to
+the bundled snapshot.
+
+Steam sign-in is off locally. It needs `STEAM_SIGN_IN_ENABLED`, the production secrets, and an HTTPS
+`PRODUCTION_ORIGIN` that matches the request origin, so it cannot run on `http://localhost`.
+
+## Required checks
+
+The source of truth for pull-request checks is `.github/workflows/ci.yml`. Its jobs are `Quality`,
+`Typecheck`, `Tests`, and `Build`. The aggregate `CI` check fails unless every required job
+succeeds, and a failed `CI` check blocks the PR from merging.
+
+Run the same gates locally with the wrapper described below:
+
+```powershell
+corepack pnpm check:local
 ```
 
 - Prettier checks formatting.
 - ESLint checks risky or inconsistent code patterns.
-- TypeScript checks type compatibility.
-- Vitest checks behavior and reports executed code paths.
-
-GitHub Actions runs those responsibilities as `Quality`, `Typecheck`, `Tests`, and `Build`. The
-aggregate `CI` check fails unless every required job succeeds, and a failed `CI` check blocks the
-PR from merging.
+- TypeScript checks type compatibility, and `typecheck:worker` checks that
+  `worker-configuration.d.ts` matches `wrangler.jsonc`.
+- Vitest checks behavior. `test:coverage` measures the Node suite only; the Worker suite runs
+  separately under `test:worker` without coverage.
 
 ## Full local verification
 
@@ -67,8 +84,9 @@ After Corepack enables pnpm `10.34.5` and dependencies are installed, run the re
 corepack pnpm check:local
 ```
 
-The wrapper runs formatting, linting, TypeScript, coverage, a production build, Worker types,
-local D1 migrations, and a bounded local Worker smoke test. It uses only local Worker and D1
+The wrapper runs formatting, linting, the tracked release configuration check, TypeScript, the
+generated-artifact checks, coverage, a production build, Worker types, Worker tests, local D1
+migrations, and a bounded local Worker smoke test. It uses only local Worker and D1
 state. It does not change Cloudflare resources.
 
 ## Pull-request review

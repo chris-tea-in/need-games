@@ -241,6 +241,28 @@ describe('repository automation contract', () => {
     expect(dependabotConfig.match(/interval: weekly/g)).toHaveLength(2)
   })
 
+  test('updates React and React DOM together in the first Dependabot group', () => {
+    const dependabotConfig = readAutomationFile(dependabotUrl)
+    const groups = dependabotConfig.slice(dependabotConfig.indexOf('groups:'))
+
+    expect(groups).toMatch(/groups:[\s\S]*?^ {6}react:\s*\n\s+patterns:/m)
+    expect(groups.indexOf('react:')).toBeLessThan(groups.indexOf('development-dependencies:'))
+    for (const name of ['react', 'react-dom', "'@types/react'", "'@types/react-dom'"]) {
+      expect(groups.split('\n')).toContain(`          - ${name}`)
+    }
+  })
+
+  test('requests owner review through CODEOWNERS instead of Dependabot reviewers', () => {
+    expect(readAutomationFile(dependabotUrl)).not.toContain('reviewers:')
+    expect(readAutomationFile(new URL('../.github/CODEOWNERS', import.meta.url))).toMatch(
+      /^\* @chris-tea-in$/m,
+    )
+  })
+
+  test('checks generated Worker types in CI', () => {
+    expect(readAutomationFile(ciWorkflowUrl)).toContain('run: pnpm typecheck:worker')
+  })
+
   test('runs protected validation for pull requests and main', () => {
     const workflow = readAutomationFile(ciWorkflowUrl)
 
