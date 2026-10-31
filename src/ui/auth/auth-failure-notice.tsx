@@ -43,7 +43,7 @@ export function AuthFailureNotice({ onDismiss }: AuthFailureNoticeProps) {
       className={`auth-failure-notice${fading ? ' auth-failure-notice--fading' : ''}`}
       role="alert"
     >
-      Authentication failed. Please try again later.
+      Steam sign-in did not finish. Try again in a moment.
     </div>
   )
 }

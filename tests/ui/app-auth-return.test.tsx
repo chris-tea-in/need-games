@@ -80,7 +80,7 @@ describe('App authentication return integration', () => {
     expect(container.querySelector('[role="dialog"]')).toBeNull()
     expect(container.querySelector('[role="menu"]')).toBeNull()
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      'Authentication failed. Please try again later.',
+      'Steam sign-in did not finish. Try again in a moment.',
     )
 
     await act(() => vi.advanceTimersByTimeAsync(3200))
@@ -104,7 +104,7 @@ describe('App authentication return integration', () => {
   test('keeps authentication controls and transient notices out of the generated catalog snapshot', () => {
     const snapshot = JSON.stringify(catalogSnapshot)
 
-    expect(snapshot).not.toContain('Authenticate with Steam')
-    expect(snapshot).not.toContain('Authentication failed. Please try again later.')
+    expect(snapshot).not.toContain('Sign in with Steam')
+    expect(snapshot).not.toContain('Steam sign-in did not finish. Try again in a moment.')
   })
 })

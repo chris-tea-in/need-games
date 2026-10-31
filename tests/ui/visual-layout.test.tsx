@@ -104,53 +104,44 @@ function createVisualFixture(markup: string): string {
     <script>
       window.addEventListener('load', () => {
         const detailLayout = document.querySelector('.detail-layout')
-        const card = document.querySelector('.card')
-        const badge = document.querySelector('.badge')
+        const shelf = document.querySelector('.catalog-page .shelf')
+        const boxBody = document.querySelector('.box-art-body')
         const gameTitleLink = document.querySelector('.game-card h2 a')
-        const storePageLink = document.querySelector('.provenance-list a')
-        const detailStyle = getComputedStyle(detailLayout)
-        const cardStyle = getComputedStyle(card)
-        const badgeStyle = getComputedStyle(badge)
-        const gameTitleStyle = getComputedStyle(gameTitleLink)
-        const storePageStyle = getComputedStyle(storePageLink)
+        const finePrintLink = document.querySelector('.fine-print a')
         const rootStyle = getComputedStyle(document.documentElement)
         const bodyStyle = getComputedStyle(document.body)
+        const columnCount = (element) =>
+          getComputedStyle(element).gridTemplateColumns.split(' ').filter(Boolean).length.toString()
+        const token = (name) => rootStyle.getPropertyValue(name).trim()
+        const boxRect = { height: boxBody.offsetHeight, width: boxBody.offsetWidth }
 
-        document.body.dataset.detailColumns = detailStyle.gridTemplateColumns
-          .split(/\\s+/)
-          .filter(Boolean).length
-          .toString()
+        document.body.dataset.detailColumns = columnCount(detailLayout)
+        document.body.dataset.shelfColumns = columnCount(shelf)
         document.body.dataset.viewportWidth = window.innerWidth.toString()
-        document.body.dataset.cardBorder = cardStyle.borderTopStyle
-        document.body.dataset.cardShadow = cardStyle.boxShadow === 'none' ? 'none' : 'raised'
-        document.body.dataset.badgeBorder = badgeStyle.borderTopStyle
-        document.body.dataset.badgeRadius = badgeStyle.borderTopLeftRadius
-        document.body.dataset.colorBackground = rootStyle.getPropertyValue('--color-bg').trim()
-        document.body.dataset.colorSurface = rootStyle.getPropertyValue('--color-surface').trim()
-        document.body.dataset.colorSurface2 = rootStyle.getPropertyValue('--color-surface-2').trim()
-        document.body.dataset.colorAccentRed = rootStyle.getPropertyValue('--color-accent-red').trim()
-        document.body.dataset.colorAccentGold = rootStyle.getPropertyValue('--color-accent-gold').trim()
-        document.body.dataset.colorText = rootStyle.getPropertyValue('--color-text').trim()
-        document.body.dataset.colorMuted = rootStyle.getPropertyValue('--color-text-muted').trim()
-        document.body.dataset.colorBorder = rootStyle.getPropertyValue('--color-border-raw').trim()
+        document.body.dataset.boxRatio = (boxRect.height / boxRect.width).toFixed(2)
+        document.body.dataset.colorGround = token('--ground')
+        document.body.dataset.colorText = token('--text')
+        document.body.dataset.colorMicro = token('--ink-micro')
+        document.body.dataset.colorMeso = token('--ink-meso')
+        document.body.dataset.colorMacro = token('--ink-macro')
+        document.body.dataset.colorSpot = token('--spot')
         document.body.dataset.pageBackground = bodyStyle.backgroundImage
         document.body.dataset.pageBackgroundColor = bodyStyle.backgroundColor
-        document.body.dataset.gameTitleColor = gameTitleStyle.color
-        document.body.dataset.storePageColor = storePageStyle.color
+        document.body.dataset.gameTitleColor = getComputedStyle(gameTitleLink).color
+        document.body.dataset.finePrintColor = getComputedStyle(finePrintLink).color
 
         const mimmaFixture = document.querySelector('[data-mimma-fixture]')
-        const mimmaGraph = document.querySelector('.mimma-graph')
-        const mimmaTrack = document.querySelector('.mimma-axis-track')
-        const mimmaBar = document.querySelector('.mimma-axis-bar')
-        const microBar = document.querySelector('.mimma-axis--micro .mimma-axis-bar')
-        const mesoBar = document.querySelector('.mimma-axis--meso .mimma-axis-bar')
-        const macroBar = document.querySelector('.mimma-axis--macro .mimma-axis-bar')
+        const mimmaGraph = mimmaFixture.querySelector('.mimma-graph')
+        const microTrack = mimmaFixture.querySelector('.mimma-axis--micro .mimma-axis-track')
+        const microBar = mimmaFixture.querySelector('.mimma-axis--micro .mimma-axis-bar')
+        const mesoBar = mimmaFixture.querySelector('.mimma-axis--meso .mimma-axis-bar')
+        const macroBar = mimmaFixture.querySelector('.mimma-axis--macro .mimma-axis-bar')
 
         document.body.dataset.mimmaFits = String(
           mimmaGraph.getBoundingClientRect().width <= mimmaFixture.getBoundingClientRect().width,
         )
-        document.body.dataset.mimmaTrackWidth = getComputedStyle(mimmaTrack).width
-        document.body.dataset.mimmaBarWidth = getComputedStyle(mimmaBar).width
+        document.body.dataset.mimmaTrackWidth = getComputedStyle(microTrack).width
+        document.body.dataset.mimmaBarWidth = getComputedStyle(microBar).width
         document.body.dataset.mimmaMicroColor = getComputedStyle(microBar).backgroundColor
         document.body.dataset.mimmaMesoColor = getComputedStyle(mesoBar).backgroundColor
         document.body.dataset.mimmaMacroColor = getComputedStyle(macroBar).backgroundColor
@@ -227,49 +218,47 @@ function readDataAttribute(snapshot: string, name: string): string {
 
 describe('visual layout in Chromium', () => {
   test(
-    'uses the supplied charcoal, red, and gold palette',
+    'defines the ground, text, process-ink, and spot tokens',
     () => {
       const chromiumPath = requireChromiumExecutable()
       const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
-      expect(desktopView).toContain('data-color-background="#1c1c1c"')
-      expect(desktopView).toContain('data-color-surface="#242424"')
-      expect(desktopView).toContain('data-color-surface2="#2e2e2e"')
-      expect(desktopView).toContain('data-color-accent-red="#e94560"')
-      expect(desktopView).toContain('data-color-accent-gold="#c4a35a"')
-      expect(desktopView).toContain('data-color-text="#eaeaea"')
-      expect(desktopView).toContain('data-color-muted="#9a9a9a"')
-      expect(desktopView).toContain('data-color-border="#3a3a3a"')
+      expect(desktopView).toContain('data-color-ground="#0e0e0f"')
+      expect(desktopView).toContain('data-color-text="#f3f2ee"')
+      expect(desktopView).toContain('data-color-micro="#00a0e3"')
+      expect(desktopView).toContain('data-color-meso="#ec008c"')
+      expect(desktopView).toContain('data-color-macro="#ffe100"')
+      expect(desktopView).toContain('data-color-spot="#ff5b14"')
     },
     visualTestTimeout,
   )
 
   test(
-    'keeps the page background solid charcoal',
+    'keeps the page background a solid ground color',
     () => {
       const chromiumPath = requireChromiumExecutable()
       const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
       expect(desktopView).toContain('data-page-background="none"')
-      expect(desktopView).toContain('data-page-background-color="rgb(28, 28, 28)"')
+      expect(desktopView).toContain('data-page-background-color="rgb(14, 14, 15)"')
     },
     visualTestTimeout,
   )
 
   test(
-    'renders game titles in white and Steam store links in gold',
+    'renders game titles in the text color and fine-print links in the secondary color',
     () => {
       const chromiumPath = requireChromiumExecutable()
       const desktopView = renderVisualSnapshot(chromiumPath, 1040)
 
-      expect(desktopView).toContain('data-game-title-color="rgb(234, 234, 234)"')
-      expect(desktopView).toContain('data-store-page-color="rgb(196, 163, 90)"')
+      expect(desktopView).toContain('data-game-title-color="rgb(243, 242, 238)"')
+      expect(desktopView).toContain('data-fine-print-color="rgb(180, 179, 173)"')
     },
     visualTestTimeout,
   )
 
   test(
-    'renders card and badge treatments and changes the detail grid at 64rem',
+    'draws boxes at 2:3 and moves the box beside the game details at 64rem',
     () => {
       const chromiumPath = requireChromiumExecutable()
       const compactView = renderVisualSnapshot(chromiumPath, 1023)
@@ -278,28 +267,26 @@ describe('visual layout in Chromium', () => {
       expect(readViewportWidth(compactView)).toBeLessThan(1024)
       expect(compactView).toContain('data-detail-columns="1"')
       expect(readViewportWidth(desktopView)).toBeGreaterThanOrEqual(1024)
-      expect(desktopView).toContain('data-detail-columns="3"')
-      expect(desktopView).toContain('data-card-border="solid"')
-      expect(desktopView).toContain('data-card-shadow="raised"')
-      expect(desktopView).toContain('data-badge-border="solid"')
-      expect(desktopView).toContain('data-badge-radius="999px"')
+      expect(desktopView).toContain('data-detail-columns="2"')
+      expect(Number(readDataAttribute(desktopView, 'shelf-columns'))).toBeGreaterThan(1)
+      expect(desktopView).toContain('data-box-ratio="1.50"')
     },
     visualTestTimeout,
   )
 
   test(
-    'keeps the compact MiMMa graph contained with equal colored tracks',
+    'keeps the MiMMa graph contained, fills a 100 score across its track, and inks each axis',
     () => {
       const chromiumPath = requireChromiumExecutable()
       const compactView = renderVisualSnapshot(chromiumPath, 1023)
 
       expect(compactView).toContain('data-mimma-fits="true"')
-      expect(readDataAttribute(compactView, 'mimma-track-width')).toBe(
-        readDataAttribute(compactView, 'mimma-bar-width'),
+      expect(readDataAttribute(compactView, 'mimma-bar-width')).toBe(
+        readDataAttribute(compactView, 'mimma-track-width'),
       )
-      expect(compactView).toContain('data-mimma-micro-color="rgb(45, 156, 219)"')
-      expect(compactView).toContain('data-mimma-meso-color="rgb(155, 81, 224)"')
-      expect(compactView).toContain('data-mimma-macro-color="rgb(39, 174, 96)"')
+      expect(compactView).toContain('data-mimma-micro-color="rgb(0, 160, 227)"')
+      expect(compactView).toContain('data-mimma-meso-color="rgb(236, 0, 140)"')
+      expect(compactView).toContain('data-mimma-macro-color="rgb(255, 225, 0)"')
     },
     visualTestTimeout,
   )

@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0e0e0f" />
+    <link rel="preconnect" href="https://shared.fastly.steamstatic.com" />
     <meta
       name="description"
       content="Find games by how they play. MiMMa profiles score execution, mind games, and strategy, then show the closest matches."
@@ -12,6 +14,21 @@
     <title>Need Games</title>
   </head>
   <body>
+    <!--
+      THESIS: Every game is a box on a shelf, and its back tells you how it plays. Refuses the
+      dark storefront card grid with rounded tiles and pill badges.
+      OWN-WORLD: Black laminate ground, Steam portrait capsules as upright boxes, process inks
+      (cyan Micro, magenta Meso, yellow Macro) on ruled hairline spec panels, one fluorescent
+      orange reserved for the game you are on, stamps for unscored and offline states. Archivo
+      variable: extended black for titles, condensed caps for panel heads.
+      STORY: A player sees boxes with three-ink strips, learns the key, opens a box, reads its
+      gameplay spec panel, and follows the closest matches on the shelf below.
+      FIRST VIEWPORT: Headline and ink key over the search row, then the first shelf of boxes
+      at full height; on a game page, hero art with the box standing in front and the spec panel.
+      FORM: Big Box, candidate 4 of 7, seed a0ff6448.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review,
+      the verdict, DESIGN.md, and every shipping raster carrying its provenance
+    -->
     <div id="root"></div>
     <script type="module" src="/src/ui/main.tsx"></script>
   </body>

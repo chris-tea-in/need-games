@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import {
   loadCatalog,
@@ -17,6 +17,8 @@ import { AuthFailureNotice } from './auth/auth-failure-notice.js'
 import { consumeAuthFailureMarker, currentReturnPath } from './auth/auth-return.js'
 import { useSession } from './auth/use-session.js'
 import { catalogSnapshot } from './generated/catalog-snapshot.js'
+import { Icon, SiteFooter, SiteHeader } from './site-chrome.js'
+import type { MimmaScore } from '../shared/mimma.js'
 
 type ScreenState<T> = { kind: 'loading' } | T
 
@@ -42,19 +44,47 @@ function similarGamesView(
   return undefined
 }
 
+/**
+ * The catalog API carries no scores, but the bundled snapshot does. Use them for the shelf
+ * strips only when the snapshot is the same reviewed release the catalog came from.
+ */
+function snapshotScoresFor(datasetVersion: string): ReadonlyMap<string, MimmaScore> | undefined {
+  if (datasetVersion !== catalogSnapshot.datasetVersion) return undefined
+
+  const scores = new Map<string, MimmaScore>()
+  for (const game of catalogSnapshot.games) {
+    if (game.authoritativeScore !== null) scores.set(game.id, game.authoritativeScore)
+  }
+  return scores
+}
+
+function StatusScreen({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <SiteHeader />
+      <main className="status-page">{children}</main>
+      <SiteFooter />
+    </>
+  )
+}
+
 function LoadingState() {
   return (
-    <p className="status-message" role="status">
-      Loading catalog data…
-    </p>
+    <StatusScreen>
+      <p className="status-message" role="status">
+        Loading catalog data…
+      </p>
+    </StatusScreen>
   )
 }
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <p className="status-message error-state" role="alert">
-      {message}
-    </p>
+    <StatusScreen>
+      <p className="status-message error-state" role="alert">
+        {message}
+      </p>
+    </StatusScreen>
   )
 }
 
@@ -74,6 +104,11 @@ export function App() {
   })
   const session = useSession()
   const slug = currentGameSlug(pathname)
+  const catalogVersion = catalogState.kind === 'data' ? catalogState.data.datasetVersion : undefined
+  const catalogScores = useMemo(
+    () => (catalogVersion === undefined ? undefined : snapshotScoresFor(catalogVersion)),
+    [catalogVersion],
+  )
   const dismissAuthFailure = useCallback(() => setAuthFailureVisible(false), [])
   const authControl = (
     <AuthControl
@@ -155,11 +190,17 @@ export function App() {
       content = <LoadingState />
     } else if (detailState.kind === 'not-found') {
       content = (
-        <main className="not-found-page">
-          <h1>Game not found</h1>
-          <p>This game is not in the closed-beta catalog.</p>
-          <a href="/">Back to catalog</a>
-        </main>
+        <StatusScreen>
+          <div className="not-found-page">
+            <p className="stamp">Not on the shelf</p>
+            <h1>Game not found</h1>
+            <p>This game is not in the closed-beta catalog.</p>
+            <a className="back-link" href="/">
+              <Icon name="arrow-left" />
+              Back to catalog
+            </a>
+          </div>
+        </StatusScreen>
       )
     } else if (detailState.kind === 'error') {
       content = <ErrorState message={detailState.message} />
@@ -200,6 +241,7 @@ export function App() {
             authControl={authControl}
             catalog={catalogState.data}
             query={query}
+            scores={catalogScores}
             sort={sort}
             onQueryChange={setQuery}
             onSortChange={setSort}

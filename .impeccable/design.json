@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-31T00:00:00Z",
+  "title": "Design System: need-games",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Shelf Black",
+        "canonical": "#0e0e0f",
+        "tonalRamp": [
+          "#0e0e0f",
+          "#161617",
+          "#1e1e20",
+          "#232325",
+          "#3a3a3e",
+          "#8b8a85",
+          "#b4b3ad",
+          "#f3f2ee"
+        ]
+      },
+      "ink-micro": {
+        "role": "primary",
+        "displayName": "Micro Cyan",
+        "canonical": "#00a0e3",
+        "tonalRamp": [
+          "#00293a",
+          "#00506f",
+          "#0078a8",
+          "#00a0e3",
+          "#33b3e9",
+          "#66c6ef",
+          "#99d9f4",
+          "#ccecfa"
+        ]
+      },
+      "ink-meso": {
+        "role": "primary",
+        "displayName": "Meso Magenta",
+        "canonical": "#ec008c",
+        "tonalRamp": [
+          "#3b0023",
+          "#76004a",
+          "#b00069",
+          "#ec008c",
+          "#f033a3",
+          "#f566b9",
+          "#f999d1",
+          "#fccce8"
+        ]
+      },
+      "ink-macro": {
+        "role": "primary",
+        "displayName": "Macro Yellow",
+        "canonical": "#ffe100",
+        "tonalRamp": [
+          "#403900",
+          "#807100",
+          "#bfa900",
+          "#ffe100",
+          "#ffe733",
+          "#ffee66",
+          "#fff399",
+          "#fff9cc"
+        ]
+      },
+      "spot": {
+        "role": "secondary",
+        "displayName": "Spot Orange",
+        "canonical": "#ff5b14",
+        "tonalRamp": [
+          "#3d1505",
+          "#7a2a09",
+          "#b8400e",
+          "#ff5b14",
+          "#ff7c43",
+          "#ff9d72",
+          "#ffbda1",
+          "#ffded0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Game name and catalog headline. font-stretch 118%."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Panel heads, field labels, buttons. font-stretch 76%, uppercase."
+      }
+    },
+    "shadows": [
+      {
+        "name": "box-rest",
+        "value": "0 18px 22px -14px rgb(0 0 0 / 85%), 0 2px 4px rgb(0 0 0 / 50%)",
+        "purpose": "A box on the shelf."
+      },
+      {
+        "name": "box-picked-up",
+        "value": "-10px 26px 30px -16px rgb(0 0 0 / 90%), 0 2px 4px rgb(0 0 0 / 50%)",
+        "purpose": "Hover or focus on a box."
+      },
+      {
+        "name": "floating",
+        "value": "0 18px 40px -12px rgb(0 0 0 / 80%)",
+        "purpose": "Account menu and failure notice."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Box turn (520ms), laminate sweep (720ms), ink bars (1100ms), hero settle (1400ms)."
+      }
+    ],
+    "breakpoints": [
+      { "name": "controls-row", "value": "48rem" },
+      { "name": "two-column", "value": "64rem" },
+      { "name": "two-up-shelf", "value": "30rem" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Prints a state (unscored, offline, not found) instead of hiding it.",
+      "html": "<p class=\"ds-stamp\">Not yet scored</p>",
+      "css": ".ds-stamp { display: inline-block; border: 1px solid currentColor; border-radius: 2px; color: #b4b3ad; font-family: 'Archivo Variable', system-ui, sans-serif; font-stretch: 76%; font-weight: 700; font-size: 0.875rem; letter-spacing: 0.14em; text-transform: uppercase; padding: 0.3rem 0.55rem 0.25rem; margin: 0; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Sign-in trigger and store link.",
+      "html": "<button class=\"ds-btn-ghost\">Sign in with Steam</button>",
+      "css": ".ds-btn-ghost { min-height: 2.75rem; border: 1px solid rgb(255 255 255 / 26%); border-radius: 3px; background: transparent; color: #f3f2ee; cursor: pointer; font: inherit; font-size: 0.78rem; font-stretch: 76%; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; padding: 0.5rem 1rem; transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease; } .ds-btn-ghost:hover { border-color: #f3f2ee; background: #f3f2ee; color: #0e0e0f; } .ds-btn-ghost:focus-visible { outline: 2px solid #f3f2ee; outline-offset: 3px; box-shadow: 0 0 0 6px #0e0e0f; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Panel-filled field with a strong hairline border.",
+      "html": "<input class=\"ds-input\" type=\"search\" placeholder=\"Search games\">",
+      "css": ".ds-input { width: 100%; min-height: 3.25rem; border: 1px solid rgb(255 255 255 / 26%); border-radius: 3px; background: #161617; color: #f3f2ee; font: inherit; font-size: 1rem; padding-inline: 1rem; transition: border-color 160ms ease, background-color 160ms ease; } .ds-input:hover { border-color: rgb(255 255 255 / 42%); } .ds-input:focus { border-color: #f3f2ee; background: #1e1e20; outline: none; }"
+    },
+    {
+      "name": "MiMMa Axis Row",
+      "kind": "custom",
+      "refersTo": "ink-micro",
+      "description": "One row of the spec panel: name, ticked track with ink bar, score.",
+      "html": "<div class=\"ds-axis\"><span class=\"ds-axis-name\">Micro</span><span class=\"ds-axis-track\"><span class=\"ds-axis-bar\"></span></span><span class=\"ds-axis-value\">72</span></div>",
+      "css": ".ds-axis { display: grid; grid-template-columns: 8rem 1fr 3.5rem; align-items: center; gap: 1.5rem; border-top: 1px solid rgb(255 255 255 / 12%); padding-block: 1.25rem; color: #f3f2ee; font-family: 'Archivo Variable', system-ui, sans-serif; } .ds-axis-name { font-size: 1.125rem; font-stretch: 108%; font-weight: 800; } .ds-axis-track { display: block; height: 0.875rem; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgb(255 255 255 / 16%) calc(10% - 1px) 10%), rgb(255 255 255 / 5%); } .ds-axis-bar { display: block; width: 72%; height: 100%; background: #00a0e3; } .ds-axis-value { font-size: 1.75rem; font-stretch: 118%; font-weight: 850; text-align: right; font-variant-numeric: tabular-nums; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Big Box",
+    "overview": "Games are upright boxes on a dark shelf; a game page is the box back with a ruled spec panel. Three process inks carry the MiMMa axes, one spot orange marks the current game, and states print as condensed caps stamps. One family, Archivo Variable, at extended heavy and condensed caps.",
+    "keyCharacteristics": [
+      "Dark ground only.",
+      "Portrait 2:3 box art with a 3D turn on hover and a shelf ledge.",
+      "Hairline rules and a 3px white top rule define panels; no filled cards.",
+      "Corners are nearly square (3px).",
+      "States are stamped, not hidden."
+    ],
+    "rules": [
+      {
+        "name": "The Axis Ink Rule",
+        "body": "Cyan, magenta and yellow mean Micro, Meso and Macro. A surface that is not an axis does not get an ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Orange Rule",
+        "body": "Spot orange appears only on the current game: the picked-up spine and the reference tick.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Widths Rule",
+        "body": "Titles go extended heavy, panel heads and labels go condensed caps. No second family.",
+        "section": "typography"
+      },
+      {
+        "name": "The Shadows Belong To Objects Rule",
+        "body": "Only boxes, the ledge, the sticker and floating layers throw shadows.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do print states as stamps.",
+      "Do use cyan, magenta and yellow for Micro, Meso and Macro, in that order.",
+      "Do open panels with a 3px white top rule and divide rows with 1px hairlines.",
+      "Do keep corners at 3px (2px for stamps and badges).",
+      "Do use tabular-nums for scores, counts and dates.",
+      "Do keep a visible focus ring on every interactive element."
+    ],
+    "donts": [
+      "Don't use spot orange for anything but the current game.",
+      "Don't spend an axis ink on a status or brand role.",
+      "Don't wrap games in rounded dark cards with pill badges.",
+      "Don't hide a missing score, offline dataset or missing image.",
+      "Don't add a second typeface or a middle width for headings.",
+      "Don't put shadows on panels, inputs or stamps."
+    ]
+  }
+}

@@ -10,10 +10,10 @@ export function OfflineNotice({ datasetVersion, generatedAt }: OfflineNoticeProp
 
   return (
     <aside className="offline-notice" aria-label="Degraded catalog data notice">
-      <strong>Showing saved catalog data</strong>
+      <strong className="stamp stamp--small">Saved data</strong>
       <span>
-        Dataset {datasetVersion} was generated {freshness}. Search and sorting use this saved
-        snapshot.
+        The live catalog is unreachable, so this is dataset {datasetVersion}, generated {freshness}.
+        Search and sorting use this saved snapshot.
       </span>
     </aside>
   )

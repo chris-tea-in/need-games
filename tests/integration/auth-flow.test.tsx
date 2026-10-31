@@ -483,7 +483,7 @@ describe('real-router Steam authentication flow', () => {
     })
     await settle()
 
-    expect(container.textContent).toContain('Authenticate with Steam')
+    expect(container.textContent).toContain('Sign in with Steam')
     expect(container.querySelector('[role="dialog"]')).toBeNull()
   })
 
@@ -512,7 +512,7 @@ describe('real-router Steam authentication flow', () => {
     await settle()
 
     expect(container.querySelector('button')).toBeNull()
-    expect(container.textContent).not.toContain('Authenticate with Steam')
+    expect(container.textContent).not.toContain('Sign in with Steam')
   })
 
   test('keeps a session after two profile failures, uses Authenticated user attribution, returns safely, and logs out', async () => {
@@ -562,7 +562,7 @@ describe('real-router Steam authentication flow', () => {
       signOut.click()
       await settle()
     })
-    expect(container.textContent).toContain('Authenticate with Steam')
+    expect(container.textContent).toContain('Sign in with Steam')
     await expect(fetchSession({ fetcher: client.fetcher })).resolves.toEqual({
       authenticated: false,
       steamSignInEnabled: true,
@@ -683,7 +683,7 @@ describe('real-router Steam authentication flow', () => {
     expect(window.location.pathname).toBe(RETURN_PATH)
     expect(document.querySelector('[role="dialog"]')).toBeNull()
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      'Authentication failed. Please try again later.',
+      'Steam sign-in did not finish. Try again in a moment.',
     )
   })
 })

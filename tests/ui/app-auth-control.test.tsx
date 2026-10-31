@@ -60,17 +60,17 @@ describe('App authentication control integration', () => {
     })
 
     const trigger = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('Authenticate with Steam'),
+      button.textContent?.includes('Sign in with Steam'),
     )
     expect(trigger).not.toBeUndefined()
-    expect(trigger?.closest('.page-header')).not.toBeNull()
+    expect(trigger?.closest('.site-header')).not.toBeNull()
 
     act(() => trigger?.click())
     expect(document.querySelector('[role="dialog"]')).not.toBeNull()
     expect(controller.beginSignIn).not.toHaveBeenCalled()
 
     const steamAction = [...document.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('Authenticate on Steam'),
+      button.textContent?.includes('Continue to Steam'),
     )
     act(() => steamAction?.click())
     expect(controller.beginSignIn).toHaveBeenCalledWith('/')
