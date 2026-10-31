@@ -69,7 +69,6 @@ describe('repository package contract', () => {
       'typecheck:worker': 'node scripts/check-worker-types.mjs',
       'check:local': 'node scripts/check-local.mjs',
       'catalog:check': 'node scripts/generate-catalog-artifacts.mts',
-      'mimma-seed:check': 'node scripts/generate-authoritative-mimma-seed.mts',
       'authoritative-record:check': 'node scripts/generate-owner-authoritative-mimma.mts',
       'release:check': 'node scripts/assert-release-d1-id.mts',
       'release:production': 'node scripts/release-production.mts',
@@ -171,7 +170,7 @@ describe('repository automation contract', () => {
       expect(contributing).toContain(`\`${name}\``)
     }
     expect(contributing).toContain(
-      'wrangler d1 execute need-games-production --remote --file migrations/0005_owner_authoritative_mimma_v1.sql --config .wrangler.production.jsonc',
+      'wrangler d1 execute need-games-production --remote --file migrations/0006_retire_authoritative_mimma_seeds.sql --config .wrangler.production.jsonc',
     )
     expect(contributing).toContain('scripts/release-manifest.mts')
     expect(contributing).toContain('## Owner-run production release boundary')
@@ -312,16 +311,16 @@ describe('repository automation contract', () => {
     const workflow = readAutomationFile(ciWorkflowUrl)
 
     expect(workflow).toContain('pnpm catalog:check')
-    expect(workflow).toContain('pnpm mimma-seed:check')
+    expect(workflow).not.toContain('pnpm mimma-seed:check')
     expect(workflow).toContain('pnpm authoritative-record:check')
     expect(workflow).toContain('pnpm test:worker')
   })
 
-  test('runs the owner-authoritative artifact check after the seed check in CI', () => {
+  test('runs the owner-authoritative artifact check after the catalog check in CI', () => {
     const workflow = readAutomationFile(ciWorkflowUrl)
-    expect(workflow.indexOf('pnpm mimma-seed:check')).toBeGreaterThan(-1)
+    expect(workflow.indexOf('pnpm catalog:check')).toBeGreaterThan(-1)
     expect(workflow.indexOf('pnpm authoritative-record:check')).toBeGreaterThan(
-      workflow.indexOf('pnpm mimma-seed:check'),
+      workflow.indexOf('pnpm catalog:check'),
     )
   })
 

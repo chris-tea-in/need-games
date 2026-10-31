@@ -25,6 +25,10 @@ export const productionMigrations = [
     name: '0005_owner_authoritative_mimma_v1.sql',
     sha256: 'f1c61a0e5ec4a2219b6658e840eb112e17f60e5813a0d290089eea0218850717',
   },
+  {
+    name: '0006_retire_authoritative_mimma_seeds.sql',
+    sha256: '3493baf91d8e37e1fd0d9247375de58b42dc6f5cef05cc4de14eedec0882fa41',
+  },
 ] as const
 
 export const catalogReleaseUrl = new URL('../data/catalog-release-v1.json', import.meta.url)
@@ -36,7 +40,6 @@ export const authoritativeRecord = {
 
 /** Row counts of the legacy tables, which no release changes. */
 export const legacyTableCounts = {
-  authoritativeSeedCount: 62,
   legacyScoreCount: 0,
 } as const
 

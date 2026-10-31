@@ -73,62 +73,13 @@ describe('closed beta D1 schema', () => {
     expect(release).toEqual({ dataset_version: 'catalog-release-v1', schema_version: 1 })
   })
 
-  test('preserves the 62-row platform-neutral Surnex sample and its immutable boundary', async () => {
-    const counts = await env.NEED_GAMES_DB.prepare(
-      `SELECT
-         COUNT(*) AS total,
-         SUM(micro_score = 100) AS pure_micro,
-         SUM(meso_score = 100) AS pure_meso,
-         SUM(macro_score = 100) AS pure_macro
-       FROM authoritative_mimma_seeds`,
-    ).first<{ total: number; pure_micro: number; pure_meso: number; pure_macro: number }>()
-    expect(counts).toEqual({ total: 62, pure_micro: 24, pure_meso: 17, pure_macro: 21 })
-
-    const governance = await env.NEED_GAMES_DB.prepare(
-      `SELECT COUNT(*) AS count
-       FROM authoritative_mimma_seeds
-       WHERE provenance <> 'authoritative_sample_seed'
-          OR dataset_version <> 'authoritative-mimma-seed-v1'`,
-    ).first<{ count: number }>()
-    expect(governance?.count).toBe(0)
-
-    const columns = await env.NEED_GAMES_DB.prepare(
-      'PRAGMA table_info(authoritative_mimma_seeds)',
+  test('retires the Surnex seed table and its triggers', async () => {
+    const leftovers = await env.NEED_GAMES_DB.prepare(
+      `SELECT name FROM sqlite_master
+       WHERE name = 'authoritative_mimma_seeds' OR tbl_name = 'authoritative_mimma_seeds'`,
     ).all<{ name: string }>()
-    expect(columns.results.map((column) => column.name)).not.toEqual(
-      expect.arrayContaining(['zone', 'label', 'game_id', 'steam_app_id']),
-    )
-    await expect(
-      env.NEED_GAMES_DB.prepare(
-        `INSERT INTO authoritative_mimma_seeds (
-          id, conceptual_name, micro_score, meso_score, macro_score,
-          provenance, dataset_version, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-        .bind(
-          'invalid-seed',
-          'Invalid Seed',
-          80,
-          0,
-          0,
-          'authoritative_sample_seed',
-          'authoritative-mimma-seed-v1',
-          '2026-08-18T20:02:44Z',
-        )
-        .run(),
-    ).rejects.toThrow()
-    await expect(
-      env.NEED_GAMES_DB.prepare(
-        'UPDATE authoritative_mimma_seeds SET conceptual_name = ? WHERE id = ?',
-      )
-        .bind('Changed', 'authoritative-mimma-seed-v1-aimlabs')
-        .run(),
-    ).rejects.toThrow()
-    await expect(
-      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_mimma_seeds WHERE id = ?')
-        .bind('authoritative-mimma-seed-v1-aimlabs')
-        .run(),
-    ).rejects.toThrow()
+
+    expect(leftovers.results).toEqual([])
   })
 
   test('stores the exact ten-game frozen snapshot and eight mappings', async () => {

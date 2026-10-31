@@ -74,9 +74,6 @@ jobs:
       - name: Check generated catalog artifacts
         run: pnpm catalog:check
 
-      - name: Check generated MiMMa seed artifact
-        run: pnpm mimma-seed:check
-
       - name: Check generated owner-authoritative record
         run: pnpm authoritative-record:check
 

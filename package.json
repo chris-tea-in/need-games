@@ -25,8 +25,7 @@
     "test:node": "vitest run --config vitest.config.ts",
     "test:worker": "vitest run --config vitest.worker.config.ts",
     "typecheck": "tsc --noEmit",
-    "typecheck:worker": "node scripts/check-worker-types.mjs",
-    "mimma-seed:check": "node scripts/generate-authoritative-mimma-seed.mts"
+    "typecheck:worker": "node scripts/check-worker-types.mjs"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.52.1",

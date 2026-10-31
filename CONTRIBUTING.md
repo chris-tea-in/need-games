@@ -141,8 +141,9 @@ The tracked production value is the release mode source of truth. Set the transi
 The release rejects a missing, invalid, duplicate, or mismatched mode before upload. The final
 generated config must contain the transient D1 ID and the reviewed Steam sign-in mode.
 The release verifies the target D1 identity, catalog state, and exactly `0001_schema.sql`,
-`0002_seed_beta_catalog.sql`, `0003_authoritative_mimma_seed.sql`, `0004_identity_sessions.sql`, and
-`0005_owner_authoritative_mimma_v1.sql` in its migration history. That list, each migration's content
+`0002_seed_beta_catalog.sql`, `0003_authoritative_mimma_seed.sql`, `0004_identity_sessions.sql`,
+`0005_owner_authoritative_mimma_v1.sql`, and `0006_retire_authoritative_mimma_seeds.sql` in its
+migration history. `0006` drops the unread seed table that `0003` created. That list, each migration's content
 hash, and the catalog and owner-authoritative data files live in `scripts/release-manifest.mts`. The
 verifier derives its expected authority rows from the hash-pinned record, so a new migration or data
 release updates the manifest and the data instead of the verifier. Before running `release:production`, use
@@ -151,11 +152,11 @@ reviewed migration set remotely:
 
 ```powershell
 corepack pnpm node scripts/create-production-wrangler-config.mts
-corepack pnpm exec wrangler d1 execute need-games-production --remote --file migrations/0005_owner_authoritative_mimma_v1.sql --config .wrangler.production.jsonc
+corepack pnpm exec wrangler d1 execute need-games-production --remote --file migrations/0006_retire_authoritative_mimma_seeds.sql --config .wrangler.production.jsonc
 ```
 
 Review Wrangler's migration list before confirming it. The release command does not apply
-migrations; it fails closed if any of these five migrations is absent or if any later migration is
+migrations; it fails closed if any of these six migrations is absent or if any later migration is
 present. Ordinary remote `d1 migrations apply` is not verified for the compound triggers in
 `0005`; use the owner-gated atomic file-ingestion procedure below. A real D1 ID must never be
 committed, added to GitHub, or written to a release report.

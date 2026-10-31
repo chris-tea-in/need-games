@@ -651,7 +651,6 @@ async function verifyProductionDatabase(databaseId: string, env: NodeJS.ProcessE
 SELECT id, name FROM d1_migrations ORDER BY id;
 SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' AND name NOT IN ('_cf_METADATA', 'd1_migrations') ORDER BY name;
 SELECT
-  (SELECT COUNT(*) FROM authoritative_mimma_seeds) AS authoritative_seed_count,
   (SELECT COUNT(*) FROM authoritative_mimma_scores) AS legacy_score_count,
   (SELECT COUNT(*) FROM authoritative_games) AS authoritative_game_count,
   (SELECT COUNT(*) FROM authoritative_mimma_score_versions) AS authoritative_score_version_count,

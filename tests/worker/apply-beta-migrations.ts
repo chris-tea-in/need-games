@@ -69,9 +69,6 @@ export async function resetBetaDatabase(database: D1Database): Promise<void> {
     'authoritative_games_prevent_update',
     'authoritative_mimma_scores_prevent_delete',
     'authoritative_mimma_scores_prevent_update',
-    'authoritative_mimma_seeds_prevent_insert',
-    'authoritative_mimma_seeds_prevent_delete',
-    'authoritative_mimma_seeds_prevent_update',
   ]
   const indexNames = [
     'authoritative_game_mappings_catalog_version_idx',
@@ -98,7 +95,6 @@ export async function resetBetaDatabase(database: D1Database): Promise<void> {
     'authoritative_mimma_scores',
     'games',
     'catalog_release_metadata',
-    'authoritative_mimma_seeds',
   ]
 
   await database.batch(

@@ -236,26 +236,6 @@ const canonicalSchemaOracle = [
     sql: `create trigger authoritative_mimma_scores_prevent_delete before delete on authoritative_mimma_scores begin select raise(abort, 'authoritative score history cannot be deleted'); end`,
   },
   {
-    name: 'authoritative_mimma_seeds',
-    type: 'table',
-    sql: `create table authoritative_mimma_seeds ( id text primary key not null, conceptual_name text not null collate nocase unique, micro_score integer not null check (typeof(micro_score) = 'integer' and micro_score between 0 and 100), meso_score integer not null check (typeof(meso_score) = 'integer' and meso_score between 0 and 100), macro_score integer not null check (typeof(macro_score) = 'integer' and macro_score between 0 and 100), provenance text not null check (provenance = 'authoritative_sample_seed'), dataset_version text not null check (dataset_version = 'authoritative-mimma-seed-v1'), created_at text not null, check ( (micro_score = 100 and meso_score = 0 and macro_score = 0) or (micro_score = 0 and meso_score = 100 and macro_score = 0) or (micro_score = 0 and meso_score = 0 and macro_score = 100) ) )`,
-  },
-  {
-    name: 'authoritative_mimma_seeds_prevent_update',
-    type: 'trigger',
-    sql: `create trigger authoritative_mimma_seeds_prevent_update before update on authoritative_mimma_seeds begin select raise(abort, 'authoritative mimma seeds are immutable'); end`,
-  },
-  {
-    name: 'authoritative_mimma_seeds_prevent_delete',
-    type: 'trigger',
-    sql: `create trigger authoritative_mimma_seeds_prevent_delete before delete on authoritative_mimma_seeds begin select raise(abort, 'authoritative mimma seeds cannot be deleted'); end`,
-  },
-  {
-    name: 'authoritative_mimma_seeds_prevent_insert',
-    type: 'trigger',
-    sql: `create trigger authoritative_mimma_seeds_prevent_insert before insert on authoritative_mimma_seeds begin select raise(abort, 'authoritative mimma seed set is immutable'); end`,
-  },
-  {
     name: 'users',
     type: 'table',
     sql: `create table users ( id text primary key not null, steam_id text not null unique check (length(steam_id) = 17 and steam_id not glob '*[^0-9]*'), steam_display_name text check ( steam_display_name is null or ( length(steam_display_name) between 1 and 64 and steam_display_name = trim(steam_display_name) ) ), profile_lookup_status text not null check (profile_lookup_status in ('verified', 'unavailable')), profile_checked_at integer not null check (typeof(profile_checked_at) = 'integer' and profile_checked_at >= 0), created_at integer not null check (typeof(created_at) = 'integer' and created_at >= 0), check (created_at <= profile_checked_at), check (profile_lookup_status <> 'verified' or steam_display_name is not null) )`,
@@ -426,6 +406,7 @@ function validVerification(): VerificationFixture {
           { id: 3, name: '0003_authoritative_mimma_seed.sql' },
           { id: 4, name: '0004_identity_sessions.sql' },
           { id: 5, name: '0005_owner_authoritative_mimma_v1.sql' },
+          { id: 6, name: '0006_retire_authoritative_mimma_seeds.sql' },
         ],
       },
       {
@@ -438,7 +419,6 @@ function validVerification(): VerificationFixture {
       {
         results: [
           {
-            authoritative_seed_count: 62,
             legacy_score_count: 0,
             authoritative_game_count: 10,
             authoritative_score_version_count: 10,
@@ -561,7 +541,7 @@ function validVerification(): VerificationFixture {
 
 describe('production D1 verification', () => {
   test('keeps an independently authored exact SQL identity for every schema object', () => {
-    expect(canonicalSchemaOracle).toHaveLength(45)
+    expect(canonicalSchemaOracle).toHaveLength(41)
     expect(canonicalSchemaOracle[0].sql).toBe(
       "create table catalog_release_metadata ( dataset_version text primary key not null, schema_version integer not null check (typeof(schema_version) = 'integer' and schema_version > 0), generated_at text not null )",
     )
@@ -605,7 +585,8 @@ describe('production D1 verification', () => {
               { id: 3, name: '0003_authoritative_mimma_seed.sql' },
               { id: 4, name: '0004_identity_sessions.sql' },
               { id: 5, name: '0005_owner_authoritative_mimma_v1.sql' },
-              { id: 6, name: '0006_unexpected.sql' },
+              { id: 6, name: '0006_retire_authoritative_mimma_seeds.sql' },
+              { id: 7, name: '0007_unexpected.sql' },
             ],
           },
         ],
@@ -637,6 +618,16 @@ describe('production D1 verification', () => {
   test('rejects a missing schema object', () => {
     const fixture = validVerification()
     fixture.queryResults[2].results = fixture.queryResults[2].results.slice(1)
+    expect(() => assertProductionD1Verification(fixture)).toThrow(/schema objects/i)
+  })
+
+  test('rejects a database that still holds the retired seed table', () => {
+    const fixture = validVerification()
+    fixture.queryResults[2].results.push({
+      name: 'authoritative_mimma_seeds',
+      type: 'table',
+      sql: 'create table authoritative_mimma_seeds ( id text primary key not null )',
+    })
     expect(() => assertProductionD1Verification(fixture)).toThrow(/schema objects/i)
   })
 

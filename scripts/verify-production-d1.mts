@@ -111,22 +111,6 @@ const expectedProductionSchemaObjectContracts: readonly ExpectedSchemaObjectCont
     type: 'trigger',
     sqlFragment: 'before delete on authoritative_mimma_scores',
   },
-  { name: 'authoritative_mimma_seeds', type: 'table', sqlFragment: 'provenance text' },
-  {
-    name: 'authoritative_mimma_seeds_prevent_update',
-    type: 'trigger',
-    sqlFragment: 'before update on authoritative_mimma_seeds',
-  },
-  {
-    name: 'authoritative_mimma_seeds_prevent_delete',
-    type: 'trigger',
-    sqlFragment: 'before delete on authoritative_mimma_seeds',
-  },
-  {
-    name: 'authoritative_mimma_seeds_prevent_insert',
-    type: 'trigger',
-    sqlFragment: 'before insert on authoritative_mimma_seeds',
-  },
   { name: 'users', type: 'table', sqlFragment: 'length(steam_id) = 17' },
   {
     name: 'steam_login_transactions',
@@ -287,6 +271,17 @@ function loadCanonicalSchemaObjects(): readonly ExpectedSchemaObject[] {
         .replace(/^(?:\s*--[^\n]*(?:\n|$))+/, '')
         .trim()
         .replace(/;\s*$/, '')
+      const drop = statement.match(/^DROP\s+(TABLE|INDEX|TRIGGER)\s+([A-Za-z_][A-Za-z0-9_]*)$/i)
+      if (drop !== null) {
+        const [, type, name] = drop
+        if (canonicalByName.get(name)?.type !== type.toLowerCase()) {
+          throw new Error(
+            `Production D1 verification failed: ${migrationName} drops unknown schema object ${name}.`,
+          )
+        }
+        canonicalByName.delete(name)
+        continue
+      }
       const match = statement.match(
         /^CREATE\s+(?:(?:UNIQUE)\s+)?(TABLE|INDEX|TRIGGER)\s+([A-Za-z_][A-Za-z0-9_]*)\b/i,
       )
@@ -468,7 +463,6 @@ function assertAuthorityState(queryResults: unknown): void {
   }
   const counts = countRows[0]
   const expectedCounts: Record<string, number> = {
-    authoritative_seed_count: legacyTableCounts.authoritativeSeedCount,
     legacy_score_count: legacyTableCounts.legacyScoreCount,
     authoritative_game_count: expectedGames.length,
     authoritative_score_version_count: expectedGames.length,
