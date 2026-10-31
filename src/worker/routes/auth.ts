@@ -461,7 +461,7 @@ async function callbackSteamAuthentication(
   let assertion: Awaited<ReturnType<typeof validate>>
   try {
     assertion = await validate(request, {
-      productionOrigin: origin.origin,
+      expectedOrigin: origin.origin,
       callbackUrl: request.url,
       expectedReturnTo: expectedCallback.href,
       fetcher: options.fetcher,
@@ -698,5 +698,3 @@ export async function routeAuthRequest(
 export function authUnavailableResponse(): Response {
   return authErrorResponse('identity_storage_unavailable', 503)
 }
-
-export { parseTrustedOrigin, isSafeRelativeReturnPath }

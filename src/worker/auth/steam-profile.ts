@@ -66,7 +66,6 @@ export interface SteamProfileLookupOptions {
   /** Unix seconds or a Date used for profile_checked_at. */
   now?: number | Date
   logger?: SteamProfileLookupLogger
-  onError?: SteamProfileLookupLogger
 }
 
 export interface SteamProfileVerifiedResult {
@@ -333,7 +332,7 @@ export async function synchronizeSteamProfile(
     } catch (error) {
       const reason = error instanceof ProfileAttemptError ? error.reason : 'network_error'
       const httpStatus = error instanceof ProfileAttemptError ? error.httpStatus : undefined
-      reportFailure(options.logger ?? options.onError, reason, httpStatus, attempt, attemptsAllowed)
+      reportFailure(options.logger, reason, httpStatus, attempt, attemptsAllowed)
 
       if (attempt < attemptsAllowed && retryDelayMs > 0) {
         try {
@@ -351,7 +350,3 @@ export async function synchronizeSteamProfile(
   // The loop always returns, but retaining a safe fallback keeps future edits fail-closed.
   return unavailable('network_error', attemptsAllowed, { ...options, now: checkedAt })
 }
-
-export const lookupSteamProfile = synchronizeSteamProfile
-export const synchronizeSteamUsername = synchronizeSteamProfile
-export const fetchSteamProfile = synchronizeSteamProfile

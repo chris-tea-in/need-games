@@ -86,30 +86,6 @@ function parseCookiePair(part: string, index: number): { name: string; value: st
   return { name, value }
 }
 
-/** Parse an RFC 6265 Cookie header, ignoring malformed unrelated pairs. */
-export function parseCookieHeader(header: string | null): ReadonlyMap<string, string> | null {
-  if (header === null || header.trim() === '') {
-    return new Map()
-  }
-
-  const cookies = new Map<string, string>()
-  for (const [index, part] of header.split(';').entries()) {
-    const pair = parseCookiePair(part, index)
-    if (pair === null) {
-      continue
-    }
-    if (cookies.has(pair.name)) {
-      return null
-    }
-
-    cookies.set(pair.name, pair.value)
-  }
-
-  return cookies
-}
-
-export const parseCookies = parseCookieHeader
-
 export function getCookie(request: Request, name: string): string | null {
   assertCookieName(name)
   const header = request.headers.get('Cookie')
@@ -148,5 +124,3 @@ export function getCookie(request: Request, name: string): string | null {
   }
   return value
 }
-
-export const readCookie = getCookie
