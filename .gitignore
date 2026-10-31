@@ -32,3 +32,6 @@ dist/
 
 # Impeccable review captures
 .impeccable/review/
+
+# Community MiMMa research downloads (scripts/research)
+.cache/

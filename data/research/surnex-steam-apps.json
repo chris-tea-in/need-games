@@ -1,0 +1,1694 @@
+[
+  {
+    "name": "Aimlabs",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 714010,
+    "steamName": "Aimlabs",
+    "match": "exact"
+  },
+  {
+    "name": "Beat Saber",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 620980,
+    "steamName": "Beat Saber",
+    "match": "exact"
+  },
+  {
+    "name": "Crossy Road",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "CS2 Surf",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Dark Roll",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 962810,
+    "steamName": "Dark Roll",
+    "match": "exact"
+  },
+  {
+    "name": "Devil Daggers",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 422970,
+    "steamName": "Devil Daggers",
+    "match": "exact"
+  },
+  {
+    "name": "F-Zero GX",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Flappy Bird",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Friday Night Funkin'",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Geometry Dash",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 322170,
+    "steamName": "Geometry Dash",
+    "match": "exact"
+  },
+  {
+    "name": "Half Sword",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 2397300,
+    "steamName": "Half Sword",
+    "match": "exact"
+  },
+  {
+    "name": "Hot Lava",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 382560,
+    "steamName": "Hot Lava",
+    "match": "exact"
+  },
+  {
+    "name": "I Wanna Be the Guy",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "osu!",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "QWOP",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "StepMania",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Subway Surfers",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Super Hexagon",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 221640,
+    "steamName": "Super Hexagon",
+    "match": "exact"
+  },
+  {
+    "name": "Super Mario Maker",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Super Meat Boy",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 40800,
+    "steamName": "Super Meat Boy",
+    "match": "exact"
+  },
+  {
+    "name": "SUPERHOT",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 322500,
+    "steamName": "SUPERHOT",
+    "match": "exact"
+  },
+  {
+    "name": "Taiko no Tatsujin",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 2288630,
+    "steamName": "Taiko no Tatsujin: Rhythm Festival",
+    "match": "manual"
+  },
+  {
+    "name": "Tetris",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": 1003590,
+    "steamName": "Tetris® Effect: Connected",
+    "match": "manual"
+  },
+  {
+    "name": "TypeRacer",
+    "zone": "micro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Among Us",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 945360,
+    "steamName": "Among Us",
+    "match": "exact"
+  },
+  {
+    "name": "Blood on the Clocktower",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Codenames",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 884670,
+    "steamName": "Codenames",
+    "match": "exact"
+  },
+  {
+    "name": "Coup",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Gambling / Slots",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Goose Goose Duck",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 1568590,
+    "steamName": "Goose Goose Duck",
+    "match": "exact"
+  },
+  {
+    "name": "Grand Theft Auto V",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 271590,
+    "steamName": null,
+    "match": "manual"
+  },
+  {
+    "name": "Guess Who?",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 888690,
+    "steamName": "Guess who ?",
+    "match": "exact"
+  },
+  {
+    "name": "Liar's Bar",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 3097560,
+    "steamName": "Liar's Bar",
+    "match": "exact"
+  },
+  {
+    "name": "Liar's Dice",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 3274940,
+    "steamName": "Liar's Dice",
+    "match": "exact"
+  },
+  {
+    "name": "Mafia",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Project Winter",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 774861,
+    "steamName": "Project Winter",
+    "match": "exact"
+  },
+  {
+    "name": "Rock Paper Scissors",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Spyfall",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Stock Trading",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "The Resistance: Avalon",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Town of Salem",
+    "zone": "meso",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 334230,
+    "steamName": "Town of Salem",
+    "match": "exact"
+  },
+  {
+    "name": "7 Billion Humans",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 792100,
+    "steamName": "7 Billion Humans",
+    "match": "exact"
+  },
+  {
+    "name": "AdVenture Capitalist",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 346900,
+    "steamName": "AdVenture Capitalist",
+    "match": "exact"
+  },
+  {
+    "name": "Cities: Skylines",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 255710,
+    "steamName": "Cities: Skylines",
+    "match": "exact"
+  },
+  {
+    "name": "Clicker Heroes",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 363970,
+    "steamName": "Clicker Heroes",
+    "match": "exact"
+  },
+  {
+    "name": "Connect 4",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Cookie Clicker",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 1454400,
+    "steamName": "Cookie Clicker",
+    "match": "exact"
+  },
+  {
+    "name": "Crusader Kings III",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 1158310,
+    "steamName": "Crusader Kings III",
+    "match": "exact"
+  },
+  {
+    "name": "Dwarf Fortress",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 975370,
+    "steamName": "Dwarf Fortress",
+    "match": "exact"
+  },
+  {
+    "name": "Factorio",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 427520,
+    "steamName": "Factorio",
+    "match": "exact"
+  },
+  {
+    "name": "Kerbal Space Program",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 220200,
+    "steamName": "Kerbal Space Program",
+    "match": "exact"
+  },
+  {
+    "name": "Mini Motorways",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 1127500,
+    "steamName": "Mini Motorways",
+    "match": "exact"
+  },
+  {
+    "name": "Oxygen Not Included",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 457140,
+    "steamName": "Oxygen Not Included",
+    "match": "exact"
+  },
+  {
+    "name": "Poly Bridge",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 367450,
+    "steamName": "Poly Bridge",
+    "match": "exact"
+  },
+  {
+    "name": "RimWorld",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 294100,
+    "steamName": "RimWorld",
+    "match": "exact"
+  },
+  {
+    "name": "Satisfactory",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 526870,
+    "steamName": "Satisfactory",
+    "match": "exact"
+  },
+  {
+    "name": "shapez",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 1318690,
+    "steamName": "shapez",
+    "match": "exact"
+  },
+  {
+    "name": "SimCity",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 24780,
+    "steamName": "SimCity™ 4 Deluxe Edition",
+    "match": "manual"
+  },
+  {
+    "name": "Stardew Valley",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 413150,
+    "steamName": "Stardew Valley",
+    "match": "exact"
+  },
+  {
+    "name": "Sudoku",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Tic-Tac-Toe",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Victoria 3",
+    "zone": "macro",
+    "levels": {
+      "micro": "low",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 529340,
+    "steamName": "Victoria 3",
+    "match": "exact"
+  },
+  {
+    "name": "2XKO",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Brawlhalla",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 291550,
+    "steamName": "Brawlhalla",
+    "match": "exact"
+  },
+  {
+    "name": "Chivalry II",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 1824220,
+    "steamName": "Chivalry 2",
+    "match": "manual"
+  },
+  {
+    "name": "Dragon Ball FighterZ",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 678950,
+    "steamName": "DRAGON BALL FighterZ",
+    "match": "exact"
+  },
+  {
+    "name": "Fall Guys",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "med",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "For Honor",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 304390,
+    "steamName": "FOR HONOR™",
+    "match": "exact"
+  },
+  {
+    "name": "Gang Beasts",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "med",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 285900,
+    "steamName": "Gang Beasts",
+    "match": "exact"
+  },
+  {
+    "name": "Guilty Gear",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 850980,
+    "steamName": "GUILTY GEAR",
+    "match": "exact"
+  },
+  {
+    "name": "Mario Kart",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Mordhau",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 629760,
+    "steamName": "MORDHAU",
+    "match": "exact"
+  },
+  {
+    "name": "Mortal Kombat",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 1971870,
+    "steamName": "Mortal Kombat 1",
+    "match": "manual"
+  },
+  {
+    "name": "Party Animals",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 1260320,
+    "steamName": "Party Animals",
+    "match": "exact"
+  },
+  {
+    "name": "Quake",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 2310,
+    "steamName": "Quake",
+    "match": "exact"
+  },
+  {
+    "name": "Street Fighter",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 1364780,
+    "steamName": "Street Fighter™ 6",
+    "match": "manual"
+  },
+  {
+    "name": "Super Smash Bros",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Tekken",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "low"
+    },
+    "appid": 1778820,
+    "steamName": "TEKKEN 8",
+    "match": "manual"
+  },
+  {
+    "name": "Tetris 99",
+    "zone": "micro-meso",
+    "levels": {
+      "micro": "high",
+      "meso": "med",
+      "macro": "low"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "8 Ball Pool",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Call of Duty: Modern Warfare III",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 3595270,
+    "steamName": "Call of Duty®: Modern Warfare® III",
+    "match": "exact"
+  },
+  {
+    "name": "Celeste",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 504230,
+    "steamName": "Celeste",
+    "match": "exact"
+  },
+  {
+    "name": "Cuphead",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 268910,
+    "steamName": "Cuphead",
+    "match": "exact"
+  },
+  {
+    "name": "Dead Cells",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 588650,
+    "steamName": "Dead Cells",
+    "match": "exact"
+  },
+  {
+    "name": "Devil May Cry 5",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 601150,
+    "steamName": "Devil May Cry 5",
+    "match": "exact"
+  },
+  {
+    "name": "Doom",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 379720,
+    "steamName": "DOOM",
+    "match": "exact"
+  },
+  {
+    "name": "Getting Over It",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "med"
+    },
+    "appid": 240720,
+    "steamName": "Getting Over It with Bennett Foddy",
+    "match": "manual"
+  },
+  {
+    "name": "Hades",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 1145360,
+    "steamName": "Hades",
+    "match": "exact"
+  },
+  {
+    "name": "Hollow Knight: Silksong",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 1030300,
+    "steamName": "Hollow Knight: Silksong",
+    "match": "exact"
+  },
+  {
+    "name": "Jump King",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "med"
+    },
+    "appid": 1061090,
+    "steamName": "Jump King",
+    "match": "exact"
+  },
+  {
+    "name": "Monster Hunter",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 2246340,
+    "steamName": "Monster Hunter Wilds",
+    "match": "manual"
+  },
+  {
+    "name": "Rubik's Cube (Speedcubing)",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Super Mario 64",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Terraria",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 105600,
+    "steamName": "Terraria",
+    "match": "exact"
+  },
+  {
+    "name": "The Forest",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 242760,
+    "steamName": "The Forest",
+    "match": "exact"
+  },
+  {
+    "name": "The Legend of Zelda: Breath of the Wild",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "ULTRAKILL",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 1229490,
+    "steamName": "ULTRAKILL",
+    "match": "exact"
+  },
+  {
+    "name": "Vampire Survivors",
+    "zone": "micro-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "low",
+      "macro": "high"
+    },
+    "appid": 1794680,
+    "steamName": "Vampire Survivors",
+    "match": "exact"
+  },
+  {
+    "name": "Balatro",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "med",
+      "macro": "high"
+    },
+    "appid": 2379780,
+    "steamName": "Balatro",
+    "match": "exact"
+  },
+  {
+    "name": "Battleship",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "med"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Chess",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "med",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Civilization VI",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 289070,
+    "steamName": "Sid Meier’s Civilization® VI",
+    "match": "manual"
+  },
+  {
+    "name": "Colonist.io",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Hearthstone",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Magic: The Gathering Arena",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 2141910,
+    "steamName": "Magic: The Gathering Arena",
+    "match": "exact"
+  },
+  {
+    "name": "Monopoly",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Phasmophobia",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "med",
+      "macro": "high"
+    },
+    "appid": 739630,
+    "steamName": "Phasmophobia",
+    "match": "exact"
+  },
+  {
+    "name": "Pokémon VGC",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Poker",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Risk",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Slay the Spire",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 646570,
+    "steamName": "Slay the Spire",
+    "match": "exact"
+  },
+  {
+    "name": "Super Auto Pets",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 1714040,
+    "steamName": "Super Auto Pets",
+    "match": "exact"
+  },
+  {
+    "name": "Teamfight Tactics",
+    "zone": "meso-macro",
+    "levels": {
+      "micro": "low",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Apex Legends",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 1172470,
+    "steamName": "Apex Legends™",
+    "match": "exact"
+  },
+  {
+    "name": "Arc Raiders",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 1808500,
+    "steamName": "ARC Raiders",
+    "match": "exact"
+  },
+  {
+    "name": "Battlefield",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 2807960,
+    "steamName": "Battlefield™ 6",
+    "match": "manual"
+  },
+  {
+    "name": "Clash of Clans",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Counter-Strike 2",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "med"
+    },
+    "appid": 730,
+    "steamName": "Counter-Strike 2",
+    "match": "exact"
+  },
+  {
+    "name": "Deadlock",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 1422450,
+    "steamName": "Deadlock",
+    "match": "exact"
+  },
+  {
+    "name": "Delta Force 2024",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 2507950,
+    "steamName": null,
+    "match": "manual"
+  },
+  {
+    "name": "Diablo IV",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 2344520,
+    "steamName": "Diablo® IV",
+    "match": "exact"
+  },
+  {
+    "name": "Dota 2",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 570,
+    "steamName": "Dota 2",
+    "match": "exact"
+  },
+  {
+    "name": "EA Sports FC",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Escape from Tarkov",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 3932890,
+    "steamName": "Escape from Tarkov",
+    "match": "exact"
+  },
+  {
+    "name": "Fortnite",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Halo Infinite",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 1240440,
+    "steamName": "Halo Infinite",
+    "match": "exact"
+  },
+  {
+    "name": "League of Legends",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Marathon",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 3065800,
+    "steamName": "Marathon",
+    "match": "exact"
+  },
+  {
+    "name": "Marvel Rivals",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 2767030,
+    "steamName": "Marvel Rivals",
+    "match": "exact"
+  },
+  {
+    "name": "NARAKA: BLADEPOINT",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 1203220,
+    "steamName": "NARAKA: BLADEPOINT",
+    "match": "exact"
+  },
+  {
+    "name": "Overwatch 2",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 2357570,
+    "steamName": null,
+    "match": "manual"
+  },
+  {
+    "name": "PUBG: Battlegrounds",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 578080,
+    "steamName": "PUBG: BATTLEGROUNDS",
+    "match": "exact"
+  },
+  {
+    "name": "Rainbow Six Siege",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 359550,
+    "steamName": "Tom Clancy's Rainbow Six Siege",
+    "match": "manual"
+  },
+  {
+    "name": "Rocket League",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "med",
+      "macro": "med"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Rust",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 252490,
+    "steamName": "Rust",
+    "match": "exact"
+  },
+  {
+    "name": "Smite",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 386360,
+    "steamName": "SMITE®",
+    "match": "exact"
+  },
+  {
+    "name": "StarCraft II",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "The Finals",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 2073850,
+    "steamName": "THE FINALS",
+    "match": "exact"
+  },
+  {
+    "name": "Valorant",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  },
+  {
+    "name": "Warframe",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": 230410,
+    "steamName": "Warframe",
+    "match": "exact"
+  },
+  {
+    "name": "World of Warcraft",
+    "zone": "micro-meso-macro",
+    "levels": {
+      "micro": "high",
+      "meso": "high",
+      "macro": "high"
+    },
+    "appid": null,
+    "steamName": null,
+    "match": "none"
+  }
+]
