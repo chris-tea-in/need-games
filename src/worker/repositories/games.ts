@@ -1,9 +1,14 @@
 import type {
+  AuthoritativeScoreSummary,
   CatalogCard,
   GameDetail,
   SteamProvenance,
   SteamReviewSummary,
 } from '../../shared/catalog-contract.js'
+import {
+  getMappedAuthoritativeScoreFromLatestSnapshot,
+  type AuthoritativeMimmaScore,
+} from './authoritative-scores.js'
 
 export const CATALOG_SORT_OPTIONS = ['title_asc', 'review_count_desc'] as const
 
@@ -84,10 +89,19 @@ function toProvenance(row: GameRow): SteamProvenance {
   }
 }
 
-function toGameDetail(row: GameRow): GameDetail {
+export function toScoreSummary(score: AuthoritativeMimmaScore): AuthoritativeScoreSummary {
+  return {
+    macro: score.macroScore,
+    meso: score.mesoScore,
+    micro: score.microScore,
+    snapshotVersion: score.snapshotVersion,
+  }
+}
+
+function toGameDetail(row: GameRow, score: AuthoritativeMimmaScore | null): GameDetail {
   return {
     ...toCatalogCard(row),
-    authoritativeScore: null,
+    authoritativeScore: score === null ? null : toScoreSummary(score),
     provenance: toProvenance(row),
     shortDescription: row.short_description,
   }
@@ -150,7 +164,11 @@ export async function findGameBySlug(
     .bind(slug)
     .first<GameRow>()
 
-  return row === null ? null : toGameDetail(row)
+  if (row === null) {
+    return null
+  }
+
+  return toGameDetail(row, await getMappedAuthoritativeScoreFromLatestSnapshot(database, row.id))
 }
 
 function escapeLikePattern(value: string): string {

@@ -18,16 +18,22 @@ This makes MiMMa useful for finding games with overlapping gameplay traits, such
 
 ## Closed beta
 
-The current closed beta is a read-only catalog of ten curated Steam games. You can browse, search, sort, and inspect source metadata. Each game is intentionally unscored, so the beta does not provide MiMMa comparisons or similar-game results yet.
+The current closed beta is a read-only catalog of ten curated Steam games. You can browse, search, sort, and inspect source metadata. Eight games have an owner-authoritative MiMMa score: their pages show the gameplay profile and the five scored games with the closest profiles. Destiny 2 and BeamNG.drive are not scored yet.
 
-The application bundles a reviewed catalog snapshot. It keeps browsing available when the same-origin catalog API is temporarily unavailable, and labels that degraded state with its dataset version and freshness.
+Signing in with Steam is available. It does not unlock any features yet.
+
+The application bundles a reviewed catalog snapshot, including the scores. It keeps browsing and similar-game results available when the same-origin catalog API is temporarily unavailable, and labels that degraded state with its dataset version and freshness.
 
 ## Roadmap
 
 - Build a curated, review-gated game catalog.
-- Add authoritative MiMMa scores and similar-game discovery.
+- Add authoritative MiMMa scores and similar-game discovery (first version live for eight games).
 - Add verified Community MiMMa contributions.
-- Add optional Steam-based personal profiles and personalized recommendations in V2.
+- Add optional Steam-based personal profiles and personalized recommendations in V2. Steam sign-in is in place.
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) to run the app locally and for the required checks.
 
 ## Status
 

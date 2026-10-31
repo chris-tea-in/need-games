@@ -1,10 +1,16 @@
 import type { ReactNode } from 'react'
 
-import type { GameDetail } from '../shared/catalog-contract.js'
+import type { GameDetail, SimilarGame } from '../shared/catalog-contract.js'
+import { MimmaGraph } from './mimma-graph.js'
+
+export type SimilarGamesView =
+  { kind: 'loading' } | { kind: 'error' } | { games: readonly SimilarGame[]; kind: 'data' }
 
 interface GameDetailPageProps {
   authControl?: ReactNode
   game: GameDetail
+  /** Omit for unscored games; similar games need an authoritative score. */
+  similarGames?: SimilarGamesView
 }
 
 function formatReviewCount(count: number): string {
@@ -18,7 +24,65 @@ function formatFetchedAt(timestamp: string): string {
   }).format(new Date(timestamp))
 }
 
-export function GameDetailPage({ authControl, game }: GameDetailPageProps) {
+function ScorePanel({ game }: { game: GameDetail }) {
+  if (game.authoritativeScore === null) {
+    return (
+      <aside className="card unscored-panel" aria-labelledby="score-status-heading">
+        <p className="eyebrow">MiMMa score</p>
+        <h2 id="score-status-heading">Score unavailable</h2>
+        <p>
+          This game has no authoritative MiMMa score yet, so similar games are not available for it.
+        </p>
+      </aside>
+    )
+  }
+
+  return (
+    <aside className="card score-panel" aria-labelledby="score-status-heading">
+      <p className="eyebrow">MiMMa score</p>
+      <h2 id="score-status-heading">Gameplay profile</h2>
+      <MimmaGraph score={game.authoritativeScore} />
+      <p className="score-provenance">
+        Owner-authoritative snapshot v{game.authoritativeScore.snapshotVersion}
+      </p>
+    </aside>
+  )
+}
+
+function SimilarGamesSection({ view }: { view: SimilarGamesView }) {
+  let content: ReactNode
+  if (view.kind === 'loading') {
+    content = <p role="status">Finding similar games…</p>
+  } else if (view.kind === 'error') {
+    content = <p>Similar games are unavailable right now.</p>
+  } else if (view.games.length === 0) {
+    content = <p>No other scored games are in the catalog yet.</p>
+  } else {
+    content = (
+      <ol className="similar-games-list">
+        {view.games.map((similar) => (
+          <li key={similar.id}>
+            <a href={`/games/${similar.slug}`}>{similar.title}</a>
+            <span>
+              Micro {similar.authoritativeScore.micro}, Meso {similar.authoritativeScore.meso},
+              Macro {similar.authoritativeScore.macro}
+            </span>
+          </li>
+        ))}
+      </ol>
+    )
+  }
+
+  return (
+    <section className="card similar-games" aria-labelledby="similar-games-heading">
+      <h2 id="similar-games-heading">Similar games</h2>
+      <p className="similar-games-note">Closest MiMMa profiles first.</p>
+      {content}
+    </section>
+  )
+}
+
+export function GameDetailPage({ authControl, game, similarGames }: GameDetailPageProps) {
   return (
     <main className="detail-page">
       <a className="back-link" href="/">
@@ -61,14 +125,11 @@ export function GameDetailPage({ authControl, game }: GameDetailPageProps) {
           </dl>
         </section>
 
-        <aside className="card unscored-panel" aria-labelledby="score-status-heading">
-          <p className="eyebrow">Catalog status</p>
-          <h2 id="score-status-heading">Score unavailable</h2>
-          <p>
-            This game has no authoritative MiMMa score in the closed beta. Scoring and similar-game
-            features will appear only after source data is available.
-          </p>
-        </aside>
+        <ScorePanel game={game} />
+
+        {game.authoritativeScore !== null && similarGames !== undefined ? (
+          <SimilarGamesSection view={similarGames} />
+        ) : null}
       </article>
     </main>
   )

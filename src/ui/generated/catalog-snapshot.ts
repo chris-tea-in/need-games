@@ -6,7 +6,12 @@ export const catalogSnapshot = {
   generatedAt: '2026-08-14T19:17:05Z',
   games: [
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 80,
+        meso: 65,
+        micro: 100,
+        snapshotVersion: 1,
+      },
       id: 'steam-730',
       provenance: {
         officialTitle: 'Counter-Strike 2',
@@ -27,7 +32,12 @@ export const catalogSnapshot = {
       title: 'Counter-Strike 2',
     },
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 70,
+        meso: 20,
+        micro: 40,
+        snapshotVersion: 1,
+      },
       id: 'steam-1623730',
       provenance: {
         officialTitle: 'Palworld',
@@ -56,7 +66,12 @@ export const catalogSnapshot = {
       title: 'Palworld',
     },
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 80,
+        meso: 60,
+        micro: 80,
+        snapshotVersion: 1,
+      },
       id: 'steam-2767030',
       provenance: {
         officialTitle: 'Marvel Rivals',
@@ -85,7 +100,12 @@ export const catalogSnapshot = {
       title: 'Marvel Rivals',
     },
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 100,
+        meso: 80,
+        micro: 80,
+        snapshotVersion: 1,
+      },
       id: 'steam-1172470',
       provenance: {
         officialTitle: 'Apex Legends™',
@@ -107,7 +127,12 @@ export const catalogSnapshot = {
       title: 'Apex Legends',
     },
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 80,
+        meso: 60,
+        micro: 80,
+        snapshotVersion: 1,
+      },
       id: 'steam-359550',
       provenance: {
         officialTitle: "Tom Clancy's Rainbow Six Siege",
@@ -129,7 +154,12 @@ export const catalogSnapshot = {
       title: "Tom Clancy's Rainbow Six Siege",
     },
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 100,
+        meso: 20,
+        micro: 20,
+        snapshotVersion: 1,
+      },
       id: 'steam-1086940',
       provenance: {
         officialTitle: "Baldur's Gate 3",
@@ -180,7 +210,12 @@ export const catalogSnapshot = {
       title: 'Destiny 2',
     },
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 60,
+        meso: 40,
+        micro: 80,
+        snapshotVersion: 1,
+      },
       id: 'steam-2246340',
       provenance: {
         officialTitle: 'Monster Hunter Wilds',
@@ -209,7 +244,12 @@ export const catalogSnapshot = {
       title: 'Monster Hunter Wilds',
     },
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 40,
+        meso: 100,
+        micro: 80,
+        snapshotVersion: 1,
+      },
       id: 'steam-1245620',
       provenance: {
         officialTitle: 'ELDEN RING',

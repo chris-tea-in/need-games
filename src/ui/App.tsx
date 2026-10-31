@@ -3,12 +3,14 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import {
   loadCatalog,
   loadGameDetail,
+  loadSimilarGames,
   type CatalogLoadResult,
   type GameDetailLoadResult,
+  type SimilarGamesLoadResult,
 } from './api-client.js'
 import { CatalogPage } from './catalog-page.js'
 import { type CatalogSort } from './catalog-state.js'
-import { GameDetailPage } from './game-detail-page.js'
+import { GameDetailPage, type SimilarGamesView } from './game-detail-page.js'
 import { OfflineNotice } from './offline-notice.js'
 import { AuthControl } from './auth/auth-control.js'
 import { AuthFailureNotice } from './auth/auth-failure-notice.js'
@@ -29,6 +31,15 @@ function currentGameSlug(pathname: string): string | undefined {
   } catch {
     return undefined
   }
+}
+
+function similarGamesView(
+  state: ScreenState<SimilarGamesLoadResult>,
+): SimilarGamesView | undefined {
+  if (state.kind === 'loading') return { kind: 'loading' }
+  if (state.kind === 'data') return { games: state.games, kind: 'data' }
+  if (state.kind === 'error') return { kind: 'error' }
+  return undefined
 }
 
 function LoadingState() {
@@ -56,6 +67,9 @@ export function App() {
     kind: 'loading',
   })
   const [detailState, setDetailState] = useState<ScreenState<GameDetailLoadResult>>({
+    kind: 'loading',
+  })
+  const [similarState, setSimilarState] = useState<ScreenState<SimilarGamesLoadResult>>({
     kind: 'loading',
   })
   const session = useSession()
@@ -108,9 +122,15 @@ export function App() {
 
     let active = true
     setDetailState({ kind: 'loading' })
+    setSimilarState({ kind: 'loading' })
     void loadGameDetail(slug).then((result) => {
       if (active) {
         setDetailState(result)
+      }
+    })
+    void loadSimilarGames(slug).then((result) => {
+      if (active) {
+        setSimilarState(result)
       }
     })
     return () => {
@@ -147,7 +167,11 @@ export function App() {
             />
           ) : null}
           <div data-auth-background="true">
-            <GameDetailPage authControl={authControl} game={detailState.data.game} />
+            <GameDetailPage
+              authControl={authControl}
+              game={detailState.data.game}
+              similarGames={similarGamesView(similarState)}
+            />
           </div>
         </>
       )

@@ -10,6 +10,8 @@ export interface AuthoritativeMimmaScore {
 }
 
 export interface ScoredSimilarityCandidate extends AuthoritativeMimmaScore {
+  catalogGameId: string
+  slug: string
   steamAppId: number
   title: string
 }
@@ -39,6 +41,8 @@ interface ScoreRow {
 }
 
 interface CandidateRow extends ScoreRow {
+  catalog_game_id: string
+  slug: string
   steam_app_id: number
   title: string
 }
@@ -160,6 +164,8 @@ export async function findScoredSimilarityCandidates(
               scores.micro_score,
               scores.meso_score,
               scores.macro_score,
+              catalog.id AS catalog_game_id,
+              catalog.slug,
               catalog.steam_app_id,
               catalog.title
        FROM latest_snapshot
@@ -177,6 +183,8 @@ export async function findScoredSimilarityCandidates(
 
   return result.results.map((row) => ({
     ...toAuthoritativeScore(row),
+    catalogGameId: row.catalog_game_id,
+    slug: row.slug,
     steamAppId: row.steam_app_id,
     title: row.title,
   }))

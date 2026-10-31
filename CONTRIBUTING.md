@@ -196,8 +196,9 @@ Remove-Item Env:STEAM_SIGN_IN_ENABLED
 ```
 
 This check rejects a different origin and cross-origin redirects. It then checks the read-only
-catalog, detail, unknown-route, unscored-similarity, anonymous-session, and missing-CSRF logout
-responses. Disabled mode also verifies the exact disabled auth-start response. Enabled mode never
+catalog, the scored Counter-Strike 2 detail, its ranked similar games, the `unscored_game` response
+for Destiny 2, unknown routes, the anonymous session, and the missing-CSRF logout response. A
+smoke-only run against a deployment older than the scored-detail release fails these score checks. Disabled mode also verifies the exact disabled auth-start response. Enabled mode never
 calls auth start because that endpoint creates a login transaction.
 
 ### Initial Steam sign-in enablement

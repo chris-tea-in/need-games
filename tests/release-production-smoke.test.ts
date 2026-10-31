@@ -6,6 +6,9 @@ import {
   assertMissingCsrfLogoutResponse,
   assertProductionSteamSignInMode,
   assertProductionSmokeOrigin,
+  assertScoredGameDetailResponse,
+  assertSimilarGamesResponse,
+  assertUnscoredSimilarGamesResponse,
   readOnlySmokeTest,
   requestProductionJson,
 } from '../scripts/release-production.mjs'
@@ -164,7 +167,23 @@ describe('production smoke boundary', () => {
         )
       }
       if (url.pathname === '/api/games/counter-strike-2')
-        return Promise.resolve(response(url, 200, {}))
+        return Promise.resolve(
+          response(url, 200, { game: { authoritativeScore: { macro: 80, meso: 65, micro: 100 } } }),
+        )
+      if (url.pathname === '/api/games/counter-strike-2/similar') {
+        return Promise.resolve(
+          response(url, 200, {
+            similarGames: [
+              { authoritativeScore: { macro: 80, meso: 60, micro: 80 }, slug: 'marvel-rivals' },
+            ],
+          }),
+        )
+      }
+      if (url.pathname === '/api/games/destiny-2/similar') {
+        return Promise.resolve(
+          response(url, 404, { error: { code: 'unscored_game', message: 'Unavailable.' } }),
+        )
+      }
       if (url.pathname === '/api/session') {
         return Promise.resolve(
           response(url, 200, {
@@ -232,5 +251,29 @@ describe('production smoke boundary', () => {
       }),
     ).not.toThrow()
     expect(() => assertMissingCsrfLogoutResponse(204, undefined)).toThrow(/logout/i)
+  })
+
+  test('requires a scored known game, ranked similar games, and the unscored contract', () => {
+    expect(() =>
+      assertScoredGameDetailResponse(200, {
+        game: { authoritativeScore: { macro: 1, meso: 2, micro: 3 } },
+      }),
+    ).not.toThrow()
+    expect(() =>
+      assertScoredGameDetailResponse(200, { game: { authoritativeScore: null } }),
+    ).toThrow(/authoritative score/i)
+    expect(() =>
+      assertSimilarGamesResponse(200, {
+        similarGames: [{ authoritativeScore: { macro: 1, meso: 2, micro: 3 }, slug: 'a' }],
+      }),
+    ).not.toThrow()
+    expect(() => assertSimilarGamesResponse(200, { similarGames: [] })).toThrow(/similar games/i)
+    expect(() => assertSimilarGamesResponse(404, undefined)).toThrow(/similar games/i)
+    expect(() =>
+      assertUnscoredSimilarGamesResponse(404, { error: { code: 'unscored_game' } }),
+    ).not.toThrow()
+    expect(() =>
+      assertUnscoredSimilarGamesResponse(404, { error: { code: 'game_not_found' } }),
+    ).toThrow(/unscored/i)
   })
 })

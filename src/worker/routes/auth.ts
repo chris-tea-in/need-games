@@ -46,7 +46,7 @@ import {
   type ProfileLookupStatus,
 } from '../../shared/session-contract.js'
 import { jsonResponse } from '../http.js'
-import { gameExists, isValidSlug } from './similar-games.js'
+import { gameExists, isValidSlug } from '../catalog-lookup.js'
 
 const AUTH_FAILURE_MESSAGE = 'Authentication failed. Please try again later.'
 const AUTH_UNAVAILABLE_MESSAGE = 'Authentication is temporarily unavailable.'

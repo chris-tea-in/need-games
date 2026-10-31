@@ -12,6 +12,7 @@ import { useSession, type SessionController } from '../../src/ui/auth/use-sessio
 vi.mock('../../src/ui/api-client.js', () => ({
   loadCatalog: vi.fn(),
   loadGameDetail: vi.fn(),
+  loadSimilarGames: vi.fn(() => Promise.resolve({ kind: 'unscored' as const })),
 }))
 
 vi.mock('../../src/ui/auth/use-session.js', () => ({

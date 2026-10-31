@@ -37,8 +37,8 @@ export function CatalogPage({
           {authControl}
         </div>
         <p>
-          Browse the initial Need Games catalog. Steam review metadata is shown as catalog context;
-          scoring features are not available in this beta.
+          Browse the initial Need Games catalog. Open a game to see its MiMMa gameplay profile and
+          the scored games closest to it. Steam review metadata is shown as catalog context.
         </p>
       </header>
 

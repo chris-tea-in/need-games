@@ -2,9 +2,12 @@ import {
   isApiErrorResponse,
   isCatalogResponse,
   isGameDetailResponse,
+  isSimilarGamesResponse,
   type CatalogResponse,
   type GameDetailResponse,
+  type SimilarGame,
 } from '../shared/catalog-contract.js'
+import { rankSimilarGames } from '../shared/similarity.js'
 import { catalogSnapshot } from './generated/catalog-snapshot.js'
 
 export type ApiSource = 'api' | 'snapshot'
@@ -16,6 +19,11 @@ export type GameDetailLoadResult =
   | { data: GameDetailResponse; kind: 'data'; source: ApiSource }
   | { kind: 'error'; message: string }
   | { kind: 'not-found' }
+
+export type SimilarGamesLoadResult =
+  | { games: readonly SimilarGame[]; kind: 'data'; source: ApiSource }
+  | { kind: 'error'; message: string }
+  | { kind: 'unscored' }
 
 export interface ApiClientOptions {
   fetcher?: typeof fetch
@@ -110,5 +118,73 @@ export async function loadGameDetail(
     return detail === undefined
       ? { kind: 'error', message: 'The game detail is unavailable.' }
       : { data: detail, kind: 'data', source: 'snapshot' }
+  }
+}
+
+function snapshotSimilarGames(slug: string): SimilarGamesLoadResult {
+  const selected = catalogSnapshot.games.find((candidate) => candidate.slug === slug)
+  if (selected === undefined) {
+    return { kind: 'error', message: 'Similar games are unavailable.' }
+  }
+  if (selected.authoritativeScore === null) {
+    return { kind: 'unscored' }
+  }
+
+  const candidates = catalogSnapshot.games.flatMap((game) =>
+    game.id === selected.id || game.authoritativeScore === null
+      ? []
+      : [
+          {
+            authoritativeScore: game.authoritativeScore,
+            id: game.id,
+            score: game.authoritativeScore,
+            slug: game.slug,
+            steamAppId: game.steamAppId,
+            title: game.title,
+          },
+        ],
+  )
+  const games = rankSimilarGames(selected.authoritativeScore, candidates).map(
+    ({ authoritativeScore, distance, id, slug: candidateSlug, steamAppId, title }) => ({
+      authoritativeScore,
+      distance,
+      id,
+      slug: candidateSlug,
+      steamAppId,
+      title,
+    }),
+  )
+  return { games, kind: 'data', source: 'snapshot' }
+}
+
+export async function loadSimilarGames(
+  slug: string,
+  { fetcher = fetch }: ApiClientOptions = {},
+): Promise<SimilarGamesLoadResult> {
+  try {
+    const response = await fetcher(`/api/games/${encodeURIComponent(slug)}/similar`, {
+      headers: { accept: 'application/json' },
+    })
+    const body = await readJson(response)
+
+    if (
+      response.status === 404 &&
+      isApiErrorResponse(body) &&
+      body.error.code === 'unscored_game'
+    ) {
+      return { kind: 'unscored' }
+    }
+
+    if (response.status >= 500 || (!isSimilarGamesResponse(body) && response.ok)) {
+      return snapshotSimilarGames(slug)
+    }
+
+    if (isSimilarGamesResponse(body)) {
+      return { games: body.similarGames, kind: 'data', source: 'api' }
+    }
+
+    return { kind: 'error', message: 'Similar games are unavailable.' }
+  } catch {
+    return snapshotSimilarGames(slug)
   }
 }

@@ -36,8 +36,16 @@ export interface CatalogCard {
   title: string
 }
 
+/** An owner-authoritative MiMMa score from the latest frozen snapshot. */
+export interface AuthoritativeScoreSummary {
+  macro: number
+  meso: number
+  micro: number
+  snapshotVersion: number
+}
+
 export interface GameDetail extends CatalogCard {
-  authoritativeScore: null
+  authoritativeScore: AuthoritativeScoreSummary | null
   provenance: SteamProvenance
   shortDescription: string
 }
@@ -48,6 +56,25 @@ export interface CatalogResponse extends DatasetVersioned {
 
 export interface GameDetailResponse extends DatasetVersioned {
   game: GameDetail
+}
+
+export interface SimilarGame {
+  authoritativeScore: AuthoritativeScoreSummary
+  /** Euclidean distance between the two scores on the 0-100 axes, rounded to two decimals. */
+  distance: number
+  id: string
+  slug: string
+  steamAppId: number
+  title: string
+}
+
+export interface SimilarGamesResponse extends DatasetVersioned {
+  game: {
+    id: string
+    slug: string
+    title: string
+  }
+  similarGames: readonly SimilarGame[]
 }
 
 export interface ApiErrorResponse extends DatasetVersioned {
@@ -160,6 +187,51 @@ export function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
   )
 }
 
+export function isSimilarGamesResponse(value: unknown): value is SimilarGamesResponse {
+  if (!isRecord(value) || !isVersioned(value) || !isRecord(value.game)) {
+    return false
+  }
+
+  return (
+    typeof value.game.id === 'string' &&
+    typeof value.game.slug === 'string' &&
+    typeof value.game.title === 'string' &&
+    Array.isArray(value.similarGames) &&
+    value.similarGames.every(isSimilarGame)
+  )
+}
+
+function isScoreAxisValue(value: unknown): boolean {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 100
+}
+
+function isAuthoritativeScoreSummary(value: unknown): value is AuthoritativeScoreSummary {
+  return (
+    isRecord(value) &&
+    isScoreAxisValue(value.micro) &&
+    isScoreAxisValue(value.meso) &&
+    isScoreAxisValue(value.macro) &&
+    typeof value.snapshotVersion === 'number' &&
+    Number.isSafeInteger(value.snapshotVersion) &&
+    value.snapshotVersion > 0
+  )
+}
+
+function isSimilarGame(value: unknown): value is SimilarGame {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.slug === 'string' &&
+    typeof value.title === 'string' &&
+    typeof value.steamAppId === 'number' &&
+    Number.isSafeInteger(value.steamAppId) &&
+    typeof value.distance === 'number' &&
+    Number.isFinite(value.distance) &&
+    value.distance >= 0 &&
+    isAuthoritativeScoreSummary(value.authoritativeScore)
+  )
+}
+
 function isCatalogCard(value: unknown): value is CatalogCard {
   if (!isRecord(value) || !isRecord(value.review)) {
     return false
@@ -193,7 +265,7 @@ function isGameDetail(value: unknown): value is GameDetail {
   }
 
   return (
-    value.authoritativeScore === null &&
+    (value.authoritativeScore === null || isAuthoritativeScoreSummary(value.authoritativeScore)) &&
     typeof value.shortDescription === 'string' &&
     isHttpsUrl(provenance.appDetailsUrl) &&
     isIsoTimestamp(provenance.fetchedAt) &&

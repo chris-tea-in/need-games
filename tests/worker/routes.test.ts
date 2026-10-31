@@ -1,6 +1,10 @@
 import { SELF, env } from 'cloudflare:test'
 import { beforeAll, describe, expect, test } from 'vitest'
 
+import {
+  isSimilarGamesResponse,
+  type SimilarGamesResponse,
+} from '../../src/shared/catalog-contract.js'
 import { applyBetaMigrations } from './apply-beta-migrations.js'
 
 async function responseJson(response: Response): Promise<Record<string, unknown>> {
@@ -76,7 +80,7 @@ describe('read-only catalog routes', () => {
 
     const detail = await responseJson(detailResponse)
     expect(detail.game).toMatchObject({
-      authoritativeScore: null,
+      authoritativeScore: { macro: 100, meso: 80, micro: 80, snapshotVersion: 1 },
       slug: 'apex-legends',
       title: 'Apex Legends',
     })
@@ -86,12 +90,52 @@ describe('read-only catalog routes', () => {
     })
   })
 
-  test('returns the documented unscored response for a known similar-game request', async () => {
+  test('returns null for a catalog game without an authoritative score', async () => {
+    const detail = await responseJson(
+      await SELF.fetch('https://need-games.test/api/games/destiny-2'),
+    )
+
+    expect(detail.game).toMatchObject({ authoritativeScore: null, slug: 'destiny-2' })
+  })
+
+  test('ranks the other scored games by MiMMa distance for a scored game', async () => {
     const response = await SELF.fetch('https://need-games.test/api/games/counter-strike-2/similar')
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('public, max-age=60')
+    const body: unknown = await response.json()
+    expect(isSimilarGamesResponse(body)).toBe(true)
+    expect(body).toMatchObject({
+      datasetVersion: 'catalog-release-v1',
+      game: { id: 'steam-730', slug: 'counter-strike-2', title: 'Counter-Strike 2' },
+    })
+    const similarGames = (body as SimilarGamesResponse).similarGames
+    expect(similarGames.map((game) => [game.slug, game.distance])).toEqual([
+      ['marvel-rivals', 20.62],
+      ['tom-clancys-rainbow-six-siege', 20.62],
+      ['apex-legends', 32.02],
+      ['monster-hunter-wilds', 37.75],
+      ['elden-ring', 56.79],
+    ])
+    expect(similarGames.map((game) => game.slug)).not.toContain('destiny-2')
+    expect(similarGames.map((game) => game.slug)).not.toContain('counter-strike-2')
+  })
+
+  test('returns the documented unscored response for a game without a score', async () => {
+    const response = await SELF.fetch('https://need-games.test/api/games/destiny-2/similar')
 
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toMatchObject({
       error: { code: 'unscored_game' },
+    })
+  })
+
+  test('returns not-found for similar games of an unknown slug', async () => {
+    const response = await SELF.fetch('https://need-games.test/api/games/not-a-game/similar')
+
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'game_not_found' },
     })
   })
 })

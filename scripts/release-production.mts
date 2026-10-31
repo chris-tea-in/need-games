@@ -33,6 +33,7 @@ const cloudflareEnvironmentVariable = 'CLOUDFLARE_ENV'
 const cloudflareViteConfigPathVariable = 'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH'
 const cloudflareLoadDotEnvVariable = 'CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV'
 const knownGamePath = '/api/games/counter-strike-2'
+const unscoredGamePath = '/api/games/destiny-2'
 const expectedCatalogVersion = 'catalog-release-v1'
 const expectedCatalogSize = 10
 const wranglerTrafficPercentageEpsilon = 1e-3
@@ -804,6 +805,58 @@ export function assertMissingCsrfLogoutResponse(status: number, body: unknown): 
   }
 }
 
+function isScoreSummary(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    ['micro', 'meso', 'macro'].every(
+      (axis) =>
+        typeof value[axis] === 'number' &&
+        Number.isInteger(value[axis]) &&
+        value[axis] >= 0 &&
+        value[axis] <= 100,
+    )
+  )
+}
+
+export function assertScoredGameDetailResponse(status: number, body: unknown): void {
+  if (
+    status !== 200 ||
+    !isRecord(body) ||
+    !isRecord(body.game) ||
+    !isScoreSummary(body.game.authoritativeScore)
+  ) {
+    throw new Error('Production smoke test failed: known game detail has no authoritative score.')
+  }
+}
+
+export function assertSimilarGamesResponse(status: number, body: unknown): void {
+  if (
+    status !== 200 ||
+    !isRecord(body) ||
+    !Array.isArray(body.similarGames) ||
+    body.similarGames.length === 0 ||
+    !body.similarGames.every(
+      (game) =>
+        isRecord(game) && typeof game.slug === 'string' && isScoreSummary(game.authoritativeScore),
+    )
+  ) {
+    throw new Error('Production smoke test failed: similar games for a scored game are invalid.')
+  }
+}
+
+export function assertUnscoredSimilarGamesResponse(status: number, body: unknown): void {
+  if (
+    status !== 404 ||
+    !isRecord(body) ||
+    !isRecord(body.error) ||
+    body.error.code !== 'unscored_game'
+  ) {
+    throw new Error(
+      'Production smoke test failed: unscored similarity did not return unscored_game.',
+    )
+  }
+}
+
 export async function readOnlySmokeTest(
   origin: string,
   steamSignInMode: SteamSignInMode,
@@ -831,19 +884,18 @@ export async function readOnlySmokeTest(
   }
 
   const knownGame = await request(knownGamePath)
-  if (knownGame.status !== 200) {
-    throw new Error('Production smoke test failed: known game detail is unavailable.')
-  }
+  assertScoredGameDetailResponse(knownGame.status, knownGame.body)
 
   const unknownGame = await request('/api/games/not-a-game')
   if (unknownGame.status !== 404) {
     throw new Error('Production smoke test failed: unknown game route did not return 404.')
   }
 
-  const unscoredSimilarGames = await request(`${knownGamePath}/similar`)
-  if (unscoredSimilarGames.status !== 404) {
-    throw new Error('Production smoke test failed: unscored similarity did not return 404.')
-  }
+  const similarGames = await request(`${knownGamePath}/similar`)
+  assertSimilarGamesResponse(similarGames.status, similarGames.body)
+
+  const unscoredSimilarGames = await request(`${unscoredGamePath}/similar`)
+  assertUnscoredSimilarGamesResponse(unscoredSimilarGames.status, unscoredSimilarGames.body)
 
   const unknownApiRoute = await request('/api/not-a-route')
   if (unknownApiRoute.status !== 404) {
