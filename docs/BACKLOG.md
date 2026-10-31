@@ -55,9 +55,11 @@ committed or merged yet. `corepack pnpm check:local` passes on that branch: 300 
 Worker tests, the build, Worker types, and the local Worker smoke test.
 
 - Scores and similar games (M1, M2): the detail API returns the score, the page shows the MiMMa
-  graph, and `/api/games/:slug/similar` ranks the other scored games. The ranking is Euclidean
-  distance over micro, meso, and macro, top 5, ties broken by title and then Steam app ID
-  (`src/shared/similarity.ts`). The bundled offline snapshot now carries the scores and ranks
+  graph, and `/api/games/:slug/similar` ranks the other scored games. The ranking keeps games
+  within a Euclidean distance of 40 over micro, meso, and macro, orders them by distance plus a
+  20-point tag mismatch penalty, shows at most 5, and breaks ties by title and then Steam app ID
+  (`src/shared/similarity.ts`, explained in `docs/MIMMA_RUBRIC.md`). Each match carries its shared
+  Steam tags. The bundled offline snapshot now carries the scores and ranks
   similar games locally. These two choices are defaults for D3 and D1, so the owner should
   confirm or change them before merging.
 - Release checks: the production smoke now requires a scored Counter-Strike 2 detail, a non-empty
@@ -93,10 +95,11 @@ Worker tests, the build, Worker types, and the local Worker smoke test.
       ships.
 - [ ] D6 Privacy. The Worker stores SteamIDs and display names with no privacy notice and no way to
       delete an account (F9). Decide the notice and the deletion policy. Blocks A8 and M5.
-- [ ] D7 Legacy tables. `authoritative_mimma_scores` (migration 0001) is empty and unread, and
-      `authoritative_mimma_seeds` (migration 0003, 62 single-axis rows) is unread (F11). Keep them as
-      history, use the seeds (for example as calibration anchors), or retire them. Retiring needs a
-      migration and verifier changes, because both tables are immutable and pinned.
+- [x] D7 Legacy tables. The owner retired `authoritative_mimma_seeds`: migration 0006 drops it and
+      its triggers, and the seed generator and its checks are gone. Production releases stop until
+      the owner applies 0006 with the file-ingestion procedure in CONTRIBUTING.md.
+      `data/surnex-dataset.csv` stays as a source of low-anchor candidates for the rubric.
+      `authoritative_mimma_scores` (migration 0001, empty, unread) stays for now.
 - [ ] D8 Voting design. CONTRIBUTING.md:195 mentions "reopening voting", and the PR template points
       to a "vault plan", so a design may exist outside this repo. Link it here, or write it as M5.0.
 
@@ -208,8 +211,10 @@ Nothing exists yet beyond sign-in.
 
 - [ ] M5.0 Design: one submission per user per game, revision rules, who counts as verified (for
       example Steam ownership or playtime; the Steam Web API returns owned games only when the
-      player's game details are public), aggregation (median or trimmed mean), how community and
-      authoritative scores appear side by side, moderation, and abuse limits.
+      player's game details are public), how community and authoritative scores appear side by
+      side, moderation, and abuse limits. Aggregation is specified in `docs/MIMMA_RUBRIC.md`
+      ("Combining raters"): median per axis, rater count, lowest and highest score, provisional
+      below 5 raters, disputed above a 40-point spread.
 - [ ] M5.1 Schema migration and repository, with Worker tests.
 - [ ] M5.2 A write endpoint that reuses the logout CSRF pattern (`X-CSRF-Token` checked against the
       session hash, `src/worker/routes/auth.ts:616-657`) and the A6 rate limiter.
@@ -460,7 +465,7 @@ P3. Verified.
   `authoritative_mimma_seeds` holds 62 single-axis rows derived from `data/surnex-dataset.csv`
   (`migrations/0003_authoritative_mimma_seed.sql`). No code under `src/` reads either table. Both
   are immutable through triggers, and the release verifier pins both.
-- Fix: D7.
+- Fix: D7. Migration 0006 retires the seed table; the empty scores table remains.
 
 ### F12. Shared helpers live in the similar-games route module
 
