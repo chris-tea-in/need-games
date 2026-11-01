@@ -54,6 +54,11 @@ ignored `.wrangler/` directory; rerun it after pulling new migrations. Without i
 returns 503 and the page shows a "Showing saved catalog data" banner, because the UI falls back to
 the bundled snapshot.
 
+To compare the research score sets from `docs/MIMMA_RESCORING_2026-10-31.md` on the local site,
+add `?scores=claude`, `?scores=tags`, `?scores=reviews`, or `?scores=all` to any URL. The choice
+is kept across pages, and `?scores=v1` returns to the owner's scores. Production builds do not
+include the preview.
+
 Steam sign-in is off locally. It needs `STEAM_SIGN_IN_ENABLED`, the production secrets, and an HTTPS
 `PRODUCTION_ORIGIN` that matches the request origin, so it cannot run on `http://localhost`.
 

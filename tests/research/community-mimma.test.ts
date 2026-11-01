@@ -12,6 +12,7 @@ import {
   fitLine,
   getJson,
   highAboveLow,
+  medianScore,
   mentionRate,
   parseAppReviewsPage,
   parseStoreItemTags,
@@ -332,6 +333,14 @@ describe('statistics', () => {
     expect(roundToTen(84.9)).toBe(80)
     expect(roundToTen(-12)).toBe(0)
     expect(roundToTen(123)).toBe(100)
+  })
+
+  test('takes the median and rounds it half up, the way the rubric combines raters', () => {
+    expect(medianScore([80, 20, 50])).toBe(50)
+    expect(medianScore([100, 70])).toBe(85)
+    expect(medianScore([65, 80])).toBe(73)
+    expect(medianScore([40])).toBe(40)
+    expect(() => medianScore([])).toThrow(RangeError)
   })
 
   test('draws the same random numbers for the same seed', () => {

@@ -16,11 +16,21 @@ export type SimilarGamesView =
 interface GameDetailPageProps {
   authControl?: ReactNode
   game: GameDetail
+  /** Shown under the profile, after the graph. */
+  scoreDetails?: ReactNode
+  /** Replaces the snapshot footnote, for example in the local research preview. */
+  scoreFootnote?: string | null
   /** Omit for unscored games; similar games need an authoritative score. */
   similarGames?: SimilarGamesView
 }
 
-function ScorePanel({ game }: { game: GameDetail }) {
+interface ScorePanelProps {
+  details?: ReactNode
+  footnote?: string | null
+  game: GameDetail
+}
+
+function ScorePanel({ details, footnote, game }: ScorePanelProps) {
   if (game.authoritativeScore === null) {
     return (
       <section className="spec-panel spec-panel--unscored" aria-labelledby="score-status-heading">
@@ -47,9 +57,10 @@ function ScorePanel({ game }: { game: GameDetail }) {
       </header>
       <div className="spec-panel-body">
         <MimmaGraph score={game.authoritativeScore} size="expanded" />
+        {details}
       </div>
       <p className="spec-panel-footnote">
-        Owner-authoritative snapshot v{game.authoritativeScore.snapshotVersion}
+        {footnote ?? `Owner-authoritative snapshot v${game.authoritativeScore.snapshotVersion}`}
       </p>
     </section>
   )
@@ -110,7 +121,13 @@ function SimilarGamesSection({ game, view }: { game: GameDetail; view: SimilarGa
   )
 }
 
-export function GameDetailPage({ authControl, game, similarGames }: GameDetailPageProps) {
+export function GameDetailPage({
+  authControl,
+  game,
+  scoreDetails,
+  scoreFootnote,
+  similarGames,
+}: GameDetailPageProps) {
   return (
     <>
       <SiteHeader authControl={authControl} />
@@ -152,7 +169,7 @@ export function GameDetailPage({ authControl, game, similarGames }: GameDetailPa
               <p className="game-description">{game.shortDescription}</p>
             </section>
 
-            <ScorePanel game={game} />
+            <ScorePanel details={scoreDetails} footnote={scoreFootnote} game={game} />
           </div>
         </article>
 

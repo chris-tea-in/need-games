@@ -434,6 +434,16 @@ export function clampScore(value: number): number {
   return Math.max(0, Math.min(100, value))
 }
 
+/** Median, rounded half up to an integer, the way the rubric combines raters. */
+export function medianScore(values: readonly number[]): number {
+  if (values.length === 0) throw new RangeError('medianScore needs at least one value')
+  const sorted = [...values].sort((a, b) => a - b)
+  const middle = Math.floor(sorted.length / 2)
+  const median =
+    sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+  return Math.floor(median + 0.5)
+}
+
 /** Clamp to 0-100 and round to the rubric's steps of 10. */
 export function roundToTen(value: number): number {
   return Math.round(clampScore(value) / 10) * 10

@@ -1499,3 +1499,120 @@ select option {
     transform: translateY(-0.35rem) rotateY(7deg);
   }
 }
+
+/* Research preview (local development only) -----------------------------
+   The ?scores= switcher in research/research-preview.tsx. Production builds never render it. */
+
+.research-banner {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--rule-strong);
+  background: var(--panel-raised);
+  color: var(--text-2);
+  font-size: 0.875rem;
+  padding: 0.75rem var(--gutter);
+}
+
+.research-banner p {
+  max-width: 72ch;
+}
+
+.research-banner-label,
+.research-banner-sets a,
+.research-sources thead th {
+  font-stretch: var(--stretch-condensed);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.research-banner-label {
+  display: inline-block;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  color: var(--text);
+  font-size: 0.75rem;
+  margin-right: 0.35rem;
+  padding: 0.15rem 0.4rem 0.1rem;
+}
+
+.research-banner-sets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.research-banner-sets a {
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.55rem 0.25rem;
+  text-decoration: none;
+}
+
+.research-banner-sets a:hover {
+  border-color: var(--text-2);
+  color: var(--text);
+}
+
+.research-banner-sets a[aria-current='true'] {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--ground);
+}
+
+.research-sources {
+  overflow-x: auto;
+}
+
+.research-sources table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.research-sources caption {
+  color: var(--text-3);
+  padding-bottom: 0.5rem;
+  text-align: left;
+}
+
+.research-sources th,
+.research-sources td {
+  border-top: 1px solid var(--rule);
+  padding: 0.45rem 0.75rem 0.45rem 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.research-sources thead th {
+  color: var(--text-3);
+  font-size: 0.6875rem;
+}
+
+.research-sources tbody th {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.research-sources td {
+  color: var(--text-2);
+}
+
+.research-sources .research-sources-median {
+  color: var(--text);
+  font-weight: 750;
+}
+
+.research-sources p {
+  color: var(--text-3);
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+}

@@ -17,6 +17,12 @@ import { AuthFailureNotice } from './auth/auth-failure-notice.js'
 import { consumeAuthFailureMarker, currentReturnPath } from './auth/auth-return.js'
 import { useSession } from './auth/use-session.js'
 import { catalogSnapshot } from './generated/catalog-snapshot.js'
+import {
+  ResearchBanner,
+  browserResearchSet,
+  researchCatalogScores,
+  researchDetailView,
+} from './research/research-preview.js'
 import { Icon, SiteFooter, SiteHeader } from './site-chrome.js'
 import type { MimmaScore } from '../shared/mimma.js'
 
@@ -102,13 +108,18 @@ export function App() {
   const [similarState, setSimilarState] = useState<ScreenState<SimilarGamesLoadResult>>({
     kind: 'loading',
   })
+  // Local research preview (?scores=claude|tags|reviews|all). Production builds drop it.
+  const [researchSet] = useState(() => (import.meta.env.DEV ? browserResearchSet() : null))
   const session = useSession()
   const slug = currentGameSlug(pathname)
   const catalogVersion = catalogState.kind === 'data' ? catalogState.data.datasetVersion : undefined
-  const catalogScores = useMemo(
-    () => (catalogVersion === undefined ? undefined : snapshotScoresFor(catalogVersion)),
-    [catalogVersion],
-  )
+  const catalogGames = catalogState.kind === 'data' ? catalogState.data.games : undefined
+  const catalogScores = useMemo(() => {
+    if (import.meta.env.DEV && researchSet !== null && catalogGames !== undefined) {
+      return researchCatalogScores(catalogGames, researchSet)
+    }
+    return catalogVersion === undefined ? undefined : snapshotScoresFor(catalogVersion)
+  }, [catalogGames, catalogVersion, researchSet])
   const dismissAuthFailure = useCallback(() => setAuthFailureVisible(false), [])
   const authControl = (
     <AuthControl
@@ -205,6 +216,10 @@ export function App() {
     } else if (detailState.kind === 'error') {
       content = <ErrorState message={detailState.message} />
     } else {
+      const research =
+        import.meta.env.DEV && researchSet !== null
+          ? researchDetailView(detailState.data.game, researchSet)
+          : null
       content = (
         <>
           {detailState.source === 'snapshot' ? (
@@ -216,8 +231,10 @@ export function App() {
           <div data-auth-background="true">
             <GameDetailPage
               authControl={authControl}
-              game={detailState.data.game}
-              similarGames={similarGamesView(similarState)}
+              game={research?.game ?? detailState.data.game}
+              scoreDetails={research?.scoreDetails}
+              scoreFootnote={research?.scoreFootnote}
+              similarGames={research?.similarGames ?? similarGamesView(similarState)}
             />
           </div>
         </>
@@ -253,6 +270,7 @@ export function App() {
 
   return (
     <>
+      {import.meta.env.DEV && researchSet !== null ? <ResearchBanner active={researchSet} /> : null}
       {authFailureVisible ? <AuthFailureNotice onDismiss={dismissAuthFailure} /> : null}
       {content}
     </>

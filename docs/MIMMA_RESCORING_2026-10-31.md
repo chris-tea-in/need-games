@@ -230,11 +230,29 @@ node scripts/research/resolve-surnex-steam-apps.mts --write
 node scripts/research/fetch-community-signals.mts --reviews 300
 
 # Prints the tables in this report and writes .cache/community-mimma/results.json.
-node scripts/research/analyze-community-mimma.mts
+# --write-ui also updates src/ui/generated/research-mimma.ts for the local preview below.
+node scripts/research/analyze-community-mimma.mts --write-ui
 ```
 
 Steam's tags and reviews change over time, so a later run will not reproduce these numbers
 exactly.
+
+## Previewing on the local site
+
+With the dev server running (see "Run the app locally" in `CONTRIBUTING.md`), add `?scores=` to
+any local URL:
+
+| Value     | The shelf strips, game pages, and similar games use                   |
+| --------- | --------------------------------------------------------------------- |
+| `claude`  | Claude's scores                                                       |
+| `tags`    | the tag estimates                                                     |
+| `reviews` | the review estimates                                                  |
+| `all`     | the median of every source, with each source listed on the game pages |
+| `v1`      | the owner's v1 scores again, and the preview is switched off          |
+
+The choice is remembered across pages until `?scores=v1`, and a banner shows the active set. In
+every research set, Destiny 2 and BeamNG.drive have scores, so they get profiles and similar
+games. Production builds leave the preview out.
 
 ## Appendix: Claude's reasons
 
