@@ -303,4 +303,5 @@ League of Legends and Valorant are not in the catalog, so they keep their v1 sco
 | Audit, decisions, milestones  | `docs/BACKLOG.md`                    |
 | What a MiMMa value means      | `docs/MIMMA_RUBRIC.md`               |
 | Rescoring method and results  | `docs/MIMMA_RESCORING_2026-10-31.md` |
+| D1 free tier capacity         | `docs/D1_CAPACITY_2026-11-01.md`     |
 | Running locally and releasing | `CONTRIBUTING.md`                    |
