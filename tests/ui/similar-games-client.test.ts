@@ -74,19 +74,21 @@ describe('similar games client', () => {
     expect(result).toMatchObject({ kind: 'data', source: 'snapshot' })
     if (result.kind === 'data') {
       expect(result.games.map((game) => [game.slug, game.sharedTags])).toEqual([
-        ['tom-clancys-rainbow-six-siege', ['FPS', 'Shooter', 'Multiplayer']],
-        ['marvel-rivals', ['Multiplayer']],
         ['apex-legends', ['FPS', 'Shooter', 'Multiplayer']],
+        ['marvel-rivals', ['Multiplayer']],
+        ['tom-clancys-rainbow-six-siege', ['FPS', 'Shooter', 'Multiplayer']],
+        ['elden-ring', []],
         ['monster-hunter-wilds', ['Multiplayer', 'Action']],
       ])
     }
   })
 
-  test('reports an unscored game from the snapshot when offline', async () => {
+  test('ranks a game that owner snapshot v2 added when offline', async () => {
     const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new TypeError('offline'))
 
-    await expect(loadSimilarGames('beamng-drive', { fetcher })).resolves.toEqual({
-      kind: 'unscored',
+    await expect(loadSimilarGames('beamng-drive', { fetcher })).resolves.toMatchObject({
+      kind: 'data',
+      source: 'snapshot',
     })
   })
 })

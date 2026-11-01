@@ -222,7 +222,11 @@ async function runWorkerSmokeTest() {
     if (!Array.isArray(similar.similarGames) || similar.similarGames.length === 0) {
       throw new Error('The local similar-games response did not rank any games.')
     }
-    await assertJsonResponse(`${baseUrl}/api/games/destiny-2/similar`, 404, 'unscored_game')
+    // Owner snapshot v2 scored Destiny 2, so it proves the latest snapshot is served.
+    const newlyScored = await assertJsonResponse(`${baseUrl}/api/games/destiny-2`, 200)
+    if (newlyScored.game?.authoritativeScore?.snapshotVersion !== 2) {
+      throw new Error('The local game detail is not served from owner snapshot v2.')
+    }
     await assertJsonResponse(`${baseUrl}/api/games/not-a-game`, 404, 'game_not_found')
 
     const apiNavigationResponse = await fetchWithTimeout(`${baseUrl}/api/not-a-route`, {

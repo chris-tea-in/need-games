@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import { format, resolveConfig } from 'prettier'
 
+import { latestSnapshotScores, readOwnerAuthorityHistory } from './owner-authority-history.mts'
+
 import type {
   AuthoritativeScoreSummary,
   CatalogRelease,
@@ -18,10 +20,6 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const releasePath = resolve(repositoryRoot, 'data/catalog-release-v1.json')
 const seedPath = resolve(repositoryRoot, 'migrations/0002_seed_beta_catalog.sql')
 const snapshotPath = resolve(repositoryRoot, 'src/ui/generated/catalog-snapshot.ts')
-const authoritativeRecordPath = resolve(
-  repositoryRoot,
-  'data/authoritative-records/owner-authoritative-mimma-v1.json',
-)
 
 export type SnapshotScores = ReadonlyMap<string, AuthoritativeScoreSummary>
 
@@ -155,10 +153,22 @@ export async function generateCatalogArtifacts(release: unknown, scores?: Snapsh
   }
 }
 
+/** Scores from the latest frozen owner snapshot, with every mapping the records hold. */
 function readSnapshotScores(): SnapshotScores {
-  return scoresFromAuthoritativeRecord(
-    JSON.parse(readFileSync(authoritativeRecordPath, 'utf8')) as AuthoritativeRecordSubset,
-  )
+  const { rows } = readOwnerAuthorityHistory(repositoryRoot)
+  const latest = rows.snapshots.reduce((max, row) => (row.version > max.version ? row : max))
+  return scoresFromAuthoritativeRecord({
+    games: [...latestSnapshotScores(rows)].map(([id, score]) => ({ id, score })),
+    mappings: rows.mappings.map((mapping) => ({
+      authoritativeGameId: mapping.gameId,
+      catalogGameId: mapping.catalogGameId,
+      decision: mapping.decision,
+      externalId: mapping.externalId,
+      provider: mapping.provider,
+      version: mapping.version,
+    })),
+    snapshot: { version: latest.version },
+  })
 }
 
 function readRelease(): unknown {

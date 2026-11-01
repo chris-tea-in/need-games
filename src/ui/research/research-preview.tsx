@@ -43,7 +43,7 @@ export function isResearchSetId(value: string): value is ResearchSetId {
 
 /**
  * The set to preview. `?scores=<set>` picks one and remembers it, because links between pages are
- * plain page loads. `?scores=v1`, or any value that is not a set, returns to the owner's scores.
+ * plain page loads. `?scores=owner`, or any value that is not a set, returns to the owner's scores.
  * Without usable storage the choice lasts for the current page only.
  */
 export function resolveResearchSet(
@@ -156,10 +156,10 @@ export function ResearchBanner({ active }: { active: ResearchSetId }) {
     <aside aria-label="Research score preview" className="research-banner">
       <p>
         <span className="research-banner-label">Research preview</span> Scores on this page are{' '}
-        {SET_DESCRIPTIONS[active]}, not the owner&apos;s scores. Local development only.
+        {SET_DESCRIPTIONS[active]}. Local development only.
       </p>
       <nav aria-label="Score set" className="research-banner-sets">
-        <a href="?scores=v1">Owner v1</a>
+        <a href="?scores=owner">Owner</a>
         {RESEARCH_SETS.map((set) => (
           <a aria-current={set === active ? 'true' : undefined} href={`?scores=${set}`} key={set}>
             {SET_NAMES[set]}
@@ -177,7 +177,7 @@ function ownerSummary(game: ResearchGame): string {
     micro: game.micro.owner,
   }
   return micro === null || meso === null || macro === null
-    ? 'The owner has not scored this game.'
+    ? 'Not in owner snapshot v1.'
     : `Owner v1: Micro ${micro}, Meso ${meso}, Macro ${macro}.`
 }
 

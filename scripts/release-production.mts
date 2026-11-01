@@ -16,7 +16,7 @@ import {
 
 import { requiredProductionSecretNames } from './create-production-wrangler-config.mts'
 import { assertProductionD1Verification, productionDatabaseName } from './verify-production-d1.mts'
-import { readReleasedCatalog } from './release-manifest.mts'
+import { authoritativeRecords, readReleasedCatalog } from './release-manifest.mts'
 
 const execFileAsync = promisify(execFile)
 const productionConfigPath = '.wrangler.production.jsonc'
@@ -34,10 +34,12 @@ const cloudflareEnvironmentVariable = 'CLOUDFLARE_ENV'
 const cloudflareViteConfigPathVariable = 'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH'
 const cloudflareLoadDotEnvVariable = 'CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV'
 const knownGamePath = '/api/games/counter-strike-2'
-const unscoredGamePath = '/api/games/destiny-2'
+// Unscored in v1, scored in v2: proves the release serves the latest owner snapshot.
+const newlyScoredGamePath = '/api/games/destiny-2'
 const releasedCatalog = readReleasedCatalog()
 const expectedCatalogVersion = releasedCatalog.datasetVersion
 const expectedCatalogSize = releasedCatalog.gameCount
+const latestSnapshotVersion = authoritativeRecords.length
 const wranglerTrafficPercentageEpsilon = 1e-3
 
 interface Command {
@@ -684,11 +686,10 @@ SELECT
   created_on,
   frozen_on
 FROM authoritative_snapshots AS s
-WHERE id = 'snapshot-owner-authoritative-mimma-v1' AND version = 1;
-SELECT game_id, score_id
+ORDER BY version;
+SELECT snapshot_id, game_id, score_id
 FROM authoritative_snapshot_members
-WHERE snapshot_id = 'snapshot-owner-authoritative-mimma-v1'
-ORDER BY game_id;
+ORDER BY snapshot_id, game_id;
 SELECT id, game_id, provider, external_id, catalog_game_id, mapping_version, decision,
   verification_ref, supersedes_mapping_id, source_manifest_version, source_hash, decided_on
 FROM authoritative_game_mappings
@@ -698,20 +699,20 @@ FROM authoritative_games AS ag
 LEFT JOIN authoritative_game_mappings AS agm ON agm.game_id = ag.id
 WHERE agm.id IS NULL
 ORDER BY ag.id;
-SELECT 'authoritative_games' AS source_table, COUNT(*) AS row_count,
-  COUNT(DISTINCT introduced_source_hash) AS source_hash_count,
-  MIN(introduced_source_hash) AS source_hash,
-  MAX(introduced_source_hash) AS source_hash_max
-FROM authoritative_games
-UNION ALL
-SELECT 'authoritative_mimma_score_versions', COUNT(*), COUNT(DISTINCT source_hash), MIN(source_hash), MAX(source_hash)
-FROM authoritative_mimma_score_versions
-UNION ALL
-SELECT 'authoritative_snapshots', COUNT(*), COUNT(DISTINCT source_hash), MIN(source_hash), MAX(source_hash)
-FROM authoritative_snapshots
-UNION ALL
-SELECT 'authoritative_game_mappings', COUNT(*), COUNT(DISTINCT source_hash), MIN(source_hash), MAX(source_hash)
-FROM authoritative_game_mappings;`,
+SELECT source_table, source_hash, row_count FROM (
+  SELECT 'authoritative_games' AS source_table, introduced_source_hash AS source_hash, COUNT(*) AS row_count
+  FROM authoritative_games GROUP BY introduced_source_hash
+  UNION ALL
+  SELECT 'authoritative_mimma_score_versions', source_hash, COUNT(*)
+  FROM authoritative_mimma_score_versions GROUP BY source_hash
+  UNION ALL
+  SELECT 'authoritative_snapshots', source_hash, COUNT(*)
+  FROM authoritative_snapshots GROUP BY source_hash
+  UNION ALL
+  SELECT 'authoritative_game_mappings', source_hash, COUNT(*)
+  FROM authoritative_game_mappings GROUP BY source_hash
+)
+ORDER BY source_table, source_hash;`,
     ]),
     env,
   )
@@ -819,14 +820,22 @@ function isScoreSummary(value: unknown): boolean {
   )
 }
 
-export function assertScoredGameDetailResponse(status: number, body: unknown): void {
+export function assertScoredGameDetailResponse(
+  status: number,
+  body: unknown,
+  snapshotVersion = latestSnapshotVersion,
+): void {
   if (
     status !== 200 ||
     !isRecord(body) ||
     !isRecord(body.game) ||
-    !isScoreSummary(body.game.authoritativeScore)
+    !isScoreSummary(body.game.authoritativeScore) ||
+    !isRecord(body.game.authoritativeScore) ||
+    body.game.authoritativeScore.snapshotVersion !== snapshotVersion
   ) {
-    throw new Error('Production smoke test failed: known game detail has no authoritative score.')
+    throw new Error(
+      `Production smoke test failed: game detail has no authoritative score from snapshot v${snapshotVersion}.`,
+    )
   }
 }
 
@@ -842,19 +851,6 @@ export function assertSimilarGamesResponse(status: number, body: unknown): void 
     )
   ) {
     throw new Error('Production smoke test failed: similar games for a scored game are invalid.')
-  }
-}
-
-export function assertUnscoredSimilarGamesResponse(status: number, body: unknown): void {
-  if (
-    status !== 404 ||
-    !isRecord(body) ||
-    !isRecord(body.error) ||
-    body.error.code !== 'unscored_game'
-  ) {
-    throw new Error(
-      'Production smoke test failed: unscored similarity did not return unscored_game.',
-    )
   }
 }
 
@@ -895,8 +891,8 @@ export async function readOnlySmokeTest(
   const similarGames = await request(`${knownGamePath}/similar`)
   assertSimilarGamesResponse(similarGames.status, similarGames.body)
 
-  const unscoredSimilarGames = await request(`${unscoredGamePath}/similar`)
-  assertUnscoredSimilarGamesResponse(unscoredSimilarGames.status, unscoredSimilarGames.body)
+  const newlyScoredGame = await request(newlyScoredGamePath)
+  assertScoredGameDetailResponse(newlyScoredGame.status, newlyScoredGame.body)
 
   const unknownApiRoute = await request('/api/not-a-route')
   if (unknownApiRoute.status !== 404) {

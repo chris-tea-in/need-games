@@ -121,194 +121,78 @@ describe('catalog repositories', () => {
       getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-730'),
     ).resolves.toEqual({
       gameId: 'auth-game-counter-strike-2',
-      snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-      snapshotVersion: 1,
-      scoreId: 'auth-score-counter-strike-2-v1',
-      scoreVersion: 1,
-      macroScore: 80,
-      mesoScore: 65,
-      microScore: 100,
+      snapshotId: 'snapshot-owner-authoritative-mimma-v2',
+      snapshotVersion: 2,
+      scoreId: 'auth-score-counter-strike-2-v2',
+      scoreVersion: 2,
+      macroScore: 60,
+      mesoScore: 70,
+      microScore: 80,
     })
     await expect(
       getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-1085660'),
-    ).resolves.toBeNull()
+    ).resolves.toMatchObject({
+      gameId: 'auth-game-destiny-2',
+      scoreId: 'auth-score-destiny-2-v1',
+      microScore: 60,
+      mesoScore: 50,
+      macroScore: 70,
+    })
     await expect(
       getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-284160'),
-    ).resolves.toBeNull()
+    ).resolves.toMatchObject({ gameId: 'auth-game-beamng-drive', scoreVersion: 1, microScore: 50 })
   })
 
-  test('reads all ten frozen members including intentionally unmapped identities', async () => {
+  test('reads all twelve v2 members including intentionally unmapped identities', async () => {
     const snapshot = await getFrozenAuthoritativeSnapshot(env.NEED_GAMES_DB)
-    expect(snapshot?.snapshotId).toBe('snapshot-owner-authoritative-mimma-v1')
-    expect(snapshot?.snapshotVersion).toBe(1)
-    expect(snapshot?.members.map((member) => member.identityKey)).toEqual([
-      'apex-legends',
-      'baldurs-gate-3',
-      'counter-strike-2',
-      'elden-ring',
-      'league-of-legends',
-      'marvel-rivals',
-      'monster-hunter-wilds',
-      'palworld',
-      'rainbow-six-siege',
-      'valorant',
-    ])
-    expect(snapshot?.members).toEqual([
-      {
-        gameId: 'auth-game-apex-legends',
-        identityKey: 'apex-legends',
-        canonicalTitle: 'Apex Legends',
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-apex-legends-v1',
-        scoreVersion: 1,
-        microScore: 80,
-        mesoScore: 80,
-        macroScore: 100,
-        catalogGameId: 'steam-1172470',
-        steamAppId: 1172470,
-      },
-      {
-        gameId: 'auth-game-baldurs-gate-3',
-        identityKey: 'baldurs-gate-3',
-        canonicalTitle: "Baldur's Gate 3",
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-baldurs-gate-3-v1',
-        scoreVersion: 1,
-        microScore: 20,
-        mesoScore: 20,
-        macroScore: 100,
-        catalogGameId: 'steam-1086940',
-        steamAppId: 1086940,
-      },
-      {
-        gameId: 'auth-game-counter-strike-2',
-        identityKey: 'counter-strike-2',
-        canonicalTitle: 'Counter-Strike 2',
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-counter-strike-2-v1',
-        scoreVersion: 1,
-        microScore: 100,
-        mesoScore: 65,
-        macroScore: 80,
-        catalogGameId: 'steam-730',
-        steamAppId: 730,
-      },
-      {
-        gameId: 'auth-game-elden-ring',
-        identityKey: 'elden-ring',
-        canonicalTitle: 'ELDEN RING',
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-elden-ring-v1',
-        scoreVersion: 1,
-        microScore: 80,
-        mesoScore: 100,
-        macroScore: 40,
-        catalogGameId: 'steam-1245620',
-        steamAppId: 1245620,
-      },
-      {
-        gameId: 'auth-game-league-of-legends',
-        identityKey: 'league-of-legends',
-        canonicalTitle: 'League of Legends',
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-league-of-legends-v1',
-        scoreVersion: 1,
-        microScore: 69,
-        mesoScore: 77,
-        macroScore: 100,
-        catalogGameId: null,
-        steamAppId: null,
-      },
-      {
-        gameId: 'auth-game-marvel-rivals',
-        identityKey: 'marvel-rivals',
-        canonicalTitle: 'Marvel Rivals',
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-marvel-rivals-v1',
-        scoreVersion: 1,
-        microScore: 80,
-        mesoScore: 60,
-        macroScore: 80,
-        catalogGameId: 'steam-2767030',
-        steamAppId: 2767030,
-      },
-      {
-        gameId: 'auth-game-monster-hunter-wilds',
-        identityKey: 'monster-hunter-wilds',
-        canonicalTitle: 'Monster Hunter Wilds',
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-monster-hunter-wilds-v1',
-        scoreVersion: 1,
-        microScore: 80,
-        mesoScore: 40,
-        macroScore: 60,
-        catalogGameId: 'steam-2246340',
-        steamAppId: 2246340,
-      },
-      {
-        gameId: 'auth-game-palworld',
-        identityKey: 'palworld',
-        canonicalTitle: 'Palworld',
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-palworld-v1',
-        scoreVersion: 1,
-        microScore: 40,
-        mesoScore: 20,
-        macroScore: 70,
-        catalogGameId: 'steam-1623730',
-        steamAppId: 1623730,
-      },
-      {
-        gameId: 'auth-game-rainbow-six-siege',
-        identityKey: 'rainbow-six-siege',
-        canonicalTitle: "Tom Clancy's Rainbow Six Siege",
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-rainbow-six-siege-v1',
-        scoreVersion: 1,
-        microScore: 80,
-        mesoScore: 60,
-        macroScore: 80,
-        catalogGameId: 'steam-359550',
-        steamAppId: 359550,
-      },
-      {
-        gameId: 'auth-game-valorant',
-        identityKey: 'valorant',
-        canonicalTitle: 'Valorant',
-        snapshotId: 'snapshot-owner-authoritative-mimma-v1',
-        snapshotVersion: 1,
-        scoreId: 'auth-score-valorant-v1',
-        scoreVersion: 1,
-        microScore: 100,
-        mesoScore: 73,
-        macroScore: 80,
-        catalogGameId: null,
-        steamAppId: null,
-      },
-    ])
+    expect(snapshot?.snapshotId).toBe('snapshot-owner-authoritative-mimma-v2')
+    expect(snapshot?.snapshotVersion).toBe(2)
+    const expected = [
+      ['apex-legends', 'Apex Legends', 2, 80, 80, 70, 1172470],
+      ['baldurs-gate-3', "Baldur's Gate 3", 2, 30, 50, 85, 1086940],
+      ['beamng-drive', 'BeamNG.drive', 1, 50, 30, 40, 284160],
+      ['counter-strike-2', 'Counter-Strike 2', 2, 80, 70, 60, 730],
+      ['destiny-2', 'Destiny 2', 1, 60, 50, 70, 1085660],
+      ['elden-ring', 'ELDEN RING', 2, 75, 55, 60, 1245620],
+      ['league-of-legends', 'League of Legends', 1, 69, 77, 100, null],
+      ['marvel-rivals', 'Marvel Rivals', 2, 80, 60, 70, 2767030],
+      ['monster-hunter-wilds', 'Monster Hunter Wilds', 2, 80, 50, 60, 2246340],
+      ['palworld', 'Palworld', 2, 45, 35, 80, 1623730],
+      ['rainbow-six-siege', "Tom Clancy's Rainbow Six Siege", 2, 80, 80, 80, 359550],
+      ['valorant', 'Valorant', 1, 100, 73, 80, null],
+    ] as const
+    expect(snapshot?.members).toEqual(
+      expected.map(
+        ([identityKey, canonicalTitle, scoreVersion, micro, meso, macro, steamAppId]) => ({
+          gameId: `auth-game-${identityKey}`,
+          identityKey,
+          canonicalTitle,
+          snapshotId: 'snapshot-owner-authoritative-mimma-v2',
+          snapshotVersion: 2,
+          scoreId: `auth-score-${identityKey}-v${scoreVersion}`,
+          scoreVersion,
+          microScore: micro,
+          mesoScore: meso,
+          macroScore: macro,
+          catalogGameId: steamAppId === null ? null : `steam-${steamAppId}`,
+          steamAppId,
+        }),
+      ),
+    )
   })
 
-  test('uses the V1 snapshot score rather than a later appended score version', async () => {
-    await insertScoreVersion('auth-score-palworld-v2', 'auth-game-palworld', 2, 50, 60, 70)
+  test('uses the snapshot score rather than a later appended score version', async () => {
+    await insertScoreVersion('auth-score-palworld-v3', 'auth-game-palworld', 3, 50, 60, 70)
     await expect(
       getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-1623730'),
-    ).resolves.toMatchObject({ scoreId: 'auth-score-palworld-v1', scoreVersion: 1, microScore: 40 })
+    ).resolves.toMatchObject({ scoreId: 'auth-score-palworld-v2', scoreVersion: 2, microScore: 45 })
   })
 
-  test('lets a later frozen snapshot select a new score without rewriting V1', async () => {
+  test('lets a later frozen snapshot select a new score without rewriting earlier ones', async () => {
     await insertScoreVersion(
-      'auth-score-counter-strike-2-v2',
+      'auth-score-counter-strike-2-v3',
       'auth-game-counter-strike-2',
-      2,
+      3,
       55,
       66,
       77,
@@ -318,56 +202,51 @@ describe('catalog repositories', () => {
        (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
        VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
     )
-      .bind(
-        'snapshot-owner-authoritative-mimma-v2',
-        2,
-        'owner-authoritative-mimma-v2',
-        sourceHash,
-        10,
-        'draft',
-        '2026-08-21',
-      )
+      .bind('snapshot-test-v3', 3, 'test-v3', sourceHash, 12, 'draft', '2026-11-01')
       .run()
-    const members = [
-      ['auth-game-counter-strike-2', 'auth-score-counter-strike-2-v2'],
-      ['auth-game-palworld', 'auth-score-palworld-v1'],
-      ['auth-game-marvel-rivals', 'auth-score-marvel-rivals-v1'],
-      ['auth-game-apex-legends', 'auth-score-apex-legends-v1'],
-      ['auth-game-rainbow-six-siege', 'auth-score-rainbow-six-siege-v1'],
-      ['auth-game-baldurs-gate-3', 'auth-score-baldurs-gate-3-v1'],
-      ['auth-game-monster-hunter-wilds', 'auth-score-monster-hunter-wilds-v1'],
-      ['auth-game-elden-ring', 'auth-score-elden-ring-v1'],
-      ['auth-game-league-of-legends', 'auth-score-league-of-legends-v1'],
-      ['auth-game-valorant', 'auth-score-valorant-v1'],
-    ]
-    for (const [gameId, scoreId] of members) {
+    const v2Members = await env.NEED_GAMES_DB.prepare(
+      'SELECT game_id, score_id FROM authoritative_snapshot_members WHERE snapshot_id = ?',
+    )
+      .bind('snapshot-owner-authoritative-mimma-v2')
+      .all<{ game_id: string; score_id: string }>()
+    expect(v2Members.results).toHaveLength(12)
+    for (const { game_id: gameId, score_id: scoreId } of v2Members.results) {
       await env.NEED_GAMES_DB.prepare(
         'INSERT INTO authoritative_snapshot_members (snapshot_id, game_id, score_id) VALUES (?, ?, ?)',
       )
-        .bind('snapshot-owner-authoritative-mimma-v2', gameId, scoreId)
+        .bind(
+          'snapshot-test-v3',
+          gameId,
+          gameId === 'auth-game-counter-strike-2' ? 'auth-score-counter-strike-2-v3' : scoreId,
+        )
         .run()
     }
     await env.NEED_GAMES_DB.prepare(
       'UPDATE authoritative_snapshots SET state = ?, frozen_on = ? WHERE id = ?',
     )
-      .bind('frozen', '2026-08-21', 'snapshot-owner-authoritative-mimma-v2')
+      .bind('frozen', '2026-11-01', 'snapshot-test-v3')
       .run()
 
     await expect(
       getMappedAuthoritativeScoreFromLatestSnapshot(env.NEED_GAMES_DB, 'steam-730'),
     ).resolves.toMatchObject({
-      snapshotId: 'snapshot-owner-authoritative-mimma-v2',
-      snapshotVersion: 2,
-      scoreId: 'auth-score-counter-strike-2-v2',
-      scoreVersion: 2,
+      snapshotId: 'snapshot-test-v3',
+      snapshotVersion: 3,
+      scoreId: 'auth-score-counter-strike-2-v3',
+      scoreVersion: 3,
       microScore: 55,
     })
-    const v1 = await env.NEED_GAMES_DB.prepare(
-      'SELECT score_id FROM authoritative_snapshot_members WHERE snapshot_id = ? AND game_id = ?',
-    )
-      .bind('snapshot-owner-authoritative-mimma-v1', 'auth-game-counter-strike-2')
-      .first<{ score_id: string }>()
-    expect(v1?.score_id).toBe('auth-score-counter-strike-2-v1')
+    for (const [snapshotId, scoreId] of [
+      ['snapshot-owner-authoritative-mimma-v1', 'auth-score-counter-strike-2-v1'],
+      ['snapshot-owner-authoritative-mimma-v2', 'auth-score-counter-strike-2-v2'],
+    ]) {
+      const member = await env.NEED_GAMES_DB.prepare(
+        'SELECT score_id FROM authoritative_snapshot_members WHERE snapshot_id = ? AND game_id = ?',
+      )
+        .bind(snapshotId, 'auth-game-counter-strike-2')
+        .first<{ score_id: string }>()
+      expect(member?.score_id).toBe(scoreId)
+    }
   })
 
   test('finds mapped candidates from the frozen snapshot in deterministic catalog order', async () => {
@@ -376,50 +255,21 @@ describe('catalog repositories', () => {
 
     expect(apexTags).toContain('Battle Royale')
 
-    expect(candidates).toEqual([
-      expect.objectContaining({
-        gameId: 'auth-game-apex-legends',
-        title: 'Apex Legends',
-        steamAppId: 1172470,
-        scoreVersion: 1,
-      }),
-      expect.objectContaining({
-        gameId: 'auth-game-baldurs-gate-3',
-        title: "Baldur's Gate 3",
-        steamAppId: 1086940,
-        scoreVersion: 1,
-      }),
-      expect.objectContaining({
-        gameId: 'auth-game-elden-ring',
-        title: 'ELDEN RING',
-        steamAppId: 1245620,
-        scoreVersion: 1,
-      }),
-      expect.objectContaining({
-        gameId: 'auth-game-marvel-rivals',
-        title: 'Marvel Rivals',
-        steamAppId: 2767030,
-        scoreVersion: 1,
-      }),
-      expect.objectContaining({
-        gameId: 'auth-game-monster-hunter-wilds',
-        title: 'Monster Hunter Wilds',
-        steamAppId: 2246340,
-        scoreVersion: 1,
-      }),
-      expect.objectContaining({
-        gameId: 'auth-game-palworld',
-        title: 'Palworld',
-        steamAppId: 1623730,
-        scoreVersion: 1,
-      }),
-      expect.objectContaining({
-        gameId: 'auth-game-rainbow-six-siege',
-        title: "Tom Clancy's Rainbow Six Siege",
-        steamAppId: 359550,
-        scoreVersion: 1,
-      }),
-    ])
+    expect(candidates).toEqual(
+      [
+        ['auth-game-apex-legends', 'Apex Legends', 1172470, 2],
+        ['auth-game-baldurs-gate-3', "Baldur's Gate 3", 1086940, 2],
+        ['auth-game-beamng-drive', 'BeamNG.drive', 284160, 1],
+        ['auth-game-destiny-2', 'Destiny 2', 1085660, 1],
+        ['auth-game-elden-ring', 'ELDEN RING', 1245620, 2],
+        ['auth-game-marvel-rivals', 'Marvel Rivals', 2767030, 2],
+        ['auth-game-monster-hunter-wilds', 'Monster Hunter Wilds', 2246340, 2],
+        ['auth-game-palworld', 'Palworld', 1623730, 2],
+        ['auth-game-rainbow-six-siege', "Tom Clancy's Rainbow Six Siege", 359550, 2],
+      ].map(([gameId, title, steamAppId, scoreVersion]): unknown =>
+        expect.objectContaining({ gameId, title, steamAppId, scoreVersion }),
+      ),
+    )
   })
 
   test('treats a latest rejected mapping as unmapped without deleting its history', async () => {

@@ -69,7 +69,8 @@ describe('repository package contract', () => {
       'typecheck:worker': 'node scripts/check-worker-types.mjs',
       'check:local': 'node scripts/check-local.mjs',
       'catalog:check': 'node scripts/generate-catalog-artifacts.mts',
-      'authoritative-record:check': 'node scripts/generate-owner-authoritative-mimma.mts',
+      'authoritative-record:check':
+        'node scripts/generate-owner-authoritative-mimma.mts && node scripts/generate-owner-authoritative-mimma-v2.mts',
       'release:check': 'node scripts/assert-release-d1-id.mts',
       'release:production': 'node scripts/release-production.mts',
       predeploy: 'pnpm release:check',
@@ -170,7 +171,7 @@ describe('repository automation contract', () => {
       expect(contributing).toContain(`\`${name}\``)
     }
     expect(contributing).toContain(
-      'wrangler d1 execute need-games-production --remote --file migrations/0006_retire_authoritative_mimma_seeds.sql --config .wrangler.production.jsonc',
+      'wrangler d1 execute need-games-production --remote --file migrations/0007_owner_authoritative_mimma_v2.sql --config .wrangler.production.jsonc',
     )
     expect(contributing).toContain('scripts/release-manifest.mts')
     expect(contributing).toContain('## Owner-run production release boundary')

@@ -4,8 +4,9 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 
 import { EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256 } from '../scripts/generate-owner-authoritative-mimma.mts'
+import { EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V2_SHA256 } from '../scripts/owner-authority-history.mts'
 import {
-  authoritativeRecord,
+  authoritativeRecords,
   productionMigrations,
   readReleasedCatalog,
 } from '../scripts/release-manifest.mts'
@@ -35,9 +36,14 @@ describe('release manifest', () => {
     }
   })
 
-  test('pins the owner-authoritative record the generator also pins', () => {
-    expect(authoritativeRecord.sha256).toBe(EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256)
-    expect(sha256(readFileSync(authoritativeRecord.url, 'utf8'))).toBe(authoritativeRecord.sha256)
+  test('pins each owner-authoritative record the generators also pin, oldest first', () => {
+    expect(authoritativeRecords.map(({ sha256: pinned }) => pinned)).toEqual([
+      EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256,
+      EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V2_SHA256,
+    ])
+    for (const record of authoritativeRecords) {
+      expect(sha256(readFileSync(record.url, 'utf8'))).toBe(record.sha256)
+    }
   })
 
   test('reads the released catalog the UI snapshot was generated from', () => {

@@ -3,12 +3,19 @@ import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
+import { dirname, resolve } from 'node:path'
+
 import {
+  EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256,
   hashOwnerAuthoritativeManifest,
-  parseOwnerAuthoritativeManifest,
 } from './generate-owner-authoritative-mimma.mts'
 import {
-  authoritativeRecord,
+  type AuthorityRows,
+  EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V2_SHA256,
+  readOwnerAuthorityHistory,
+} from './owner-authority-history.mts'
+import {
+  authoritativeRecords,
   legacyTableCounts,
   productionMigrations,
   readReleasedCatalog,
@@ -21,19 +28,31 @@ const expectedMigrationSourceHashes: Readonly<Record<string, string>> = Object.f
   productionMigrations.map(({ name, sha256 }) => [name, sha256]),
 )
 
-/** Read the owner-authoritative record and refuse it unless it matches the manifest's pinned hash. */
-function loadAuthoritativeRecord() {
-  const source = readFileSync(authoritativeRecord.url, 'utf8')
-  if (hashOwnerAuthoritativeManifest(source) !== authoritativeRecord.sha256) {
+/**
+ * Build every authority row the database must hold from the owner records, and refuse records
+ * that do not match the hashes pinned in the release manifest.
+ */
+function loadAuthorityRows(): AuthorityRows {
+  const pinned = [
+    EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256,
+    EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V2_SHA256,
+  ]
+  if (
+    authoritativeRecords.length !== pinned.length ||
+    authoritativeRecords.some(
+      (record, index) =>
+        record.sha256 !== pinned[index] ||
+        hashOwnerAuthoritativeManifest(readFileSync(record.url, 'utf8')) !== record.sha256,
+    )
+  ) {
     throw new Error(
-      'Production D1 verification failed: the owner-authoritative record does not match its pinned hash.',
+      'Production D1 verification failed: the owner-authoritative records do not match their pinned hashes.',
     )
   }
-  return parseOwnerAuthoritativeManifest(source)
+  return readOwnerAuthorityHistory(resolve(dirname(fileURLToPath(import.meta.url)), '..')).rows
 }
 
-const record = loadAuthoritativeRecord()
-const authoritativeRecordHash = authoritativeRecord.sha256
+const authority = loadAuthorityRows()
 const releasedCatalog = readReleasedCatalog()
 
 function compareText(left: string, right: string): number {
@@ -41,17 +60,44 @@ function compareText(left: string, right: string): number {
 }
 
 // Sorted exactly like the verification queries in release-production.mts.
-const expectedGames = [...record.games].sort((left, right) => compareText(left.id, right.id))
-const expectedMappings = [...record.mappings].sort(
+const expectedGames = [...authority.games].sort((left, right) => compareText(left.id, right.id))
+const expectedScores = [...authority.scores].sort(
+  (left, right) => compareText(left.gameId, right.gameId) || left.version - right.version,
+)
+const expectedSnapshots = [...authority.snapshots].sort(
+  (left, right) => left.version - right.version,
+)
+const expectedMembers = [...authority.members].sort(
   (left, right) =>
-    compareText(left.authoritativeGameId, right.authoritativeGameId) ||
+    compareText(left.snapshotId, right.snapshotId) || compareText(left.gameId, right.gameId),
+)
+const expectedMappings = [...authority.mappings].sort(
+  (left, right) =>
+    compareText(left.gameId, right.gameId) ||
     compareText(left.provider, right.provider) ||
     left.version - right.version,
 )
-const mappedGameIds = new Set(record.mappings.map((mapping) => mapping.authoritativeGameId))
+const mappedGameIds = new Set(authority.mappings.map((mapping) => mapping.gameId))
 const expectedUnmappedGameIds = expectedGames
   .filter((game) => !mappedGameIds.has(game.id))
   .map((game) => game.id)
+
+/** Row counts per table and source record hash, ordered like the provenance query. */
+function expectedProvenance(): { source_table: string; source_hash: string; row_count: number }[] {
+  const tables: [string, readonly { sourceHash: string }[]][] = [
+    ['authoritative_game_mappings', authority.mappings],
+    ['authoritative_games', authority.games],
+    ['authoritative_mimma_score_versions', authority.scores],
+    ['authoritative_snapshots', authority.snapshots],
+  ]
+  return tables.flatMap(([source_table, rows]) =>
+    [...new Set(rows.map((row) => row.sourceHash))].sort(compareText).map((source_hash) => ({
+      source_table,
+      source_hash,
+      row_count: rows.filter((row) => row.sourceHash === source_hash).length,
+    })),
+  )
+}
 
 interface ExpectedSchemaObjectContract {
   name: string
@@ -465,11 +511,11 @@ function assertAuthorityState(queryResults: unknown): void {
   const expectedCounts: Record<string, number> = {
     legacy_score_count: legacyTableCounts.legacyScoreCount,
     authoritative_game_count: expectedGames.length,
-    authoritative_score_version_count: expectedGames.length,
-    authoritative_snapshot_count: 1,
-    authoritative_snapshot_member_count: expectedGames.length,
+    authoritative_score_version_count: expectedScores.length,
+    authoritative_snapshot_count: expectedSnapshots.length,
+    authoritative_snapshot_member_count: expectedMembers.length,
     authoritative_mapping_count: expectedMappings.length,
-    frozen_snapshot_count: 1,
+    frozen_snapshot_count: expectedSnapshots.length,
     unmapped_authority_game_count: expectedUnmappedGameIds.length,
   }
   for (const [key, expected] of Object.entries(expectedCounts)) {
@@ -487,9 +533,9 @@ function assertAuthorityState(queryResults: unknown): void {
           id: expectedGames[index].id,
           identity_key: expectedGames[index].identityKey,
           canonical_title: expectedGames[index].canonicalTitle,
-          introduced_manifest_version: record.manifestVersion,
-          introduced_source_hash: authoritativeRecordHash,
-          created_on: record.snapshot.approvedOn,
+          introduced_manifest_version: expectedGames[index].manifestVersion,
+          introduced_source_hash: expectedGames[index].sourceHash,
+          created_on: expectedGames[index].createdOn,
         }),
     )
   ) {
@@ -498,12 +544,12 @@ function assertAuthorityState(queryResults: unknown): void {
 
   const scoreRows = requireResultRows(queryResults, 5, 'authoritative score versions')
   if (
-    scoreRows.length !== expectedGames.length ||
+    scoreRows.length !== expectedScores.length ||
     scoreRows.some((row, index) => {
-      const { id: gameId, score } = expectedGames[index]
+      const score = expectedScores[index]
       return !rowMatchesExpected(row, {
         id: score.id,
-        game_id: gameId,
+        game_id: score.gameId,
         version: score.version,
         micro_score: score.micro,
         meso_score: score.meso,
@@ -511,10 +557,10 @@ function assertAuthorityState(queryResults: unknown): void {
         micro_original_decimal: score.microOriginal,
         meso_original_decimal: score.mesoOriginal,
         macro_original_decimal: score.macroOriginal,
-        decimal_scale: record.rounding.decimalScale,
-        rounding_mode: record.rounding.mode,
-        source_manifest_version: record.manifestVersion,
-        source_hash: authoritativeRecordHash,
+        decimal_scale: 1,
+        rounding_mode: 'half-up-to-integer-v1',
+        source_manifest_version: score.manifestVersion,
+        source_hash: score.sourceHash,
         provenance: 'owner_authoritative',
         approval_reason: score.approvalReason,
         approved_on: score.approvedOn,
@@ -524,30 +570,39 @@ function assertAuthorityState(queryResults: unknown): void {
     throw new Error('Production D1 verification failed: authority score versions are incomplete.')
   }
 
-  const snapshotRows = requireResultRows(queryResults, 6, 'frozen snapshot')
+  const snapshotRows = requireResultRows(queryResults, 6, 'frozen snapshots')
   if (
-    snapshotRows.length !== 1 ||
-    snapshotRows[0].id !== record.snapshot.id ||
-    snapshotRows[0].version !== record.snapshot.version ||
-    snapshotRows[0].manifest_version !== record.manifestVersion ||
-    snapshotRows[0].state !== 'frozen' ||
-    snapshotRows[0].expected_member_count !== expectedGames.length ||
-    snapshotRows[0].member_count !== expectedGames.length ||
-    snapshotRows[0].distinct_game_count !== expectedGames.length ||
-    snapshotRows[0].distinct_score_count !== expectedGames.length ||
-    snapshotRows[0].source_hash !== authoritativeRecordHash ||
-    snapshotRows[0].created_on !== record.snapshot.approvedOn ||
-    snapshotRows[0].frozen_on !== record.snapshot.approvedOn
+    snapshotRows.length !== expectedSnapshots.length ||
+    snapshotRows.some((row, index) => {
+      const snapshot = expectedSnapshots[index]
+      return !rowMatchesExpected(row, {
+        id: snapshot.id,
+        version: snapshot.version,
+        manifest_version: snapshot.manifestVersion,
+        source_hash: snapshot.sourceHash,
+        state: 'frozen',
+        expected_member_count: snapshot.memberCount,
+        member_count: snapshot.memberCount,
+        distinct_game_count: snapshot.memberCount,
+        distinct_score_count: snapshot.memberCount,
+        created_on: snapshot.createdOn,
+        frozen_on: snapshot.frozenOn,
+      })
+    })
   ) {
     throw new Error('Production D1 verification failed: frozen snapshot state is incomplete.')
   }
 
   const memberRows = requireResultRows(queryResults, 7, 'frozen snapshot members')
   if (
-    memberRows.length !== expectedGames.length ||
+    memberRows.length !== expectedMembers.length ||
     memberRows.some(
       (row, index) =>
-        row.game_id !== expectedGames[index].id || row.score_id !== expectedGames[index].score.id,
+        !rowMatchesExpected(row, {
+          snapshot_id: expectedMembers[index].snapshotId,
+          game_id: expectedMembers[index].gameId,
+          score_id: expectedMembers[index].scoreId,
+        }),
     )
   ) {
     throw new Error('Production D1 verification failed: frozen snapshot members are incomplete.')
@@ -558,20 +613,20 @@ function assertAuthorityState(queryResults: unknown): void {
     mappingRows.length !== expectedMappings.length ||
     mappingRows.some((row, index) => {
       const mapping = expectedMappings[index]
-      return (
-        row.id !== mapping.id ||
-        row.game_id !== mapping.authoritativeGameId ||
-        row.provider !== mapping.provider ||
-        row.external_id !== mapping.externalId ||
-        row.catalog_game_id !== mapping.catalogGameId ||
-        row.mapping_version !== mapping.version ||
-        row.decision !== mapping.decision ||
-        row.verification_ref !== mapping.verificationRef ||
-        row.supersedes_mapping_id !== null ||
-        row.source_manifest_version !== record.manifestVersion ||
-        row.source_hash !== authoritativeRecordHash ||
-        row.decided_on !== mapping.decidedOn
-      )
+      return !rowMatchesExpected(row, {
+        id: mapping.id,
+        game_id: mapping.gameId,
+        provider: mapping.provider,
+        external_id: mapping.externalId,
+        catalog_game_id: mapping.catalogGameId,
+        mapping_version: mapping.version,
+        decision: mapping.decision,
+        verification_ref: mapping.verificationRef,
+        supersedes_mapping_id: null,
+        source_manifest_version: mapping.manifestVersion,
+        source_hash: mapping.sourceHash,
+        decided_on: mapping.decidedOn,
+      })
     })
   ) {
     throw new Error('Production D1 verification failed: authority mappings are incomplete.')
@@ -589,22 +644,10 @@ function assertAuthorityState(queryResults: unknown): void {
   }
 
   const provenanceRows = requireResultRows(queryResults, 10, 'authority provenance')
-  const expectedProvenance = new Map([
-    ['authoritative_games', expectedGames.length],
-    ['authoritative_mimma_score_versions', expectedGames.length],
-    ['authoritative_snapshots', 1],
-    ['authoritative_game_mappings', expectedMappings.length],
-  ])
+  const provenance = expectedProvenance()
   if (
-    provenanceRows.length !== expectedProvenance.size ||
-    provenanceRows.some(
-      (row) =>
-        typeof row.source_table !== 'string' ||
-        row.row_count !== expectedProvenance.get(row.source_table) ||
-        row.source_hash_count !== 1 ||
-        row.source_hash !== authoritativeRecordHash ||
-        row.source_hash_max !== authoritativeRecordHash,
-    )
+    provenanceRows.length !== provenance.length ||
+    provenanceRows.some((row, index) => !rowMatchesExpected(row, provenance[index]))
   ) {
     throw new Error('Production D1 verification failed: authority provenance hash is incomplete.')
   }

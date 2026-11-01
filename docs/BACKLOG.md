@@ -83,7 +83,8 @@ Worker tests, the build, Worker types, and the local Worker smoke test.
 
 - [ ] D1 Offline snapshot and scores. Should `src/ui/generated/catalog-snapshot.ts` carry scores, or
       should degraded mode show the unscored panel? Blocks M1.5.
-- [ ] D2 Scores for Destiny 2 and BeamNG.drive. Provide them (feeds M4.2) or keep them unscored.
+- [x] D2 Scores for Destiny 2 and BeamNG.drive. Owner snapshot v2 (2026-10-31) scores both, from
+      the median in `docs/MIMMA_RESCORING_2026-10-31.md`.
       Does not block M1, because the unscored state stays.
 - [ ] D3 Similarity definition: the distance over the three axes (for example Euclidean on 0-100),
       the result count, the tie-break, any minimum similarity, and what to show when few scored
@@ -199,10 +200,13 @@ Why: the schema supports corrections and new snapshots (`approval_reason` values
 and `owner-restore`, versioned snapshots, and `supersedes_mapping_id` in
 `migrations/0005_owner_authoritative_mimma_v1.sql`), but the generator only emits v1.
 
-- [ ] M4.1 Make `scripts/generate-owner-authoritative-mimma.mts` version-aware (v1 is fixed at `:10`,
-      `:49`, `:97-102`). Emit append-only migrations: new score versions, a new frozen snapshot, and
-      new mappings.
-- [ ] M4.2 Add scores for Destiny 2 and BeamNG.drive if D2 says so.
+- [x] M4.1 Append-only authority releases. `scripts/owner-authority-history.mts` turns the v1 and
+      v2 records into every expected row; `scripts/generate-owner-authoritative-mimma-v2.mts` renders
+      `migrations/0007_owner_authoritative_mimma_v2.sql` from the rows v2 adds (new score versions,
+      the v2 snapshot, new mappings); the verifier checks the whole history. A v3 still needs its
+      own generator entry and a supersession rule for changed mappings.
+- [x] M4.2 Destiny 2 and BeamNG.drive are scored in v2. Production needs migrations 0006 and 0007
+      applied by the owner before the next release.
 - Done when: a v2 snapshot lands without editing the verifier body.
 
 #### M5. Community MiMMa contributions (effort L, needs D6, D8, A6, A8)

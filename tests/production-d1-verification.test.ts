@@ -8,6 +8,75 @@ import {
 
 const productionDatabaseId = '11111111-1111-4111-8111-111111111111'
 const sourceHash = 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65'
+const v2Hash = '4bd997752f5efd5692f541a3631498512efd9eb95e83a4a21a3bff7cba855560'
+const v2Date = '2026-10-31'
+
+// Independently authored v2 state (migration 0007), not derived from the record.
+const v2Identities = [
+  ['auth-game-beamng-drive', 'beamng-drive', 'BeamNG.drive'],
+  ['auth-game-destiny-2', 'destiny-2', 'Destiny 2'],
+] as const
+
+const v2ScoreVersions = [
+  ['auth-score-apex-legends-v2', 'auth-game-apex-legends', 2, 80, 80, 70, 'owner-correction'],
+  ['auth-score-baldurs-gate-3-v2', 'auth-game-baldurs-gate-3', 2, 30, 50, 85, 'owner-correction'],
+  ['auth-score-beamng-drive-v1', 'auth-game-beamng-drive', 1, 50, 30, 40, 'initial-owner-snapshot'],
+  [
+    'auth-score-counter-strike-2-v2',
+    'auth-game-counter-strike-2',
+    2,
+    80,
+    70,
+    60,
+    'owner-correction',
+  ],
+  ['auth-score-destiny-2-v1', 'auth-game-destiny-2', 1, 60, 50, 70, 'initial-owner-snapshot'],
+  ['auth-score-elden-ring-v2', 'auth-game-elden-ring', 2, 75, 55, 60, 'owner-correction'],
+  ['auth-score-marvel-rivals-v2', 'auth-game-marvel-rivals', 2, 80, 60, 70, 'owner-correction'],
+  [
+    'auth-score-monster-hunter-wilds-v2',
+    'auth-game-monster-hunter-wilds',
+    2,
+    80,
+    50,
+    60,
+    'owner-correction',
+  ],
+  ['auth-score-palworld-v2', 'auth-game-palworld', 2, 45, 35, 80, 'owner-correction'],
+  [
+    'auth-score-rainbow-six-siege-v2',
+    'auth-game-rainbow-six-siege',
+    2,
+    80,
+    80,
+    80,
+    'owner-correction',
+  ],
+] as const
+
+const v2SnapshotMembers = [
+  ['auth-game-apex-legends', 'auth-score-apex-legends-v2'],
+  ['auth-game-baldurs-gate-3', 'auth-score-baldurs-gate-3-v2'],
+  ['auth-game-beamng-drive', 'auth-score-beamng-drive-v1'],
+  ['auth-game-counter-strike-2', 'auth-score-counter-strike-2-v2'],
+  ['auth-game-destiny-2', 'auth-score-destiny-2-v1'],
+  ['auth-game-elden-ring', 'auth-score-elden-ring-v2'],
+  ['auth-game-league-of-legends', 'auth-score-league-of-legends-v1'],
+  ['auth-game-marvel-rivals', 'auth-score-marvel-rivals-v2'],
+  ['auth-game-monster-hunter-wilds', 'auth-score-monster-hunter-wilds-v2'],
+  ['auth-game-palworld', 'auth-score-palworld-v2'],
+  ['auth-game-rainbow-six-siege', 'auth-score-rainbow-six-siege-v2'],
+  ['auth-game-valorant', 'auth-score-valorant-v1'],
+] as const
+
+const v2Mappings = [
+  ['auth-game-beamng-drive', '284160', 'steam-284160'],
+  ['auth-game-destiny-2', '1085660', 'steam-1085660'],
+] as const
+
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0
+}
 
 const expectedMappings = [
   ['auth-game-apex-legends', '1172470', 'steam-1172470'],
@@ -407,6 +476,7 @@ function validVerification(): VerificationFixture {
           { id: 4, name: '0004_identity_sessions.sql' },
           { id: 5, name: '0005_owner_authoritative_mimma_v1.sql' },
           { id: 6, name: '0006_retire_authoritative_mimma_seeds.sql' },
+          { id: 7, name: '0007_owner_authoritative_mimma_v2.sql' },
         ],
       },
       {
@@ -420,47 +490,83 @@ function validVerification(): VerificationFixture {
         results: [
           {
             legacy_score_count: 0,
-            authoritative_game_count: 10,
-            authoritative_score_version_count: 10,
-            authoritative_snapshot_count: 1,
-            authoritative_snapshot_member_count: 10,
-            authoritative_mapping_count: 8,
-            frozen_snapshot_count: 1,
+            authoritative_game_count: 12,
+            authoritative_score_version_count: 20,
+            authoritative_snapshot_count: 2,
+            authoritative_snapshot_member_count: 22,
+            authoritative_mapping_count: 10,
+            frozen_snapshot_count: 2,
             unmapped_authority_game_count: 2,
           },
         ],
       },
-      { results: [...expectedAuthorityIdentities] },
       {
-        results: expectedScoreVersions.map(
-          ([
+        results: [
+          ...expectedAuthorityIdentities,
+          ...v2Identities.map(([id, identity_key, canonical_title]) => ({
             id,
-            game_id,
-            version,
-            micro_score,
-            meso_score,
-            macro_score,
-            micro_original_decimal,
-            meso_original_decimal,
-            macro_original_decimal,
-          ]) => ({
-            id,
-            game_id,
-            version,
-            micro_score,
-            meso_score,
-            macro_score,
-            micro_original_decimal,
-            meso_original_decimal,
-            macro_original_decimal,
-            decimal_scale: 1,
-            rounding_mode: 'half-up-to-integer-v1',
-            source_manifest_version: 'owner-authoritative-mimma-v1',
-            source_hash: sourceHash,
-            provenance: 'owner_authoritative',
-            approval_reason: 'initial-owner-snapshot',
-            approved_on: '2026-08-21',
-          }),
+            identity_key,
+            canonical_title,
+            introduced_manifest_version: 'owner-authoritative-mimma-v2',
+            introduced_source_hash: v2Hash,
+            created_on: v2Date,
+          })),
+        ].sort((left, right) => compareText(left.id, right.id)),
+      },
+      {
+        results: [
+          ...expectedScoreVersions.map(
+            ([
+              id,
+              game_id,
+              version,
+              micro_score,
+              meso_score,
+              macro_score,
+              micro_original_decimal,
+              meso_original_decimal,
+              macro_original_decimal,
+            ]) => ({
+              id,
+              game_id,
+              version,
+              micro_score,
+              meso_score,
+              macro_score,
+              micro_original_decimal,
+              meso_original_decimal,
+              macro_original_decimal,
+              decimal_scale: 1,
+              rounding_mode: 'half-up-to-integer-v1',
+              source_manifest_version: 'owner-authoritative-mimma-v1',
+              source_hash: sourceHash,
+              provenance: 'owner_authoritative',
+              approval_reason: 'initial-owner-snapshot',
+              approved_on: '2026-08-21',
+            }),
+          ),
+          ...v2ScoreVersions.map(
+            ([id, game_id, version, micro_score, meso_score, macro_score, approval_reason]) => ({
+              id,
+              game_id,
+              version,
+              micro_score,
+              meso_score,
+              macro_score,
+              micro_original_decimal: `${micro_score}.0`,
+              meso_original_decimal: `${meso_score}.0`,
+              macro_original_decimal: `${macro_score}.0`,
+              decimal_scale: 1,
+              rounding_mode: 'half-up-to-integer-v1',
+              source_manifest_version: 'owner-authoritative-mimma-v2',
+              source_hash: v2Hash,
+              provenance: 'owner_authoritative',
+              approval_reason,
+              approved_on: v2Date,
+            }),
+          ),
+        ].sort(
+          (left, right) => compareText(left.game_id, right.game_id) || left.version - right.version,
         ),
       },
       {
@@ -478,61 +584,86 @@ function validVerification(): VerificationFixture {
             created_on: '2026-08-21',
             frozen_on: '2026-08-21',
           },
+          {
+            id: 'snapshot-owner-authoritative-mimma-v2',
+            version: 2,
+            manifest_version: 'owner-authoritative-mimma-v2',
+            source_hash: v2Hash,
+            state: 'frozen',
+            expected_member_count: 12,
+            member_count: 12,
+            distinct_game_count: 12,
+            distinct_score_count: 12,
+            created_on: v2Date,
+            frozen_on: v2Date,
+          },
         ],
       },
       {
-        results: expectedSnapshotMembers.map(([gameId, scoreId]) => ({
-          game_id: gameId,
-          score_id: scoreId,
-        })),
+        results: [
+          ...expectedSnapshotMembers.map(([gameId, scoreId]) => ({
+            snapshot_id: 'snapshot-owner-authoritative-mimma-v1',
+            game_id: gameId,
+            score_id: scoreId,
+          })),
+          ...v2SnapshotMembers.map(([gameId, scoreId]) => ({
+            snapshot_id: 'snapshot-owner-authoritative-mimma-v2',
+            game_id: gameId,
+            score_id: scoreId,
+          })),
+        ],
       },
       {
-        results: expectedMappings.map(([gameId, externalId, catalogGameId]) => ({
-          id: `auth-map-steam-${gameId.replace('auth-game-', '')}-v1`,
-          game_id: gameId,
-          provider: 'steam',
-          external_id: externalId,
-          catalog_game_id: catalogGameId,
-          mapping_version: 1,
-          decision: 'verified',
-          verification_ref: 'owner-approved-manifest-v1',
-          supersedes_mapping_id: null,
-          source_manifest_version: 'owner-authoritative-mimma-v1',
-          source_hash: sourceHash,
-          decided_on: '2026-08-21',
-        })),
+        results: [
+          ...expectedMappings.map(([gameId, externalId, catalogGameId]) => ({
+            id: `auth-map-steam-${gameId.replace('auth-game-', '')}-v1`,
+            game_id: gameId,
+            provider: 'steam',
+            external_id: externalId,
+            catalog_game_id: catalogGameId,
+            mapping_version: 1,
+            decision: 'verified',
+            verification_ref: 'owner-approved-manifest-v1',
+            supersedes_mapping_id: null,
+            source_manifest_version: 'owner-authoritative-mimma-v1',
+            source_hash: sourceHash,
+            decided_on: '2026-08-21',
+          })),
+          ...v2Mappings.map(([gameId, externalId, catalogGameId]) => ({
+            id: `auth-map-steam-${gameId.replace('auth-game-', '')}-v1`,
+            game_id: gameId,
+            provider: 'steam',
+            external_id: externalId,
+            catalog_game_id: catalogGameId,
+            mapping_version: 1,
+            decision: 'verified',
+            verification_ref: 'owner-approved-manifest-v2',
+            supersedes_mapping_id: null,
+            source_manifest_version: 'owner-authoritative-mimma-v2',
+            source_hash: v2Hash,
+            decided_on: v2Date,
+          })),
+        ].sort((left, right) => compareText(left.game_id, right.game_id)),
       },
       { results: [{ game_id: 'auth-game-league-of-legends' }, { game_id: 'auth-game-valorant' }] },
       {
         results: [
+          { source_table: 'authoritative_game_mappings', source_hash: v2Hash, row_count: 2 },
+          { source_table: 'authoritative_game_mappings', source_hash: sourceHash, row_count: 8 },
+          { source_table: 'authoritative_games', source_hash: v2Hash, row_count: 2 },
+          { source_table: 'authoritative_games', source_hash: sourceHash, row_count: 10 },
           {
-            source_table: 'authoritative_games',
+            source_table: 'authoritative_mimma_score_versions',
+            source_hash: v2Hash,
             row_count: 10,
-            source_hash_count: 1,
-            source_hash: sourceHash,
-            source_hash_max: sourceHash,
           },
           {
             source_table: 'authoritative_mimma_score_versions',
+            source_hash: sourceHash,
             row_count: 10,
-            source_hash_count: 1,
-            source_hash: sourceHash,
-            source_hash_max: sourceHash,
           },
-          {
-            source_table: 'authoritative_snapshots',
-            row_count: 1,
-            source_hash_count: 1,
-            source_hash: sourceHash,
-            source_hash_max: sourceHash,
-          },
-          {
-            source_table: 'authoritative_game_mappings',
-            row_count: 8,
-            source_hash_count: 1,
-            source_hash: sourceHash,
-            source_hash_max: sourceHash,
-          },
+          { source_table: 'authoritative_snapshots', source_hash: v2Hash, row_count: 1 },
+          { source_table: 'authoritative_snapshots', source_hash: sourceHash, row_count: 1 },
         ],
       },
     ],
@@ -586,7 +717,8 @@ describe('production D1 verification', () => {
               { id: 4, name: '0004_identity_sessions.sql' },
               { id: 5, name: '0005_owner_authoritative_mimma_v1.sql' },
               { id: 6, name: '0006_retire_authoritative_mimma_seeds.sql' },
-              { id: 7, name: '0007_unexpected.sql' },
+              { id: 7, name: '0007_owner_authoritative_mimma_v2.sql' },
+              { id: 8, name: '0008_unexpected.sql' },
             ],
           },
         ],

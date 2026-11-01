@@ -99,12 +99,23 @@ describe('research scores', () => {
     expect(researchScore(999_999, 'claude')).toBeNull()
   })
 
-  test('scores every catalog game, including the two the owner left unscored', () => {
+  test('scores every catalog game, including the two owner snapshot v1 left out', () => {
     const scores = researchCatalogScores(catalogSnapshot.games, 'all')
 
     expect([...scores.keys()].sort()).toEqual(catalogSnapshot.games.map((game) => game.id).sort())
+    expect(researchGame(1085660).micro.owner).toBeNull()
     expect(scores.get(snapshotGame('destiny-2').id)).toBeDefined()
-    expect(snapshotGame('destiny-2').authoritativeScore).toBeNull()
+  })
+
+  test('matches owner snapshot v2 in the all-data set, which the owner adopted', () => {
+    for (const game of catalogSnapshot.games) {
+      const score = game.authoritativeScore
+      expect(researchScore(game.steamAppId, 'all')).toMatchObject({
+        macro: score?.macro,
+        meso: score?.meso,
+        micro: score?.micro,
+      })
+    }
   })
 
   test('ranks similar games from the research set with the shared similarity rules', () => {
@@ -130,7 +141,7 @@ describe('research notes and markup', () => {
     expect(researchScoreNote(1245620, 'claude')).toBe(
       `Research preview: Claude's rubric scores, ${researchMimma.collectedOn}. Owner v1: Micro ${owner.micro.owner}, Meso ${owner.meso.owner}, Macro ${owner.macro.owner}.`,
     )
-    expect(researchScoreNote(1085660, 'claude')).toContain('The owner has not scored this game.')
+    expect(researchScoreNote(1085660, 'claude')).toContain('Not in owner snapshot v1.')
     expect(researchScoreNote(1245620, 'all')).not.toContain('Owner v1')
     expect(researchScoreNote(999_999, 'claude')).toBeNull()
   })
@@ -151,7 +162,7 @@ describe('research notes and markup', () => {
 
     expect(markup).toContain('Research preview')
     expect(markup).toContain('estimates from Steam user tags')
-    expect(markup).toContain('href="?scores=v1"')
+    expect(markup).toContain('href="?scores=owner"')
     expect(markup).toContain('aria-current="true" href="?scores=tags"')
     expect(markup.match(/aria-current/g)).toHaveLength(1)
   })

@@ -56,7 +56,7 @@ the bundled snapshot.
 
 To compare the research score sets from `docs/MIMMA_RESCORING_2026-10-31.md` on the local site,
 add `?scores=claude`, `?scores=tags`, `?scores=reviews`, or `?scores=all` to any URL. The choice
-is kept across pages, and `?scores=v1` returns to the owner's scores. Production builds do not
+is kept across pages, and `?scores=owner` returns to the owner's scores. Production builds do not
 include the preview.
 
 Steam sign-in is off locally. It needs `STEAM_SIGN_IN_ENABLED`, the production secrets, and an HTTPS
@@ -147,23 +147,29 @@ The release rejects a missing, invalid, duplicate, or mismatched mode before upl
 generated config must contain the transient D1 ID and the reviewed Steam sign-in mode.
 The release verifies the target D1 identity, catalog state, and exactly `0001_schema.sql`,
 `0002_seed_beta_catalog.sql`, `0003_authoritative_mimma_seed.sql`, `0004_identity_sessions.sql`,
-`0005_owner_authoritative_mimma_v1.sql`, and `0006_retire_authoritative_mimma_seeds.sql` in its
-migration history. `0006` drops the unread seed table that `0003` created. That list, each migration's content
-hash, and the catalog and owner-authoritative data files live in `scripts/release-manifest.mts`. The
-verifier derives its expected authority rows from the hash-pinned record, so a new migration or data
-release updates the manifest and the data instead of the verifier. Before running `release:production`, use
+`0005_owner_authoritative_mimma_v1.sql`, `0006_retire_authoritative_mimma_seeds.sql`, and
+`0007_owner_authoritative_mimma_v2.sql` in its migration history. `0006` drops the unread seed table
+that `0003` created. `0007` appends owner snapshot v2, which the site serves as the latest frozen
+snapshot. That list, each migration's content hash, and the catalog and owner-authoritative data
+files live in `scripts/release-manifest.mts`. The verifier derives every expected authority row from
+the hash-pinned records (`scripts/owner-authority-history.mts`), so a new owner snapshot adds a record
+and its generated migration instead of changing the verifier. Before running `release:production`, use
 the generated `.wrangler.production.jsonc` for the owner-confirmed database ID to apply the
 reviewed migration set remotely:
 
 ```powershell
 corepack pnpm node scripts/create-production-wrangler-config.mts
 corepack pnpm exec wrangler d1 execute need-games-production --remote --file migrations/0006_retire_authoritative_mimma_seeds.sql --config .wrangler.production.jsonc
+corepack pnpm exec wrangler d1 execute need-games-production --remote --file migrations/0007_owner_authoritative_mimma_v2.sql --config .wrangler.production.jsonc
 ```
 
+Apply them in that order. `0007` starts with a preflight that aborts the file unless the database
+holds exactly the frozen v1 history.
+
 Review Wrangler's migration list before confirming it. The release command does not apply
-migrations; it fails closed if any of these six migrations is absent or if any later migration is
+migrations; it fails closed if any of these seven migrations is absent or if any later migration is
 present. Ordinary remote `d1 migrations apply` is not verified for the compound triggers in
-`0005`; use the owner-gated atomic file-ingestion procedure below. A real D1 ID must never be
+`0005` and `0007`; use the owner-gated atomic file-ingestion procedure below. A real D1 ID must never be
 committed, added to GitHub, or written to a release report.
 The generated configuration is ignored and is the only release file that may contain the ID.
 
@@ -176,7 +182,7 @@ exact target and reviewed commit. The owner then ingests the reviewed trigger-be
 atomic file-ingestion step is required because a failed file execution restores the database;
 ordinary remote migration application has not been verified for this compound-trigger SQL.
 After ingestion, verify every allowlisted table, index, trigger, source hash, permanent row
-count, and permanent invariants for the frozen snapshot, eight mappings, two intentionally unmapped games, and the unchanged
+count, and permanent invariants for both frozen snapshots, ten mappings, two intentionally unmapped games, and the unchanged
 legacy score table. Only after those checks pass may the owner record migration history through
 the separately reviewed procedure, rerun the release verifier, and perform the read-only public
 smoke sequence. Keep the bookmark, export, and verification evidence intact on any failure;

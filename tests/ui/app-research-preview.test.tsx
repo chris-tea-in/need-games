@@ -75,7 +75,7 @@ describe('App research score preview', () => {
     await renderAt('/')
 
     expect(container.querySelector('.research-banner')).toBeNull()
-    expect(card('beamng-drive').textContent).toContain('Not yet scored')
+    expect(card('beamng-drive').querySelector('.profile-strip')).not.toBeNull()
     expect(card('counter-strike-2').querySelector('.profile-strip')).not.toBeNull()
   })
 
@@ -86,24 +86,23 @@ describe('App research score preview', () => {
     expect(banner?.textContent).toContain("Claude's rubric scores")
     expect(banner?.querySelector('[aria-current="true"]')?.textContent).toBe('Claude')
     expect(card('beamng-drive').querySelector('.profile-strip')).not.toBeNull()
-    expect(card('beamng-drive').textContent).not.toContain('Not yet scored')
     expect(window.localStorage.getItem(RESEARCH_STORAGE_KEY)).toBe('claude')
   })
 
-  test('keeps the stored set on a plain URL and drops it for v1', async () => {
+  test('keeps the stored set on a plain URL and drops it for the owner scores', async () => {
     window.localStorage.setItem(RESEARCH_STORAGE_KEY, 'tags')
     await renderAt('/')
     expect(container.querySelector('.research-banner')?.textContent).toContain('Steam user tags')
 
     act(() => root.unmount())
     root = createRoot(container)
-    await renderAt('/?scores=v1')
+    await renderAt('/?scores=owner')
     expect(container.querySelector('.research-banner')).toBeNull()
     expect(window.localStorage.getItem(RESEARCH_STORAGE_KEY)).toBeNull()
   })
 
-  test('scores an owner-unscored game page from all data and lists every source', async () => {
-    const destiny = snapshotGame('destiny-2')
+  test('scores a game page from all data, even without an owner score, and lists every source', async () => {
+    const destiny = { ...snapshotGame('destiny-2'), authoritativeScore: null }
     vi.mocked(loadGameDetail).mockResolvedValue({
       data: { datasetVersion: catalog.datasetVersion, game: destiny, schemaVersion: 1 },
       kind: 'data',

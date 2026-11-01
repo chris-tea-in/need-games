@@ -42,8 +42,8 @@ or store popularity, so a match can cross genres.
 - Stack: React 19 + Vite, served by a Cloudflare Worker. Plain CSS in `src/ui/styles.css`.
 - Strict CSP in `public/_headers`. Fonts and scripts must be self-hosted. Steam's image CDN is
   allowed for game art (user decision, 2026-10-31).
-- 8 of 10 games have an owner-authoritative score. Destiny 2 and BeamNG.drive are unscored and must
-  say so; they get no similar games.
+- All 10 games have an owner-authoritative score from snapshot v2 (2026-10-31). A game without a
+  score must still say so and gets no similar games, so the unscored state stays in the UI.
 - MiMMa labels: Absent (0), Slight (<30), Low (<50), Moderate (<70), High (<90), Defining (90+).
 
 ## Brand Commitments

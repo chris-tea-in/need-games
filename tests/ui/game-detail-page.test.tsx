@@ -21,15 +21,18 @@ describe('GameDetailPage', () => {
     expect(markup).toContain('Catalog source')
     expect(markup).toContain('Steam metadata fetched')
     expect(markup).toContain('Gameplay profile')
-    expect(markup).toContain('aria-valuenow="100"')
-    expect(markup).toContain('Owner-authoritative snapshot v1')
+    expect(markup).toContain('aria-valuenow="80"')
+    expect(markup).toContain('Owner-authoritative snapshot v2')
     expect(markup).not.toContain('Score unavailable')
     expect(markup).not.toContain('//comments//')
   })
 
   test('renders the explicit unscored state without a similar-games section', () => {
     const markup = renderToStaticMarkup(
-      <GameDetailPage game={snapshotGame('destiny-2')} similarGames={{ kind: 'loading' }} />,
+      <GameDetailPage
+        game={{ ...snapshotGame('destiny-2'), authoritativeScore: null }}
+        similarGames={{ kind: 'loading' }}
+      />,
     )
 
     expect(markup).toContain('Score unavailable')

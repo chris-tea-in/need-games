@@ -7,10 +7,10 @@ export const catalogSnapshot = {
   games: [
     {
       authoritativeScore: {
-        macro: 80,
-        meso: 65,
-        micro: 100,
-        snapshotVersion: 1,
+        macro: 60,
+        meso: 70,
+        micro: 80,
+        snapshotVersion: 2,
       },
       id: 'steam-730',
       provenance: {
@@ -33,10 +33,10 @@ export const catalogSnapshot = {
     },
     {
       authoritativeScore: {
-        macro: 70,
-        meso: 20,
-        micro: 40,
-        snapshotVersion: 1,
+        macro: 80,
+        meso: 35,
+        micro: 45,
+        snapshotVersion: 2,
       },
       id: 'steam-1623730',
       provenance: {
@@ -67,10 +67,10 @@ export const catalogSnapshot = {
     },
     {
       authoritativeScore: {
-        macro: 80,
+        macro: 70,
         meso: 60,
         micro: 80,
-        snapshotVersion: 1,
+        snapshotVersion: 2,
       },
       id: 'steam-2767030',
       provenance: {
@@ -101,10 +101,10 @@ export const catalogSnapshot = {
     },
     {
       authoritativeScore: {
-        macro: 100,
+        macro: 70,
         meso: 80,
         micro: 80,
-        snapshotVersion: 1,
+        snapshotVersion: 2,
       },
       id: 'steam-1172470',
       provenance: {
@@ -129,9 +129,9 @@ export const catalogSnapshot = {
     {
       authoritativeScore: {
         macro: 80,
-        meso: 60,
+        meso: 80,
         micro: 80,
-        snapshotVersion: 1,
+        snapshotVersion: 2,
       },
       id: 'steam-359550',
       provenance: {
@@ -155,10 +155,10 @@ export const catalogSnapshot = {
     },
     {
       authoritativeScore: {
-        macro: 100,
-        meso: 20,
-        micro: 20,
-        snapshotVersion: 1,
+        macro: 85,
+        meso: 50,
+        micro: 30,
+        snapshotVersion: 2,
       },
       id: 'steam-1086940',
       provenance: {
@@ -188,7 +188,12 @@ export const catalogSnapshot = {
       title: "Baldur's Gate 3",
     },
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 70,
+        meso: 50,
+        micro: 60,
+        snapshotVersion: 2,
+      },
       id: 'steam-1085660',
       provenance: {
         officialTitle: 'Destiny 2',
@@ -212,9 +217,9 @@ export const catalogSnapshot = {
     {
       authoritativeScore: {
         macro: 60,
-        meso: 40,
+        meso: 50,
         micro: 80,
-        snapshotVersion: 1,
+        snapshotVersion: 2,
       },
       id: 'steam-2246340',
       provenance: {
@@ -245,10 +250,10 @@ export const catalogSnapshot = {
     },
     {
       authoritativeScore: {
-        macro: 40,
-        meso: 100,
-        micro: 80,
-        snapshotVersion: 1,
+        macro: 60,
+        meso: 55,
+        micro: 75,
+        snapshotVersion: 2,
       },
       id: 'steam-1245620',
       provenance: {
@@ -271,7 +276,12 @@ export const catalogSnapshot = {
       title: 'ELDEN RING',
     },
     {
-      authoritativeScore: null,
+      authoritativeScore: {
+        macro: 40,
+        meso: 30,
+        micro: 50,
+        snapshotVersion: 2,
+      },
       id: 'steam-284160',
       provenance: {
         officialTitle: 'BeamNG.drive',

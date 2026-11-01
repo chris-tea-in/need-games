@@ -1,6 +1,9 @@
 # MiMMa rescoring experiment, 2026-10-31
 
-Status: research only. No score in the app changed. The owner's v1 snapshot stays authoritative.
+Status: the owner adopted the "all data" median (owner v1, Claude, tags, reviews, and surnex) as
+owner snapshot v2 on 2026-10-31. `data/authoritative-records/owner-authoritative-mimma-v2.json`
+records it, and `migrations/0007_owner_authoritative_mimma_v2.sql` appends it. The tables below
+compare against v1, the snapshot this experiment started from.
 
 The 10 catalog games were scored three more ways and compared with the owner's v1 scores:
 
@@ -248,11 +251,11 @@ any local URL:
 | `tags`    | the tag estimates                                                     |
 | `reviews` | the review estimates                                                  |
 | `all`     | the median of every source, with each source listed on the game pages |
-| `v1`      | the owner's v1 scores again, and the preview is switched off          |
+| `owner`   | the owner's current snapshot again, and the preview is switched off   |
 
-The choice is remembered across pages until `?scores=v1`, and a banner shows the active set. In
-every research set, Destiny 2 and BeamNG.drive have scores, so they get profiles and similar
-games. Production builds leave the preview out.
+The choice is remembered across pages until `?scores=owner`, and a banner shows the active set.
+Since snapshot v2, `all` matches the owner's scores for every catalog game; its game pages still
+list each source. Production builds leave the preview out.
 
 ## Appendix: Claude's reasons
 

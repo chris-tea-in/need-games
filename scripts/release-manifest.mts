@@ -29,14 +29,33 @@ export const productionMigrations = [
     name: '0006_retire_authoritative_mimma_seeds.sql',
     sha256: '3493baf91d8e37e1fd0d9247375de58b42dc6f5cef05cc4de14eedec0882fa41',
   },
+  {
+    name: '0007_owner_authoritative_mimma_v2.sql',
+    sha256: '94f2352f3f2eb0eb3528903a978adb3e3a1a7b27f7c28f24cdcc165bfb7e2743',
+  },
 ] as const
 
 export const catalogReleaseUrl = new URL('../data/catalog-release-v1.json', import.meta.url)
 
-export const authoritativeRecord = {
-  sha256: 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65',
-  url: new URL('../data/authoritative-records/owner-authoritative-mimma-v1.json', import.meta.url),
-} as const
+/** Owner-authoritative records, oldest first. Each adds rows; none rewrites an earlier one. */
+export const authoritativeRecords = [
+  {
+    manifestVersion: 'owner-authoritative-mimma-v1',
+    sha256: 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65',
+    url: new URL(
+      '../data/authoritative-records/owner-authoritative-mimma-v1.json',
+      import.meta.url,
+    ),
+  },
+  {
+    manifestVersion: 'owner-authoritative-mimma-v2',
+    sha256: '4bd997752f5efd5692f541a3631498512efd9eb95e83a4a21a3bff7cba855560',
+    url: new URL(
+      '../data/authoritative-records/owner-authoritative-mimma-v2.json',
+      import.meta.url,
+    ),
+  },
+] as const
 
 /** Row counts of the legacy tables, which no release changes. */
 export const legacyTableCounts = {
