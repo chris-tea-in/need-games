@@ -551,10 +551,3 @@ export async function cleanupExpiredAuthRows(
     sessions: results[1]?.meta.changes ?? 0,
   }
 }
-
-// Stable aliases keep the repository vocabulary readable at route call sites.
-export const getSession = readSession
-export const revokeAuthSession = revokeSession
-export const cleanupExpiredRows = cleanupExpiredAuthRows
-export const upsertUser = upsertUserBySteamId
-export const updateUserProfile = synchronizeUserProfile

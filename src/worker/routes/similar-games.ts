@@ -1,14 +1,65 @@
-import type { DatasetVersioned } from '../../shared/catalog-contract.js'
-import { findGameBySlug } from '../repositories/games.js'
+import type { DatasetVersioned, SimilarGamesResponse } from '../../shared/catalog-contract.js'
+import { rankSimilarGames } from '../../shared/similarity.js'
+import { jsonResponse } from '../http.js'
+import { findScoredSimilarityCandidates } from '../repositories/authoritative-scores.js'
+import { findGameBySlug, toScoreSummary } from '../repositories/games.js'
 
-export async function gameExists(database: D1Database, slug: string): Promise<boolean> {
-  return (await findGameBySlug(database, slug)) !== null
-}
+export type SimilarGamesResult = Response | 'game_not_found' | 'unscored_game'
 
-export function isValidSlug(slug: string): boolean {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 100
-}
+/** Rank the other scored catalog games that are close to the requested game's MiMMa profile. */
+export async function similarGamesResponse(
+  database: D1Database,
+  version: DatasetVersioned,
+  slug: string,
+): Promise<SimilarGamesResult> {
+  const game = await findGameBySlug(database, slug)
+  if (game === null) {
+    return 'game_not_found'
+  }
+  if (game.authoritativeScore === null) {
+    return 'unscored_game'
+  }
 
-export function unavailableVersion(): DatasetVersioned {
-  return { datasetVersion: 'unavailable', schemaVersion: 1 }
+  const candidates = (await findScoredSimilarityCandidates(database, game.id)).map((candidate) => ({
+    authoritativeScore: toScoreSummary(candidate),
+    id: candidate.catalogGameId,
+    score: {
+      macro: candidate.macroScore,
+      meso: candidate.mesoScore,
+      micro: candidate.microScore,
+    },
+    slug: candidate.slug,
+    steamAppId: candidate.steamAppId,
+    tags: candidate.tags,
+    title: candidate.title,
+  }))
+
+  const body: SimilarGamesResponse = {
+    ...version,
+    game: { id: game.id, slug: game.slug, title: game.title },
+    similarGames: rankSimilarGames(
+      { score: game.authoritativeScore, tags: game.tags },
+      candidates,
+    ).map(
+      ({
+        authoritativeScore,
+        distance,
+        id,
+        sharedTags,
+        slug: candidateSlug,
+        steamAppId,
+        title,
+      }) => ({
+        authoritativeScore,
+        distance,
+        id,
+        sharedTags,
+        slug: candidateSlug,
+        steamAppId,
+        title,
+      }),
+    ),
+  }
+
+  return jsonResponse(body, { cacheControl: 'public, max-age=60' })
 }

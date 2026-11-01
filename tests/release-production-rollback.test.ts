@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { createProductionRollbackBaseline } from '../scripts/release-production.mjs'
+import { createProductionRollbackBaseline } from '../scripts/release-production.mts'
 
 describe('production rollback baseline', () => {
   test('retains the active version and traffic allocation needed for recovery', () => {

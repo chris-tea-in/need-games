@@ -3,96 +3,100 @@ import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
+import { dirname, resolve } from 'node:path'
+
+import {
+  EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256,
+  hashOwnerAuthoritativeManifest,
+} from './generate-owner-authoritative-mimma.mts'
+import {
+  type AuthorityRows,
+  EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V2_SHA256,
+  readOwnerAuthorityHistory,
+} from './owner-authority-history.mts'
+import {
+  authoritativeRecords,
+  legacyTableCounts,
+  productionMigrations,
+  readReleasedCatalog,
+} from './release-manifest.mts'
+
 export const productionDatabaseName = 'need-games-production'
-export const expectedProductionMigrations = [
-  '0001_schema.sql',
-  '0002_seed_beta_catalog.sql',
-  '0003_authoritative_mimma_seed.sql',
-  '0004_identity_sessions.sql',
-  '0005_owner_authoritative_mimma_v1.sql',
-] as const
+export const expectedProductionMigrations = productionMigrations.map(({ name }) => name)
 
-const authoritativeRecordHash = 'da26d8f94ebbc932bc6cb7ea70591a19ab316e028f8bc013dcb0fbb8356a9a65'
+const expectedMigrationSourceHashes: Readonly<Record<string, string>> = Object.fromEntries(
+  productionMigrations.map(({ name, sha256 }) => [name, sha256]),
+)
 
-const expectedAuthorityIdentities = [
-  ['auth-game-apex-legends', 'apex-legends', 'Apex Legends'],
-  ['auth-game-baldurs-gate-3', 'baldurs-gate-3', "Baldur's Gate 3"],
-  ['auth-game-counter-strike-2', 'counter-strike-2', 'Counter-Strike 2'],
-  ['auth-game-elden-ring', 'elden-ring', 'ELDEN RING'],
-  ['auth-game-league-of-legends', 'league-of-legends', 'League of Legends'],
-  ['auth-game-marvel-rivals', 'marvel-rivals', 'Marvel Rivals'],
-  ['auth-game-monster-hunter-wilds', 'monster-hunter-wilds', 'Monster Hunter Wilds'],
-  ['auth-game-palworld', 'palworld', 'Palworld'],
-  ['auth-game-rainbow-six-siege', 'rainbow-six-siege', "Tom Clancy's Rainbow Six Siege"],
-  ['auth-game-valorant', 'valorant', 'Valorant'],
-] as const
+/**
+ * Build every authority row the database must hold from the owner records, and refuse records
+ * that do not match the hashes pinned in the release manifest.
+ */
+function loadAuthorityRows(): AuthorityRows {
+  const pinned = [
+    EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V1_SHA256,
+    EXPECTED_OWNER_AUTHORITATIVE_MIMMA_V2_SHA256,
+  ]
+  if (
+    authoritativeRecords.length !== pinned.length ||
+    authoritativeRecords.some(
+      (record, index) =>
+        record.sha256 !== pinned[index] ||
+        hashOwnerAuthoritativeManifest(readFileSync(record.url, 'utf8')) !== record.sha256,
+    )
+  ) {
+    throw new Error(
+      'Production D1 verification failed: the owner-authoritative records do not match their pinned hashes.',
+    )
+  }
+  return readOwnerAuthorityHistory(resolve(dirname(fileURLToPath(import.meta.url)), '..')).rows
+}
 
-const expectedScoreVersions = [
-  ['auth-score-apex-legends-v1', 'auth-game-apex-legends', 80, 80, 100, '80.0', '80.0', '100.0'],
-  [
-    'auth-score-baldurs-gate-3-v1',
-    'auth-game-baldurs-gate-3',
-    20,
-    20,
-    100,
-    '20.0',
-    '20.0',
-    '100.0',
-  ],
-  [
-    'auth-score-counter-strike-2-v1',
-    'auth-game-counter-strike-2',
-    100,
-    65,
-    80,
-    '100.0',
-    '65.0',
-    '80.0',
-  ],
-  ['auth-score-elden-ring-v1', 'auth-game-elden-ring', 80, 100, 40, '80.0', '100.0', '40.0'],
-  [
-    'auth-score-league-of-legends-v1',
-    'auth-game-league-of-legends',
-    69,
-    77,
-    100,
-    '68.6',
-    '77.1',
-    '100.0',
-  ],
-  ['auth-score-marvel-rivals-v1', 'auth-game-marvel-rivals', 80, 60, 80, '80.0', '60.0', '80.0'],
-  [
-    'auth-score-monster-hunter-wilds-v1',
-    'auth-game-monster-hunter-wilds',
-    80,
-    40,
-    60,
-    '80.0',
-    '40.0',
-    '60.0',
-  ],
-  ['auth-score-palworld-v1', 'auth-game-palworld', 40, 20, 70, '40.0', '20.0', '70.0'],
-  [
-    'auth-score-rainbow-six-siege-v1',
-    'auth-game-rainbow-six-siege',
-    80,
-    60,
-    80,
-    '80.0',
-    '60.0',
-    '80.0',
-  ],
-  ['auth-score-valorant-v1', 'auth-game-valorant', 100, 73, 80, '100.0', '73.3', '80.0'],
-] as const
+const authority = loadAuthorityRows()
+const releasedCatalog = readReleasedCatalog()
 
-const expectedMigrationSourceHashes: Record<string, string> = {
-  '0001_schema.sql': '751a94bbaa163c92f074ba49c0216884901ae088db1c5260fd2ec1425dc4b961',
-  '0002_seed_beta_catalog.sql': '897e30cb9961132245af3f4cc98b92d217ebbcbfb3d745b1d1f09f998b2628e4',
-  '0003_authoritative_mimma_seed.sql':
-    '425a56ae640a2b00c8505a51388402ece135417c1b52e8e2f60b8f5800b6f265',
-  '0004_identity_sessions.sql': '643def4fc16805e84914918c67759adbc61cf9d17a5dfdcd6ed4a53d8a7a45f3',
-  '0005_owner_authoritative_mimma_v1.sql':
-    'f1c61a0e5ec4a2219b6658e840eb112e17f60e5813a0d290089eea0218850717',
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0
+}
+
+// Sorted exactly like the verification queries in release-production.mts.
+const expectedGames = [...authority.games].sort((left, right) => compareText(left.id, right.id))
+const expectedScores = [...authority.scores].sort(
+  (left, right) => compareText(left.gameId, right.gameId) || left.version - right.version,
+)
+const expectedSnapshots = [...authority.snapshots].sort(
+  (left, right) => left.version - right.version,
+)
+const expectedMembers = [...authority.members].sort(
+  (left, right) =>
+    compareText(left.snapshotId, right.snapshotId) || compareText(left.gameId, right.gameId),
+)
+const expectedMappings = [...authority.mappings].sort(
+  (left, right) =>
+    compareText(left.gameId, right.gameId) ||
+    compareText(left.provider, right.provider) ||
+    left.version - right.version,
+)
+const mappedGameIds = new Set(authority.mappings.map((mapping) => mapping.gameId))
+const expectedUnmappedGameIds = expectedGames
+  .filter((game) => !mappedGameIds.has(game.id))
+  .map((game) => game.id)
+
+/** Row counts per table and source record hash, ordered like the provenance query. */
+function expectedProvenance(): { source_table: string; source_hash: string; row_count: number }[] {
+  const tables: [string, readonly { sourceHash: string }[]][] = [
+    ['authoritative_game_mappings', authority.mappings],
+    ['authoritative_games', authority.games],
+    ['authoritative_mimma_score_versions', authority.scores],
+    ['authoritative_snapshots', authority.snapshots],
+  ]
+  return tables.flatMap(([source_table, rows]) =>
+    [...new Set(rows.map((row) => row.sourceHash))].sort(compareText).map((source_hash) => ({
+      source_table,
+      source_hash,
+      row_count: rows.filter((row) => row.sourceHash === source_hash).length,
+    })),
+  )
 }
 
 interface ExpectedSchemaObjectContract {
@@ -152,22 +156,6 @@ const expectedProductionSchemaObjectContracts: readonly ExpectedSchemaObjectCont
     name: 'authoritative_mimma_scores_prevent_delete',
     type: 'trigger',
     sqlFragment: 'before delete on authoritative_mimma_scores',
-  },
-  { name: 'authoritative_mimma_seeds', type: 'table', sqlFragment: 'provenance text' },
-  {
-    name: 'authoritative_mimma_seeds_prevent_update',
-    type: 'trigger',
-    sqlFragment: 'before update on authoritative_mimma_seeds',
-  },
-  {
-    name: 'authoritative_mimma_seeds_prevent_delete',
-    type: 'trigger',
-    sqlFragment: 'before delete on authoritative_mimma_seeds',
-  },
-  {
-    name: 'authoritative_mimma_seeds_prevent_insert',
-    type: 'trigger',
-    sqlFragment: 'before insert on authoritative_mimma_seeds',
   },
   { name: 'users', type: 'table', sqlFragment: 'length(steam_id) = 17' },
   {
@@ -329,6 +317,17 @@ function loadCanonicalSchemaObjects(): readonly ExpectedSchemaObject[] {
         .replace(/^(?:\s*--[^\n]*(?:\n|$))+/, '')
         .trim()
         .replace(/;\s*$/, '')
+      const drop = statement.match(/^DROP\s+(TABLE|INDEX|TRIGGER)\s+([A-Za-z_][A-Za-z0-9_]*)$/i)
+      if (drop !== null) {
+        const [, type, name] = drop
+        if (canonicalByName.get(name)?.type !== type.toLowerCase()) {
+          throw new Error(
+            `Production D1 verification failed: ${migrationName} drops unknown schema object ${name}.`,
+          )
+        }
+        canonicalByName.delete(name)
+        continue
+      }
       const match = statement.match(
         /^CREATE\s+(?:(?:UNIQUE)\s+)?(TABLE|INDEX|TRIGGER)\s+([A-Za-z_][A-Za-z0-9_]*)\b/i,
       )
@@ -510,15 +509,14 @@ function assertAuthorityState(queryResults: unknown): void {
   }
   const counts = countRows[0]
   const expectedCounts: Record<string, number> = {
-    authoritative_seed_count: 62,
-    legacy_score_count: 0,
-    authoritative_game_count: 10,
-    authoritative_score_version_count: 10,
-    authoritative_snapshot_count: 1,
-    authoritative_snapshot_member_count: 10,
-    authoritative_mapping_count: 8,
-    frozen_snapshot_count: 1,
-    unmapped_authority_game_count: 2,
+    legacy_score_count: legacyTableCounts.legacyScoreCount,
+    authoritative_game_count: expectedGames.length,
+    authoritative_score_version_count: expectedScores.length,
+    authoritative_snapshot_count: expectedSnapshots.length,
+    authoritative_snapshot_member_count: expectedMembers.length,
+    authoritative_mapping_count: expectedMappings.length,
+    frozen_snapshot_count: expectedSnapshots.length,
+    unmapped_authority_game_count: expectedUnmappedGameIds.length,
   }
   for (const [key, expected] of Object.entries(expectedCounts)) {
     if (counts[key] !== expected) {
@@ -528,210 +526,108 @@ function assertAuthorityState(queryResults: unknown): void {
 
   const identityRows = requireResultRows(queryResults, 4, 'authoritative identities')
   if (
-    identityRows.length !== expectedAuthorityIdentities.length ||
-    identityRows.some((row, index) => {
-      const [id, identityKey, title] = expectedAuthorityIdentities[index]
-      return !rowMatchesExpected(row, {
-        id,
-        identity_key: identityKey,
-        canonical_title: title,
-        introduced_manifest_version: 'owner-authoritative-mimma-v1',
-        introduced_source_hash: authoritativeRecordHash,
-        created_on: '2026-08-21',
-      })
-    })
+    identityRows.length !== expectedGames.length ||
+    identityRows.some(
+      (row, index) =>
+        !rowMatchesExpected(row, {
+          id: expectedGames[index].id,
+          identity_key: expectedGames[index].identityKey,
+          canonical_title: expectedGames[index].canonicalTitle,
+          introduced_manifest_version: expectedGames[index].manifestVersion,
+          introduced_source_hash: expectedGames[index].sourceHash,
+          created_on: expectedGames[index].createdOn,
+        }),
+    )
   ) {
     throw new Error('Production D1 verification failed: authority identities are incomplete.')
   }
 
   const scoreRows = requireResultRows(queryResults, 5, 'authoritative score versions')
   if (
-    scoreRows.length !== expectedScoreVersions.length ||
+    scoreRows.length !== expectedScores.length ||
     scoreRows.some((row, index) => {
-      const [id, gameId, micro, meso, macro, microOriginal, mesoOriginal, macroOriginal] =
-        expectedScoreVersions[index]
+      const score = expectedScores[index]
       return !rowMatchesExpected(row, {
-        id,
-        game_id: gameId,
-        version: 1,
-        micro_score: micro,
-        meso_score: meso,
-        macro_score: macro,
-        micro_original_decimal: microOriginal,
-        meso_original_decimal: mesoOriginal,
-        macro_original_decimal: macroOriginal,
+        id: score.id,
+        game_id: score.gameId,
+        version: score.version,
+        micro_score: score.micro,
+        meso_score: score.meso,
+        macro_score: score.macro,
+        micro_original_decimal: score.microOriginal,
+        meso_original_decimal: score.mesoOriginal,
+        macro_original_decimal: score.macroOriginal,
         decimal_scale: 1,
         rounding_mode: 'half-up-to-integer-v1',
-        source_manifest_version: 'owner-authoritative-mimma-v1',
-        source_hash: authoritativeRecordHash,
+        source_manifest_version: score.manifestVersion,
+        source_hash: score.sourceHash,
         provenance: 'owner_authoritative',
-        approval_reason: 'initial-owner-snapshot',
-        approved_on: '2026-08-21',
+        approval_reason: score.approvalReason,
+        approved_on: score.approvedOn,
       })
     })
   ) {
     throw new Error('Production D1 verification failed: authority score versions are incomplete.')
   }
 
-  const snapshotRows = requireResultRows(queryResults, 6, 'frozen snapshot')
+  const snapshotRows = requireResultRows(queryResults, 6, 'frozen snapshots')
   if (
-    snapshotRows.length !== 1 ||
-    snapshotRows[0].id !== 'snapshot-owner-authoritative-mimma-v1' ||
-    snapshotRows[0].version !== 1 ||
-    snapshotRows[0].manifest_version !== 'owner-authoritative-mimma-v1' ||
-    snapshotRows[0].state !== 'frozen' ||
-    snapshotRows[0].expected_member_count !== 10 ||
-    snapshotRows[0].member_count !== 10 ||
-    snapshotRows[0].distinct_game_count !== 10 ||
-    snapshotRows[0].distinct_score_count !== 10 ||
-    snapshotRows[0].source_hash !== authoritativeRecordHash ||
-    snapshotRows[0].created_on !== '2026-08-21' ||
-    snapshotRows[0].frozen_on !== '2026-08-21'
+    snapshotRows.length !== expectedSnapshots.length ||
+    snapshotRows.some((row, index) => {
+      const snapshot = expectedSnapshots[index]
+      return !rowMatchesExpected(row, {
+        id: snapshot.id,
+        version: snapshot.version,
+        manifest_version: snapshot.manifestVersion,
+        source_hash: snapshot.sourceHash,
+        state: 'frozen',
+        expected_member_count: snapshot.memberCount,
+        member_count: snapshot.memberCount,
+        distinct_game_count: snapshot.memberCount,
+        distinct_score_count: snapshot.memberCount,
+        created_on: snapshot.createdOn,
+        frozen_on: snapshot.frozenOn,
+      })
+    })
   ) {
     throw new Error('Production D1 verification failed: frozen snapshot state is incomplete.')
   }
 
-  const expectedSnapshotMembers = [
-    ['auth-game-apex-legends', 'auth-score-apex-legends-v1'],
-    ['auth-game-baldurs-gate-3', 'auth-score-baldurs-gate-3-v1'],
-    ['auth-game-counter-strike-2', 'auth-score-counter-strike-2-v1'],
-    ['auth-game-elden-ring', 'auth-score-elden-ring-v1'],
-    ['auth-game-league-of-legends', 'auth-score-league-of-legends-v1'],
-    ['auth-game-marvel-rivals', 'auth-score-marvel-rivals-v1'],
-    ['auth-game-monster-hunter-wilds', 'auth-score-monster-hunter-wilds-v1'],
-    ['auth-game-palworld', 'auth-score-palworld-v1'],
-    ['auth-game-rainbow-six-siege', 'auth-score-rainbow-six-siege-v1'],
-    ['auth-game-valorant', 'auth-score-valorant-v1'],
-  ] as const
   const memberRows = requireResultRows(queryResults, 7, 'frozen snapshot members')
-  const actualSnapshotMembers = memberRows.map((row) => [row.game_id, row.score_id])
   if (
-    memberRows.length !== expectedSnapshotMembers.length ||
-    actualSnapshotMembers.some(
-      (member, index) =>
-        member[0] !== expectedSnapshotMembers[index][0] ||
-        member[1] !== expectedSnapshotMembers[index][1],
+    memberRows.length !== expectedMembers.length ||
+    memberRows.some(
+      (row, index) =>
+        !rowMatchesExpected(row, {
+          snapshot_id: expectedMembers[index].snapshotId,
+          game_id: expectedMembers[index].gameId,
+          score_id: expectedMembers[index].scoreId,
+        }),
     )
   ) {
     throw new Error('Production D1 verification failed: frozen snapshot members are incomplete.')
   }
 
-  const expectedMappings = [
-    {
-      id: 'auth-map-steam-apex-legends-v1',
-      game_id: 'auth-game-apex-legends',
-      provider: 'steam',
-      external_id: '1172470',
-      catalog_game_id: 'steam-1172470',
-      mapping_version: 1,
-      decision: 'verified',
-      verification_ref: 'owner-approved-manifest-v1',
-      supersedes_mapping_id: null,
-      source_manifest_version: 'owner-authoritative-mimma-v1',
-    },
-    {
-      id: 'auth-map-steam-baldurs-gate-3-v1',
-      game_id: 'auth-game-baldurs-gate-3',
-      provider: 'steam',
-      external_id: '1086940',
-      catalog_game_id: 'steam-1086940',
-      mapping_version: 1,
-      decision: 'verified',
-      verification_ref: 'owner-approved-manifest-v1',
-      supersedes_mapping_id: null,
-      source_manifest_version: 'owner-authoritative-mimma-v1',
-    },
-    {
-      id: 'auth-map-steam-counter-strike-2-v1',
-      game_id: 'auth-game-counter-strike-2',
-      provider: 'steam',
-      external_id: '730',
-      catalog_game_id: 'steam-730',
-      mapping_version: 1,
-      decision: 'verified',
-      verification_ref: 'owner-approved-manifest-v1',
-      supersedes_mapping_id: null,
-      source_manifest_version: 'owner-authoritative-mimma-v1',
-    },
-    {
-      id: 'auth-map-steam-elden-ring-v1',
-      game_id: 'auth-game-elden-ring',
-      provider: 'steam',
-      external_id: '1245620',
-      catalog_game_id: 'steam-1245620',
-      mapping_version: 1,
-      decision: 'verified',
-      verification_ref: 'owner-approved-manifest-v1',
-      supersedes_mapping_id: null,
-      source_manifest_version: 'owner-authoritative-mimma-v1',
-    },
-    {
-      id: 'auth-map-steam-marvel-rivals-v1',
-      game_id: 'auth-game-marvel-rivals',
-      provider: 'steam',
-      external_id: '2767030',
-      catalog_game_id: 'steam-2767030',
-      mapping_version: 1,
-      decision: 'verified',
-      verification_ref: 'owner-approved-manifest-v1',
-      supersedes_mapping_id: null,
-      source_manifest_version: 'owner-authoritative-mimma-v1',
-    },
-    {
-      id: 'auth-map-steam-monster-hunter-wilds-v1',
-      game_id: 'auth-game-monster-hunter-wilds',
-      provider: 'steam',
-      external_id: '2246340',
-      catalog_game_id: 'steam-2246340',
-      mapping_version: 1,
-      decision: 'verified',
-      verification_ref: 'owner-approved-manifest-v1',
-      supersedes_mapping_id: null,
-      source_manifest_version: 'owner-authoritative-mimma-v1',
-    },
-    {
-      id: 'auth-map-steam-palworld-v1',
-      game_id: 'auth-game-palworld',
-      provider: 'steam',
-      external_id: '1623730',
-      catalog_game_id: 'steam-1623730',
-      mapping_version: 1,
-      decision: 'verified',
-      verification_ref: 'owner-approved-manifest-v1',
-      supersedes_mapping_id: null,
-      source_manifest_version: 'owner-authoritative-mimma-v1',
-    },
-    {
-      id: 'auth-map-steam-rainbow-six-siege-v1',
-      game_id: 'auth-game-rainbow-six-siege',
-      provider: 'steam',
-      external_id: '359550',
-      catalog_game_id: 'steam-359550',
-      mapping_version: 1,
-      decision: 'verified',
-      verification_ref: 'owner-approved-manifest-v1',
-      supersedes_mapping_id: null,
-      source_manifest_version: 'owner-authoritative-mimma-v1',
-    },
-  ] as const
   const mappingRows = requireResultRows(queryResults, 8, 'authority mappings')
   if (
     mappingRows.length !== expectedMappings.length ||
-    mappingRows.some(
-      (row, index) =>
-        row.id !== expectedMappings[index].id ||
-        row.game_id !== expectedMappings[index].game_id ||
-        row.provider !== expectedMappings[index].provider ||
-        row.external_id !== expectedMappings[index].external_id ||
-        row.catalog_game_id !== expectedMappings[index].catalog_game_id ||
-        row.mapping_version !== expectedMappings[index].mapping_version ||
-        row.decision !== expectedMappings[index].decision ||
-        row.verification_ref !== expectedMappings[index].verification_ref ||
-        row.supersedes_mapping_id !== expectedMappings[index].supersedes_mapping_id ||
-        row.source_manifest_version !== expectedMappings[index].source_manifest_version ||
-        row.source_hash !== authoritativeRecordHash ||
-        row.decided_on !== '2026-08-21',
-    )
+    mappingRows.some((row, index) => {
+      const mapping = expectedMappings[index]
+      return !rowMatchesExpected(row, {
+        id: mapping.id,
+        game_id: mapping.gameId,
+        provider: mapping.provider,
+        external_id: mapping.externalId,
+        catalog_game_id: mapping.catalogGameId,
+        mapping_version: mapping.version,
+        decision: mapping.decision,
+        verification_ref: mapping.verificationRef,
+        supersedes_mapping_id: null,
+        source_manifest_version: mapping.manifestVersion,
+        source_hash: mapping.sourceHash,
+        decided_on: mapping.decidedOn,
+      })
+    })
   ) {
     throw new Error('Production D1 verification failed: authority mappings are incomplete.')
   }
@@ -739,32 +635,19 @@ function assertAuthorityState(queryResults: unknown): void {
   const unmappedRows = requireResultRows(queryResults, 9, 'unmapped authority games')
   const unmappedIds = unmappedRows.map((row) => row.game_id).sort()
   if (
-    unmappedIds.length !== 2 ||
-    unmappedIds[0] !== 'auth-game-league-of-legends' ||
-    unmappedIds[1] !== 'auth-game-valorant'
+    unmappedIds.length !== expectedUnmappedGameIds.length ||
+    unmappedIds.some((id, index) => id !== expectedUnmappedGameIds[index])
   ) {
     throw new Error(
-      'Production D1 verification failed: unmapped authority games are not the V1 pair.',
+      'Production D1 verification failed: unmapped authority games do not match the record.',
     )
   }
 
   const provenanceRows = requireResultRows(queryResults, 10, 'authority provenance')
-  const expectedProvenance = new Map([
-    ['authoritative_games', 10],
-    ['authoritative_mimma_score_versions', 10],
-    ['authoritative_snapshots', 1],
-    ['authoritative_game_mappings', 8],
-  ])
+  const provenance = expectedProvenance()
   if (
-    provenanceRows.length !== expectedProvenance.size ||
-    provenanceRows.some(
-      (row) =>
-        typeof row.source_table !== 'string' ||
-        row.row_count !== expectedProvenance.get(row.source_table) ||
-        row.source_hash_count !== 1 ||
-        row.source_hash !== authoritativeRecordHash ||
-        row.source_hash_max !== authoritativeRecordHash,
-    )
+    provenanceRows.length !== provenance.length ||
+    provenanceRows.some((row, index) => !rowMatchesExpected(row, provenance[index]))
   ) {
     throw new Error('Production D1 verification failed: authority provenance hash is incomplete.')
   }
@@ -789,7 +672,7 @@ export function assertProductionD1Verification({
   const catalogRows = requireResultRows(queryResults, 0, 'catalog release')
   if (
     catalogRows.length !== 1 ||
-    catalogRows[0].dataset_version !== 'catalog-release-v1' ||
+    catalogRows[0].dataset_version !== releasedCatalog.datasetVersion ||
     catalogRows[0].schema_version !== 1
   ) {
     throw new Error(

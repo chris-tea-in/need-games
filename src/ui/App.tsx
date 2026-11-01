@@ -1,20 +1,30 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import {
   loadCatalog,
   loadGameDetail,
+  loadSimilarGames,
   type CatalogLoadResult,
   type GameDetailLoadResult,
+  type SimilarGamesLoadResult,
 } from './api-client.js'
 import { CatalogPage } from './catalog-page.js'
 import { type CatalogSort } from './catalog-state.js'
-import { GameDetailPage } from './game-detail-page.js'
+import { GameDetailPage, type SimilarGamesView } from './game-detail-page.js'
 import { OfflineNotice } from './offline-notice.js'
 import { AuthControl } from './auth/auth-control.js'
 import { AuthFailureNotice } from './auth/auth-failure-notice.js'
 import { consumeAuthFailureMarker, currentReturnPath } from './auth/auth-return.js'
 import { useSession } from './auth/use-session.js'
 import { catalogSnapshot } from './generated/catalog-snapshot.js'
+import {
+  ResearchBanner,
+  browserResearchSet,
+  researchCatalogScores,
+  researchDetailView,
+} from './research/research-preview.js'
+import { Icon, SiteFooter, SiteHeader } from './site-chrome.js'
+import type { MimmaScore } from '../shared/mimma.js'
 
 type ScreenState<T> = { kind: 'loading' } | T
 
@@ -31,19 +41,56 @@ function currentGameSlug(pathname: string): string | undefined {
   }
 }
 
+function similarGamesView(
+  state: ScreenState<SimilarGamesLoadResult>,
+): SimilarGamesView | undefined {
+  if (state.kind === 'loading') return { kind: 'loading' }
+  if (state.kind === 'data') return { games: state.games, kind: 'data' }
+  if (state.kind === 'error') return { kind: 'error' }
+  return undefined
+}
+
+/**
+ * The catalog API carries no scores, but the bundled snapshot does. Use them for the shelf
+ * strips only when the snapshot is the same reviewed release the catalog came from.
+ */
+function snapshotScoresFor(datasetVersion: string): ReadonlyMap<string, MimmaScore> | undefined {
+  if (datasetVersion !== catalogSnapshot.datasetVersion) return undefined
+
+  const scores = new Map<string, MimmaScore>()
+  for (const game of catalogSnapshot.games) {
+    if (game.authoritativeScore !== null) scores.set(game.id, game.authoritativeScore)
+  }
+  return scores
+}
+
+function StatusScreen({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <SiteHeader />
+      <main className="status-page">{children}</main>
+      <SiteFooter />
+    </>
+  )
+}
+
 function LoadingState() {
   return (
-    <p className="status-message" role="status">
-      Loading catalog data…
-    </p>
+    <StatusScreen>
+      <p className="status-message" role="status">
+        Loading catalog data…
+      </p>
+    </StatusScreen>
   )
 }
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <p className="status-message error-state" role="alert">
-      {message}
-    </p>
+    <StatusScreen>
+      <p className="status-message error-state" role="alert">
+        {message}
+      </p>
+    </StatusScreen>
   )
 }
 
@@ -58,8 +105,21 @@ export function App() {
   const [detailState, setDetailState] = useState<ScreenState<GameDetailLoadResult>>({
     kind: 'loading',
   })
+  const [similarState, setSimilarState] = useState<ScreenState<SimilarGamesLoadResult>>({
+    kind: 'loading',
+  })
+  // Local research preview (?scores=claude|tags|reviews|all). Production builds drop it.
+  const [researchSet] = useState(() => (import.meta.env.DEV ? browserResearchSet() : null))
   const session = useSession()
   const slug = currentGameSlug(pathname)
+  const catalogVersion = catalogState.kind === 'data' ? catalogState.data.datasetVersion : undefined
+  const catalogGames = catalogState.kind === 'data' ? catalogState.data.games : undefined
+  const catalogScores = useMemo(() => {
+    if (import.meta.env.DEV && researchSet !== null && catalogGames !== undefined) {
+      return researchCatalogScores(catalogGames, researchSet)
+    }
+    return catalogVersion === undefined ? undefined : snapshotScoresFor(catalogVersion)
+  }, [catalogGames, catalogVersion, researchSet])
   const dismissAuthFailure = useCallback(() => setAuthFailureVisible(false), [])
   const authControl = (
     <AuthControl
@@ -108,9 +168,15 @@ export function App() {
 
     let active = true
     setDetailState({ kind: 'loading' })
+    setSimilarState({ kind: 'loading' })
     void loadGameDetail(slug).then((result) => {
       if (active) {
         setDetailState(result)
+      }
+    })
+    void loadSimilarGames(slug).then((result) => {
+      if (active) {
+        setSimilarState(result)
       }
     })
     return () => {
@@ -118,9 +184,15 @@ export function App() {
     }
   }, [slug])
 
+  const detailTitle = detailState.kind === 'data' ? detailState.data.game.title : undefined
   useEffect(() => {
-    document.title = slug === undefined ? 'Need Games catalog' : 'Need Games game detail'
-  }, [slug])
+    if (slug === undefined) {
+      document.title = 'Need Games catalog'
+    } else {
+      document.title =
+        detailTitle === undefined ? 'Need Games game detail' : `${detailTitle} | Need Games`
+    }
+  }, [slug, detailTitle])
 
   let content: ReactNode
 
@@ -129,15 +201,25 @@ export function App() {
       content = <LoadingState />
     } else if (detailState.kind === 'not-found') {
       content = (
-        <main className="not-found-page">
-          <h1>Game not found</h1>
-          <p>This game is not in the closed-beta catalog.</p>
-          <a href="/">Back to catalog</a>
-        </main>
+        <StatusScreen>
+          <div className="not-found-page">
+            <p className="stamp">Not on the shelf</p>
+            <h1>Game not found</h1>
+            <p>This game is not in the closed-beta catalog.</p>
+            <a className="back-link" href="/">
+              <Icon name="arrow-left" />
+              Back to catalog
+            </a>
+          </div>
+        </StatusScreen>
       )
     } else if (detailState.kind === 'error') {
       content = <ErrorState message={detailState.message} />
     } else {
+      const research =
+        import.meta.env.DEV && researchSet !== null
+          ? researchDetailView(detailState.data.game, researchSet)
+          : null
       content = (
         <>
           {detailState.source === 'snapshot' ? (
@@ -147,7 +229,13 @@ export function App() {
             />
           ) : null}
           <div data-auth-background="true">
-            <GameDetailPage authControl={authControl} game={detailState.data.game} />
+            <GameDetailPage
+              authControl={authControl}
+              game={research?.game ?? detailState.data.game}
+              scoreDetails={research?.scoreDetails}
+              scoreFootnote={research?.scoreFootnote}
+              similarGames={research?.similarGames ?? similarGamesView(similarState)}
+            />
           </div>
         </>
       )
@@ -170,6 +258,7 @@ export function App() {
             authControl={authControl}
             catalog={catalogState.data}
             query={query}
+            scores={catalogScores}
             sort={sort}
             onQueryChange={setQuery}
             onSortChange={setSort}
@@ -181,6 +270,7 @@ export function App() {
 
   return (
     <>
+      {import.meta.env.DEV && researchSet !== null ? <ResearchBanner active={researchSet} /> : null}
       {authFailureVisible ? <AuthFailureNotice onDismiss={dismissAuthFailure} /> : null}
       {content}
     </>

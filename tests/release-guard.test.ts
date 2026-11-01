@@ -4,7 +4,7 @@ import {
   assertTrackedDatabaseIdsAreSentinels,
   localPreviewDatabaseIdSentinel,
   productionDatabaseIdSentinel,
-} from '../scripts/assert-release-d1-id.mjs'
+} from '../scripts/assert-release-d1-id.mts'
 
 function trackedConfig(...databaseIds: readonly string[]): string {
   const entries = databaseIds

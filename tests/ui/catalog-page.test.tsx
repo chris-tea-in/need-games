@@ -108,4 +108,51 @@ describe('CatalogPage', () => {
 
     expect(markup.indexOf('Counter-Strike 2')).toBeLessThan(markup.indexOf('BeamNG.drive'))
   })
+
+  test('prints a MiMMa strip for scored games and a stamp for unscored ones', () => {
+    const scores = new Map([['steam-730', { macro: 80, meso: 65, micro: 100 }]])
+    const markup = renderToStaticMarkup(
+      <CatalogPage
+        catalog={catalog}
+        query=""
+        scores={scores}
+        sort="title"
+        onQueryChange={() => {}}
+        onSortChange={() => {}}
+      />,
+    )
+
+    expect(markup).toContain('Micro 100, Meso 65, Macro 80')
+    expect(markup.match(/class="profile-strip"/g)).toHaveLength(1)
+    expect(markup).toContain('Not yet scored')
+  })
+
+  test('shows neither strips nor stamps when scores are unknown for this release', () => {
+    const markup = renderToStaticMarkup(
+      <CatalogPage
+        catalog={catalog}
+        query=""
+        sort="title"
+        onQueryChange={() => {}}
+        onSortChange={() => {}}
+      />,
+    )
+
+    expect(markup).not.toContain('profile-strip')
+    expect(markup).not.toContain('Not yet scored')
+  })
+
+  test('names the query when nothing matches it', () => {
+    const markup = renderToStaticMarkup(
+      <CatalogPage
+        catalog={catalog}
+        query="zzz"
+        sort="title"
+        onQueryChange={() => {}}
+        onSortChange={() => {}}
+      />,
+    )
+
+    expect(markup).toContain('No games match &quot;zzz&quot;.')
+  })
 })

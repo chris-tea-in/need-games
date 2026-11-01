@@ -8,10 +8,7 @@
 
 ## Verification
 
-- [ ] `pnpm format:check`
-- [ ] `pnpm lint`
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test:coverage`
+- [ ] `corepack pnpm check:local` passes (it runs every CI gate plus a local Worker smoke test)
 - [ ] Additional manual or integration verification is described below.
 
 <!-- Record test counts, important cases, or why a listed check does not apply. -->

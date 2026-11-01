@@ -113,6 +113,49 @@ describe('Steam authentication routes', () => {
     expect(response?.headers.get('set-cookie')).toContain('SameSite=Lax')
   })
 
+  test('rate-limits sign-in starts per client address before writing to D1', async () => {
+    const limit = vi.fn<RateLimit['limit']>(() => Promise.resolve({ success: false }))
+    const prepare = vi.fn()
+    const request = new Request(`${origin}/api/auth/steam/start?return=%2F`, {
+      headers: { 'CF-Connecting-IP': '203.0.113.7' },
+    })
+
+    const response = await routeAuthRequest(
+      request,
+      authEnv({ AUTH_START_RATE_LIMITER: { limit }, NEED_GAMES_DB: { prepare } }),
+      new URL(request.url),
+    )
+
+    expect(response?.status).toBe(429)
+    expect(response?.headers.get('retry-after')).toBe('60')
+    expect(response?.headers.get('set-cookie')).toBeNull()
+    await expect(response?.json()).resolves.toEqual({
+      error: {
+        code: 'rate_limited',
+        message: 'Too many sign-in attempts. Please wait a minute and try again.',
+      },
+    })
+    expect(limit).toHaveBeenCalledWith({ key: 'steam-start:203.0.113.7' })
+    expect(prepare).not.toHaveBeenCalled()
+  })
+
+  test('lets sign-in start continue when the rate limiter allows it or fails', async () => {
+    for (const limit of [
+      vi.fn<RateLimit['limit']>(() => Promise.resolve({ success: true })),
+      vi.fn<RateLimit['limit']>(() => Promise.reject(new Error('limiter unavailable'))),
+    ]) {
+      const request = new Request(`${origin}/api/auth/steam/start?return=%2F`)
+      const response = await routeAuthRequest(
+        request,
+        authEnv({ AUTH_START_RATE_LIMITER: { limit } }),
+        new URL(request.url),
+      )
+
+      expect(response?.status).toBe(302)
+      expect(limit).toHaveBeenCalledWith({ key: 'steam-start:unknown' })
+    }
+  })
+
   test('rejects a callback state bound to a different login transaction before identity creation', async () => {
     const now = 1_800_030_000
     const victimToken = 'V'.repeat(43)

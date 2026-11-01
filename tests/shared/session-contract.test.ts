@@ -25,6 +25,7 @@ describe('shared Steam session contract', () => {
       'callback_replayed',
       'invalid_csrf',
       'identity_storage_unavailable',
+      'rate_limited',
     ])
   })
 

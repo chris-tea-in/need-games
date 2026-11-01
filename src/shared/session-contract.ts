@@ -8,6 +8,7 @@ export const AUTH_RESULT_CODES = [
   'callback_replayed',
   'invalid_csrf',
   'identity_storage_unavailable',
+  'rate_limited',
 ] as const
 
 export type AuthResultCode = (typeof AUTH_RESULT_CODES)[number]

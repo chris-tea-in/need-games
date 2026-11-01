@@ -2,6 +2,7 @@ import { env } from 'cloudflare:test'
 import { beforeAll, describe, expect, test } from 'vitest'
 
 import ownerAuthoritativeMigration from '../../migrations/0005_owner_authoritative_mimma_v1.sql?raw'
+import ownerAuthoritativeV2Migration from '../../migrations/0007_owner_authoritative_mimma_v2.sql?raw'
 import {
   applyMigrationWithInjectedFailure,
   prepareMigrationStatements,
@@ -73,65 +74,16 @@ describe('closed beta D1 schema', () => {
     expect(release).toEqual({ dataset_version: 'catalog-release-v1', schema_version: 1 })
   })
 
-  test('preserves the 62-row platform-neutral Surnex sample and its immutable boundary', async () => {
-    const counts = await env.NEED_GAMES_DB.prepare(
-      `SELECT
-         COUNT(*) AS total,
-         SUM(micro_score = 100) AS pure_micro,
-         SUM(meso_score = 100) AS pure_meso,
-         SUM(macro_score = 100) AS pure_macro
-       FROM authoritative_mimma_seeds`,
-    ).first<{ total: number; pure_micro: number; pure_meso: number; pure_macro: number }>()
-    expect(counts).toEqual({ total: 62, pure_micro: 24, pure_meso: 17, pure_macro: 21 })
-
-    const governance = await env.NEED_GAMES_DB.prepare(
-      `SELECT COUNT(*) AS count
-       FROM authoritative_mimma_seeds
-       WHERE provenance <> 'authoritative_sample_seed'
-          OR dataset_version <> 'authoritative-mimma-seed-v1'`,
-    ).first<{ count: number }>()
-    expect(governance?.count).toBe(0)
-
-    const columns = await env.NEED_GAMES_DB.prepare(
-      'PRAGMA table_info(authoritative_mimma_seeds)',
+  test('retires the Surnex seed table and its triggers', async () => {
+    const leftovers = await env.NEED_GAMES_DB.prepare(
+      `SELECT name FROM sqlite_master
+       WHERE name = 'authoritative_mimma_seeds' OR tbl_name = 'authoritative_mimma_seeds'`,
     ).all<{ name: string }>()
-    expect(columns.results.map((column) => column.name)).not.toEqual(
-      expect.arrayContaining(['zone', 'label', 'game_id', 'steam_app_id']),
-    )
-    await expect(
-      env.NEED_GAMES_DB.prepare(
-        `INSERT INTO authoritative_mimma_seeds (
-          id, conceptual_name, micro_score, meso_score, macro_score,
-          provenance, dataset_version, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-        .bind(
-          'invalid-seed',
-          'Invalid Seed',
-          80,
-          0,
-          0,
-          'authoritative_sample_seed',
-          'authoritative-mimma-seed-v1',
-          '2026-08-18T20:02:44Z',
-        )
-        .run(),
-    ).rejects.toThrow()
-    await expect(
-      env.NEED_GAMES_DB.prepare(
-        'UPDATE authoritative_mimma_seeds SET conceptual_name = ? WHERE id = ?',
-      )
-        .bind('Changed', 'authoritative-mimma-seed-v1-aimlabs')
-        .run(),
-    ).rejects.toThrow()
-    await expect(
-      env.NEED_GAMES_DB.prepare('DELETE FROM authoritative_mimma_seeds WHERE id = ?')
-        .bind('authoritative-mimma-seed-v1-aimlabs')
-        .run(),
-    ).rejects.toThrow()
+
+    expect(leftovers.results).toEqual([])
   })
 
-  test('stores the exact ten-game frozen snapshot and eight mappings', async () => {
+  test('keeps the frozen v1 snapshot and appends the twelve-game v2 snapshot', async () => {
     const counts = await env.NEED_GAMES_DB.prepare(
       `SELECT
          (SELECT COUNT(*) FROM authoritative_games) AS games,
@@ -149,11 +101,11 @@ describe('closed beta D1 schema', () => {
       legacy_scores: number
     }>()
     expect(counts).toEqual({
-      games: 10,
-      scores: 10,
-      snapshots: 1,
-      members: 10,
-      mappings: 8,
+      games: 12,
+      scores: 20,
+      snapshots: 2,
+      members: 22,
+      mappings: 10,
       legacy_scores: 0,
     })
 
@@ -276,11 +228,68 @@ describe('closed beta D1 schema', () => {
       { identity_key: 'league-of-legends' },
       { identity_key: 'valorant' },
     ])
+
+    const v2 = await env.NEED_GAMES_DB.prepare(
+      `SELECT members.game_id, members.score_id, scores.micro_score, scores.meso_score,
+              scores.macro_score, scores.approval_reason
+       FROM authoritative_snapshot_members AS members
+       JOIN authoritative_mimma_score_versions AS scores ON scores.id = members.score_id
+       WHERE members.snapshot_id = ? AND members.game_id IN (?, ?, ?)
+       ORDER BY members.game_id`,
+    )
+      .bind(
+        'snapshot-owner-authoritative-mimma-v2',
+        'auth-game-destiny-2',
+        'auth-game-elden-ring',
+        'auth-game-valorant',
+      )
+      .all<Record<string, string | number>>()
+    expect(v2.results).toEqual([
+      {
+        game_id: 'auth-game-destiny-2',
+        score_id: 'auth-score-destiny-2-v1',
+        micro_score: 60,
+        meso_score: 50,
+        macro_score: 70,
+        approval_reason: 'initial-owner-snapshot',
+      },
+      {
+        game_id: 'auth-game-elden-ring',
+        score_id: 'auth-score-elden-ring-v2',
+        micro_score: 75,
+        meso_score: 55,
+        macro_score: 60,
+        approval_reason: 'owner-correction',
+      },
+      {
+        game_id: 'auth-game-valorant',
+        score_id: 'auth-score-valorant-v1',
+        micro_score: 100,
+        meso_score: 73,
+        macro_score: 80,
+        approval_reason: 'initial-owner-snapshot',
+      },
+    ])
+  })
+
+  test('aborts a second run of migration 0007 without writing any row', async () => {
+    const countRows = () =>
+      env.NEED_GAMES_DB.prepare(
+        `SELECT
+           (SELECT COUNT(*) FROM authoritative_games) AS games,
+           (SELECT COUNT(*) FROM authoritative_mimma_score_versions) AS scores,
+           (SELECT COUNT(*) FROM authoritative_snapshots) AS snapshots,
+           (SELECT COUNT(*) FROM authoritative_snapshot_members) AS members,
+           (SELECT COUNT(*) FROM authoritative_game_mappings) AS mappings`,
+      ).first()
+    const before = await countRows()
+
     await expect(
-      env.NEED_GAMES_DB.prepare('SELECT 1 FROM authoritative_games WHERE identity_key IN (?, ?)')
-        .bind('destiny-2', 'beamng-drive')
-        .all(),
-    ).resolves.toMatchObject({ results: [] })
+      env.NEED_GAMES_DB.batch(
+        prepareMigrationStatements(env.NEED_GAMES_DB, ownerAuthoritativeV2Migration),
+      ),
+    ).rejects.toThrow()
+    await expect(countRows()).resolves.toEqual(before)
   })
 
   test('rejects immutable authority, score, snapshot, member, and mapping changes', async () => {
@@ -311,7 +320,7 @@ describe('closed beta D1 schema', () => {
        (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
        VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
     )
-      .bind('snapshot-immutable-test', 2, 'test', sourceHash, 1, 'draft', '2026-08-21')
+      .bind('snapshot-immutable-test', 3, 'test', sourceHash, 1, 'draft', '2026-08-21')
       .run()
 
     await expect(
@@ -389,10 +398,10 @@ describe('closed beta D1 schema', () => {
 
   test('rejects invalid vectors, duplicates, mismatched membership, and mapping identity', async () => {
     await expect(
-      insertScoreVersion('invalid-zero-score', 'auth-game-counter-strike-2', 2, 0, 0, 0),
+      insertScoreVersion('invalid-zero-score', 'auth-game-counter-strike-2', 3, 0, 0, 0),
     ).rejects.toThrow()
     await expect(
-      insertScoreVersion('invalid-all-score', 'auth-game-counter-strike-2', 2, 100, 100, 100),
+      insertScoreVersion('invalid-all-score', 'auth-game-counter-strike-2', 3, 100, 100, 100),
     ).rejects.toThrow()
     const insertInvalidRounding = (
       id: string,
@@ -414,7 +423,7 @@ describe('closed beta D1 schema', () => {
         .bind(
           id,
           'auth-game-counter-strike-2',
-          2,
+          3,
           micro,
           meso,
           macro,
@@ -440,15 +449,15 @@ describe('closed beta D1 schema', () => {
       insertInvalidRounding('invalid-rounding-macro-68-5', 20, 30, 68, '20.0', '30.0', '68.5'),
     ).rejects.toThrow()
     await insertScoreVersion(
-      'auth-score-counter-strike-2-v2',
+      'auth-score-counter-strike-2-v3',
       'auth-game-counter-strike-2',
-      2,
+      3,
       10,
       20,
       30,
     )
     await expect(
-      insertScoreVersion('duplicate-score-version', 'auth-game-counter-strike-2', 2, 11, 22, 33),
+      insertScoreVersion('duplicate-score-version', 'auth-game-counter-strike-2', 3, 11, 22, 33),
     ).rejects.toThrow()
     await expect(
       env.NEED_GAMES_DB.prepare(
@@ -523,7 +532,7 @@ describe('closed beta D1 schema', () => {
       )
         .bind(
           'snapshot-direct-frozen',
-          3,
+          5,
           'test',
           sourceHash,
           10,
@@ -538,7 +547,7 @@ describe('closed beta D1 schema', () => {
        (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
        VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
     )
-      .bind('snapshot-draft-nine', 3, 'test', sourceHash, 10, 'draft', '2026-08-21')
+      .bind('snapshot-draft-nine', 5, 'test', sourceHash, 10, 'draft', '2026-08-21')
       .run()
     for (const [gameId, scoreId] of members.slice(0, 9)) {
       await env.NEED_GAMES_DB.prepare(
@@ -568,7 +577,7 @@ describe('closed beta D1 schema', () => {
        (id, version, manifest_version, source_hash, expected_member_count, state, created_on, frozen_on)
        VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
     )
-      .bind('snapshot-draft-eleven', 4, 'test', sourceHash, 10, 'draft', '2026-08-21')
+      .bind('snapshot-draft-eleven', 6, 'test', sourceHash, 10, 'draft', '2026-08-21')
       .run()
     for (const [gameId, scoreId] of members) {
       await env.NEED_GAMES_DB.prepare(

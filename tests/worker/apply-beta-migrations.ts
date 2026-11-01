@@ -1,8 +1,13 @@
-import schemaMigration from '../../migrations/0001_schema.sql?raw'
-import seedMigration from '../../migrations/0002_seed_beta_catalog.sql?raw'
-import authoritativeSeedMigration from '../../migrations/0003_authoritative_mimma_seed.sql?raw'
-import identitySessionsMigration from '../../migrations/0004_identity_sessions.sql?raw'
-import ownerAuthoritativeMigration from '../../migrations/0005_owner_authoritative_mimma_v1.sql?raw'
+const migrationSources = import.meta.glob<string>('../../migrations/*.sql', {
+  eager: true,
+  import: 'default',
+  query: '?raw',
+})
+
+/** Every migration file in name order, so a new migration is applied without editing this helper. */
+export const orderedMigrations = Object.entries(migrationSources)
+  .map(([path, sql]) => ({ name: path.slice(path.lastIndexOf('/') + 1), sql }))
+  .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
 
 function removeComments(statement: string): string {
   return statement.replaceAll(/--.*$/gm, '').trim()
@@ -18,19 +23,22 @@ export function prepareMigrationStatements(
     .map((statement) => database.prepare(statement))
 }
 
-function prepareSeedStatements(database: D1Database): D1PreparedStatement[] {
-  return seedMigration
+/** Generated seed files have no breakpoints and hold one INSERT per line. */
+function prepareStatementsFor(database: D1Database, sql: string): D1PreparedStatement[] {
+  if (sql.includes('--> statement-breakpoint')) {
+    return prepareMigrationStatements(database, sql)
+  }
+
+  return sql
     .split('\n')
     .filter((statement) => statement.startsWith('INSERT INTO'))
     .map((statement) => database.prepare(statement))
 }
 
 export async function applyBetaMigrations(database: D1Database): Promise<void> {
-  await database.batch(prepareMigrationStatements(database, schemaMigration))
-  await database.batch(prepareSeedStatements(database))
-  await database.batch(prepareMigrationStatements(database, authoritativeSeedMigration))
-  await database.batch(prepareMigrationStatements(database, identitySessionsMigration))
-  await database.batch(prepareMigrationStatements(database, ownerAuthoritativeMigration))
+  for (const migration of orderedMigrations) {
+    await database.batch(prepareStatementsFor(database, migration.sql))
+  }
 }
 
 export async function resetBetaDatabase(database: D1Database): Promise<void> {
@@ -61,9 +69,6 @@ export async function resetBetaDatabase(database: D1Database): Promise<void> {
     'authoritative_games_prevent_update',
     'authoritative_mimma_scores_prevent_delete',
     'authoritative_mimma_scores_prevent_update',
-    'authoritative_mimma_seeds_prevent_insert',
-    'authoritative_mimma_seeds_prevent_delete',
-    'authoritative_mimma_seeds_prevent_update',
   ]
   const indexNames = [
     'authoritative_game_mappings_catalog_version_idx',
@@ -90,7 +95,6 @@ export async function resetBetaDatabase(database: D1Database): Promise<void> {
     'authoritative_mimma_scores',
     'games',
     'catalog_release_metadata',
-    'authoritative_mimma_seeds',
   ]
 
   await database.batch(

@@ -87,27 +87,16 @@ describe('check:local wrapper', () => {
     )
   })
 
-  test('checks generated MiMMa seed artifacts after catalog artifacts', () => {
+  test('checks the generated owner-authoritative record after the catalog and before coverage', () => {
     const source = readFileSync(scriptUrl, 'utf8')
-
-    expect(source.indexOf("'Generated MiMMa seed artifact'")).toBeGreaterThan(-1)
-    expect(source.indexOf("'Generated catalog artifacts'")).toBeLessThan(
-      source.indexOf("'Generated MiMMa seed artifact'"),
-    )
-    expect(source.indexOf("'Generated MiMMa seed artifact'")).toBeLessThan(
-      source.indexOf("'Coverage tests'"),
-    )
-  })
-
-  test('checks the generated owner-authoritative record after the seed and before coverage', () => {
-    const source = readFileSync(scriptUrl, 'utf8')
-    const seed = source.indexOf("'Generated MiMMa seed artifact'")
+    const catalog = source.indexOf("'Generated catalog artifacts'")
     const ownerRecord = source.indexOf("'Generated owner-authoritative record'")
     const coverage = source.indexOf("'Coverage tests'")
 
-    expect(seed).toBeGreaterThan(-1)
-    expect(ownerRecord).toBeGreaterThan(seed)
+    expect(catalog).toBeGreaterThan(-1)
+    expect(ownerRecord).toBeGreaterThan(catalog)
     expect(ownerRecord).toBeLessThan(coverage)
+    expect(source).not.toContain('mimma-seed:check')
   })
 
   test('force-kills an unresponsive Worker after graceful shutdown times out', async () => {

@@ -1,8 +1,10 @@
+import {
+  SESSION_LIFETIME_SECONDS,
+  STEAM_LOGIN_TRANSACTION_LIFETIME_SECONDS,
+} from '../../shared/session-contract.js'
+
 export const SESSION_COOKIE_NAME = '__Host-myplayprint_session'
 export const LOGIN_TRANSACTION_COOKIE_NAME = '__Host-myplayprint_login_transaction'
-
-export const SESSION_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
-export const LOGIN_TRANSACTION_COOKIE_MAX_AGE_SECONDS = 10 * 60
 
 const cookieNamePattern = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/
 const cookieOctetPattern = /^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]*$/
@@ -51,14 +53,14 @@ function serializeClearedHostCookie(name: string): string {
 }
 
 export function serializeSessionCookie(token: string): string {
-  return serializeHostCookie(SESSION_COOKIE_NAME, token, SESSION_COOKIE_MAX_AGE_SECONDS)
+  return serializeHostCookie(SESSION_COOKIE_NAME, token, SESSION_LIFETIME_SECONDS)
 }
 
 export function serializeLoginTransactionCookie(token: string): string {
   return serializeHostCookie(
     LOGIN_TRANSACTION_COOKIE_NAME,
     token,
-    LOGIN_TRANSACTION_COOKIE_MAX_AGE_SECONDS,
+    STEAM_LOGIN_TRANSACTION_LIFETIME_SECONDS,
   )
 }
 
@@ -85,30 +87,6 @@ function parseCookiePair(part: string, index: number): { name: string; value: st
 
   return { name, value }
 }
-
-/** Parse an RFC 6265 Cookie header, ignoring malformed unrelated pairs. */
-export function parseCookieHeader(header: string | null): ReadonlyMap<string, string> | null {
-  if (header === null || header.trim() === '') {
-    return new Map()
-  }
-
-  const cookies = new Map<string, string>()
-  for (const [index, part] of header.split(';').entries()) {
-    const pair = parseCookiePair(part, index)
-    if (pair === null) {
-      continue
-    }
-    if (cookies.has(pair.name)) {
-      return null
-    }
-
-    cookies.set(pair.name, pair.value)
-  }
-
-  return cookies
-}
-
-export const parseCookies = parseCookieHeader
 
 export function getCookie(request: Request, name: string): string | null {
   assertCookieName(name)
@@ -148,5 +126,3 @@ export function getCookie(request: Request, name: string): string | null {
   }
   return value
 }
-
-export const readCookie = getCookie

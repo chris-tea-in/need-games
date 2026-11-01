@@ -38,26 +38,48 @@ corepack pnpm install --frozen-lockfile
 Never edit `pnpm-lock.yaml` manually. Change dependencies through pnpm and commit the resulting
 manifest and lockfile together.
 
-## Required checks
+## Run the app locally
 
-Run the same commands locally that GitHub Actions runs on a pull request:
+The app is a Vite single-page app served by a Cloudflare Worker with a local D1 database. Use Node
+`24.18.0` or later in the 24 line (see `.node-version`).
 
 ```powershell
-pnpm format:check
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm build
+corepack pnpm install --frozen-lockfile
+corepack pnpm exec wrangler d1 migrations apply NEED_GAMES_DB --local
+corepack pnpm dev
+```
+
+Open `http://localhost:5173/`. The migration step creates and seeds the local database under the
+ignored `.wrangler/` directory; rerun it after pulling new migrations. Without it, the catalog API
+returns 503 and the page shows a "Showing saved catalog data" banner, because the UI falls back to
+the bundled snapshot.
+
+To compare the research score sets from `docs/MIMMA_RESCORING_2026-10-31.md` on the local site,
+add `?scores=claude`, `?scores=tags`, `?scores=reviews`, or `?scores=all` to any URL. The choice
+is kept across pages, and `?scores=owner` returns to the owner's scores. Production builds do not
+include the preview.
+
+Steam sign-in is off locally. It needs `STEAM_SIGN_IN_ENABLED`, the production secrets, and an HTTPS
+`PRODUCTION_ORIGIN` that matches the request origin, so it cannot run on `http://localhost`.
+
+## Required checks
+
+The source of truth for pull-request checks is `.github/workflows/ci.yml`. Its jobs are `Quality`,
+`Typecheck`, `Tests`, and `Build`. The aggregate `CI` check fails unless every required job
+succeeds, and a failed `CI` check blocks the PR from merging.
+
+Run the same gates locally with the wrapper described below:
+
+```powershell
+corepack pnpm check:local
 ```
 
 - Prettier checks formatting.
 - ESLint checks risky or inconsistent code patterns.
-- TypeScript checks type compatibility.
-- Vitest checks behavior and reports executed code paths.
-
-GitHub Actions runs those responsibilities as `Quality`, `Typecheck`, `Tests`, and `Build`. The
-aggregate `CI` check fails unless every required job succeeds, and a failed `CI` check blocks the
-PR from merging.
+- TypeScript checks type compatibility, and `typecheck:worker` checks that
+  `worker-configuration.d.ts` matches `wrangler.jsonc`.
+- Vitest checks behavior. `test:coverage` measures the Node suite only; the Worker suite runs
+  separately under `test:worker` without coverage.
 
 ## Full local verification
 
@@ -67,8 +89,9 @@ After Corepack enables pnpm `10.34.5` and dependencies are installed, run the re
 corepack pnpm check:local
 ```
 
-The wrapper runs formatting, linting, TypeScript, coverage, a production build, Worker types,
-local D1 migrations, and a bounded local Worker smoke test. It uses only local Worker and D1
+The wrapper runs formatting, linting, the tracked release configuration check, TypeScript, the
+generated-artifact checks, coverage, a production build, Worker types, Worker tests, local D1
+migrations, and a bounded local Worker smoke test. It uses only local Worker and D1
 state. It does not change Cloudflare resources.
 
 ## Pull-request review
@@ -123,20 +146,30 @@ The tracked production value is the release mode source of truth. Set the transi
 The release rejects a missing, invalid, duplicate, or mismatched mode before upload. The final
 generated config must contain the transient D1 ID and the reviewed Steam sign-in mode.
 The release verifies the target D1 identity, catalog state, and exactly `0001_schema.sql`,
-`0002_seed_beta_catalog.sql`, `0003_authoritative_mimma_seed.sql`, `0004_identity_sessions.sql`, and
-`0005_owner_authoritative_mimma_v1.sql` in its migration history. Before running `release:production`, use
+`0002_seed_beta_catalog.sql`, `0003_authoritative_mimma_seed.sql`, `0004_identity_sessions.sql`,
+`0005_owner_authoritative_mimma_v1.sql`, `0006_retire_authoritative_mimma_seeds.sql`, and
+`0007_owner_authoritative_mimma_v2.sql` in its migration history. `0006` drops the unread seed table
+that `0003` created. `0007` appends owner snapshot v2, which the site serves as the latest frozen
+snapshot. That list, each migration's content hash, and the catalog and owner-authoritative data
+files live in `scripts/release-manifest.mts`. The verifier derives every expected authority row from
+the hash-pinned records (`scripts/owner-authority-history.mts`), so a new owner snapshot adds a record
+and its generated migration instead of changing the verifier. Before running `release:production`, use
 the generated `.wrangler.production.jsonc` for the owner-confirmed database ID to apply the
 reviewed migration set remotely:
 
 ```powershell
 corepack pnpm node scripts/create-production-wrangler-config.mts
-corepack pnpm exec wrangler d1 execute need-games-production --remote --file migrations/0005_owner_authoritative_mimma_v1.sql --config .wrangler.production.jsonc
+corepack pnpm exec wrangler d1 execute need-games-production --remote --file migrations/0006_retire_authoritative_mimma_seeds.sql --config .wrangler.production.jsonc
+corepack pnpm exec wrangler d1 execute need-games-production --remote --file migrations/0007_owner_authoritative_mimma_v2.sql --config .wrangler.production.jsonc
 ```
 
+Apply them in that order. `0007` starts with a preflight that aborts the file unless the database
+holds exactly the frozen v1 history.
+
 Review Wrangler's migration list before confirming it. The release command does not apply
-migrations; it fails closed if any of these five migrations is absent or if any later migration is
+migrations; it fails closed if any of these seven migrations is absent or if any later migration is
 present. Ordinary remote `d1 migrations apply` is not verified for the compound triggers in
-`0005`; use the owner-gated atomic file-ingestion procedure below. A real D1 ID must never be
+`0005` and `0007`; use the owner-gated atomic file-ingestion procedure below. A real D1 ID must never be
 committed, added to GitHub, or written to a release report.
 The generated configuration is ignored and is the only release file that may contain the ID.
 
@@ -149,7 +182,7 @@ exact target and reviewed commit. The owner then ingests the reviewed trigger-be
 atomic file-ingestion step is required because a failed file execution restores the database;
 ordinary remote migration application has not been verified for this compound-trigger SQL.
 After ingestion, verify every allowlisted table, index, trigger, source hash, permanent row
-count, and permanent invariants for the frozen snapshot, eight mappings, two intentionally unmapped games, and the unchanged
+count, and permanent invariants for both frozen snapshots, ten mappings, two intentionally unmapped games, and the unchanged
 legacy score table. Only after those checks pass may the owner record migration history through
 the separately reviewed procedure, rerun the release verifier, and perform the read-only public
 smoke sequence. Keep the bookmark, export, and verification evidence intact on any failure;
@@ -178,8 +211,9 @@ Remove-Item Env:STEAM_SIGN_IN_ENABLED
 ```
 
 This check rejects a different origin and cross-origin redirects. It then checks the read-only
-catalog, detail, unknown-route, unscored-similarity, anonymous-session, and missing-CSRF logout
-responses. Disabled mode also verifies the exact disabled auth-start response. Enabled mode never
+catalog, the scored Counter-Strike 2 detail, its ranked similar games, the `unscored_game` response
+for Destiny 2, unknown routes, the anonymous session, and the missing-CSRF logout response. A
+smoke-only run against a deployment older than the scored-detail release fails these score checks. Disabled mode also verifies the exact disabled auth-start response. Enabled mode never
 calls auth start because that endpoint creates a login transaction.
 
 ### Initial Steam sign-in enablement

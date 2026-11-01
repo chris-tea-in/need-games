@@ -12,6 +12,7 @@ import { useSession, type SessionController } from '../../src/ui/auth/use-sessio
 vi.mock('../../src/ui/api-client.js', () => ({
   loadCatalog: vi.fn(),
   loadGameDetail: vi.fn(),
+  loadSimilarGames: vi.fn(() => Promise.resolve({ kind: 'unscored' as const })),
 }))
 
 vi.mock('../../src/ui/auth/use-session.js', () => ({
@@ -79,7 +80,7 @@ describe('App authentication return integration', () => {
     expect(container.querySelector('[role="dialog"]')).toBeNull()
     expect(container.querySelector('[role="menu"]')).toBeNull()
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
-      'Authentication failed. Please try again later.',
+      'Steam sign-in did not finish. Try again in a moment.',
     )
 
     await act(() => vi.advanceTimersByTimeAsync(3200))
@@ -95,6 +96,7 @@ describe('App authentication return integration', () => {
     })
 
     expect(container.querySelector('h1')?.textContent).toBe('Counter-Strike 2')
+    expect(document.title).toBe('Counter-Strike 2 | Need Games')
     expect(container.querySelector('[role="dialog"]')).toBeNull()
     expect(container.querySelector('[role="alert"]')).toBeNull()
   })
@@ -102,7 +104,7 @@ describe('App authentication return integration', () => {
   test('keeps authentication controls and transient notices out of the generated catalog snapshot', () => {
     const snapshot = JSON.stringify(catalogSnapshot)
 
-    expect(snapshot).not.toContain('Authenticate with Steam')
-    expect(snapshot).not.toContain('Authentication failed. Please try again later.')
+    expect(snapshot).not.toContain('Sign in with Steam')
+    expect(snapshot).not.toContain('Steam sign-in did not finish. Try again in a moment.')
   })
 })

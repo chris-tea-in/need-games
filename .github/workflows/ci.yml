@@ -52,6 +52,9 @@ jobs:
       - name: Check types
         run: pnpm typecheck
 
+      - name: Check generated Worker types
+        run: pnpm typecheck:worker
+
   tests:
     name: Tests
     runs-on: ubuntu-24.04
@@ -70,9 +73,6 @@ jobs:
 
       - name: Check generated catalog artifacts
         run: pnpm catalog:check
-
-      - name: Check generated MiMMa seed artifact
-        run: pnpm mimma-seed:check
 
       - name: Check generated owner-authoritative record
         run: pnpm authoritative-record:check

@@ -69,7 +69,7 @@ describe('Steam authentication return handling', () => {
     })
 
     const notice = container.querySelector('[role="alert"]')
-    expect(notice?.textContent).toBe('Authentication failed. Please try again later.')
+    expect(notice?.textContent).toBe('Steam sign-in did not finish. Try again in a moment.')
     expect(notice?.getAttribute('aria-live')).toBe('assertive')
     expect(onDismiss).not.toHaveBeenCalled()
 

@@ -4,7 +4,7 @@ import {
   createProductionWranglerConfig,
   productionDatabaseIdEnvironmentVariable,
   productionDatabaseIdSentinel,
-} from '../scripts/create-production-wrangler-config.mjs'
+} from '../scripts/create-production-wrangler-config.mts'
 
 const safeConfig = `{
   "env": {

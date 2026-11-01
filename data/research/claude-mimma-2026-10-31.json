@@ -1,0 +1,166 @@
+{
+  "method": "Claude applied docs/MIMMA_RUBRIC.md to each game: main mode, competent player, steps of 10. Recorded before any community data was analyzed. The owner v1 scores were already known.",
+  "recordedOn": "2026-10-31",
+  "games": [
+    {
+      "appid": 730,
+      "title": "Counter-Strike 2",
+      "micro": {
+        "score": 100,
+        "reason": "Built around aim: crosshair placement, counter-strafing, and spray control decide most rounds, often in one or two shots."
+      },
+      "meso": {
+        "score": 80,
+        "reason": "Rounds turn on what you cannot see: positions, footsteps, fakes, utility baits, and guessing the enemy buy and site."
+      },
+      "macro": {
+        "score": 70,
+        "reason": "Economy across rounds and pre-round strategy and utility plans matter a lot, but gunfights decide more."
+      }
+    },
+    {
+      "appid": 284160,
+      "title": "BeamNG.drive",
+      "micro": {
+        "score": 50,
+        "reason": "Throttle, brake, and steering control is the core interaction and matters in scenarios; free roam has no fail state."
+      },
+      "meso": {
+        "score": 20,
+        "reason": "AI traffic and crash physics add some unpredictability; nothing is hidden and nobody is outguessed."
+      },
+      "macro": {
+        "score": 20,
+        "reason": "Vehicle parts and tuning; few long-term decisions decide outcomes in a sandbox."
+      }
+    },
+    {
+      "appid": 359550,
+      "title": "Tom Clancy's Rainbow Six Siege",
+      "micro": {
+        "score": 80,
+        "reason": "One-headshot kills, peeks, and recoil control decide gunfights."
+      },
+      "meso": {
+        "score": 90,
+        "reason": "Built around information: drones, cameras, roamers, sound through walls, and new angles opened by destruction."
+      },
+      "macro": {
+        "score": 80,
+        "reason": "Operator picks, site setup, and the attack plan are fixed before contact and decide many rounds."
+      }
+    },
+    {
+      "appid": 1085660,
+      "title": "Destiny 2",
+      "micro": {
+        "score": 60,
+        "reason": "Precision gunplay and movement matter often; hard raids and Grandmaster content punish misses, most PvE forgives them."
+      },
+      "meso": {
+        "score": 30,
+        "reason": "Enemy behavior is mostly predictable and raid encounters are learned scripts; loot rolls are random but do not change play."
+      },
+      "macro": {
+        "score": 80,
+        "reason": "Buildcrafting with subclass, armor mods, exotics, and weapon perks, plus loadouts per activity, decides encounters early."
+      }
+    },
+    {
+      "appid": 1086940,
+      "title": "Baldur's Gate 3",
+      "micro": {
+        "score": 0,
+        "reason": "Turn-based; it never asks for fast or precise inputs."
+      },
+      "meso": {
+        "score": 50,
+        "reason": "Every attack, save, and check is a d20 roll, with hidden traps and unknown outcomes; players plan around the odds."
+      },
+      "macro": {
+        "score": 100,
+        "reason": "Built around planning: party and multiclass builds, spell slots and rests, turn-by-turn tactics, long-term choices."
+      }
+    },
+    {
+      "appid": 1172470,
+      "title": "Apex Legends",
+      "micro": {
+        "score": 90,
+        "reason": "Recoil control, tracking aim over a long time-to-kill, and movement tech are the core of every fight."
+      },
+      "meso": {
+        "score": 80,
+        "reason": "Random loot and ring, unknown squad positions, and third parties: you act without full information constantly."
+      },
+      "macro": {
+        "score": 70,
+        "reason": "Rotations, zone reading, legend composition, and when to fight or leave decide placement."
+      }
+    },
+    {
+      "appid": 1245620,
+      "title": "ELDEN RING",
+      "micro": {
+        "score": 80,
+        "reason": "Dodge and parry timing, spacing, and stamina against bosses; builds and summons can lower the demand."
+      },
+      "meso": {
+        "score": 60,
+        "reason": "Delayed and mixed boss attacks punish early reactions, and the world hides ambushes; retries make patterns learnable."
+      },
+      "macro": {
+        "score": 70,
+        "reason": "Stat allocation, weapon and spell builds, talismans, upgrades, and exploration routing shape every fight."
+      }
+    },
+    {
+      "appid": 1623730,
+      "title": "Palworld",
+      "micro": {
+        "score": 30,
+        "reason": "Shooting and dodging matter in boss fights and raids; most play forgives rough inputs."
+      },
+      "meso": {
+        "score": 30,
+        "reason": "Capture odds, passive-skill rolls, and raids add chance that matters sometimes."
+      },
+      "macro": {
+        "score": 80,
+        "reason": "The main loop is planning: base layout, work assignments, automation, tech order, and breeding."
+      }
+    },
+    {
+      "appid": 2246340,
+      "title": "Monster Hunter Wilds",
+      "micro": {
+        "score": 80,
+        "reason": "Combos, positioning, and dodge, guard, and counter timing against a large monster decide hunts."
+      },
+      "meso": {
+        "score": 50,
+        "reason": "You read a monster's tells in the moment; rage states, turf wars, and weather vary it, but patterns are learnable."
+      },
+      "macro": {
+        "score": 70,
+        "reason": "Weapon and armor skill builds, decorations, item and meal prep, and crafting progression."
+      }
+    },
+    {
+      "appid": 2767030,
+      "title": "Marvel Rivals",
+      "micro": {
+        "score": 70,
+        "reason": "Aim and ability timing decide fights for most heroes; melee, beam, and support kits lower the demand."
+      },
+      "meso": {
+        "score": 60,
+        "reason": "Tracking enemy ultimates and cooldowns, flank timing, and baits; most information is on screen."
+      },
+      "macro": {
+        "score": 70,
+        "reason": "Team composition, counter-picks, team-ups, and ultimate economy are planned ahead of fights."
+      }
+    }
+  ]
+}

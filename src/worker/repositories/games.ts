@@ -1,9 +1,15 @@
 import type {
+  AuthoritativeScoreSummary,
   CatalogCard,
   GameDetail,
   SteamProvenance,
   SteamReviewSummary,
 } from '../../shared/catalog-contract.js'
+import {
+  getMappedAuthoritativeScoreFromLatestSnapshot,
+  type AuthoritativeMimmaScore,
+} from './authoritative-scores.js'
+import { parseSourceTags } from './source-tags.js'
 
 export const CATALOG_SORT_OPTIONS = ['title_asc', 'review_count_desc'] as const
 
@@ -51,15 +57,6 @@ const gameColumns = `
   source_store_page_url,
   source_fetched_at`
 
-function toTags(sourceTagsJson: string): readonly string[] {
-  const tags: unknown = JSON.parse(sourceTagsJson)
-  if (!Array.isArray(tags) || !tags.every((tag) => typeof tag === 'string')) {
-    throw new Error('Stored source tags are not a string array')
-  }
-
-  return tags
-}
-
 function toCatalogCard(row: GameRow): CatalogCard {
   return {
     id: row.id,
@@ -70,7 +67,7 @@ function toCatalogCard(row: GameRow): CatalogCard {
     },
     slug: row.slug,
     steamAppId: row.steam_app_id,
-    tags: toTags(row.source_tags_json),
+    tags: parseSourceTags(row.source_tags_json),
     title: row.title,
   }
 }
@@ -84,10 +81,19 @@ function toProvenance(row: GameRow): SteamProvenance {
   }
 }
 
-function toGameDetail(row: GameRow): GameDetail {
+export function toScoreSummary(score: AuthoritativeMimmaScore): AuthoritativeScoreSummary {
+  return {
+    macro: score.macroScore,
+    meso: score.mesoScore,
+    micro: score.microScore,
+    snapshotVersion: score.snapshotVersion,
+  }
+}
+
+function toGameDetail(row: GameRow, score: AuthoritativeMimmaScore | null): GameDetail {
   return {
     ...toCatalogCard(row),
-    authoritativeScore: null,
+    authoritativeScore: score === null ? null : toScoreSummary(score),
     provenance: toProvenance(row),
     shortDescription: row.short_description,
   }
@@ -150,7 +156,11 @@ export async function findGameBySlug(
     .bind(slug)
     .first<GameRow>()
 
-  return row === null ? null : toGameDetail(row)
+  if (row === null) {
+    return null
+  }
+
+  return toGameDetail(row, await getMappedAuthoritativeScoreFromLatestSnapshot(database, row.id))
 }
 
 function escapeLikePattern(value: string): string {

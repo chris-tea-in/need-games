@@ -11,6 +11,7 @@ import { App } from '../../src/ui/App.js'
 vi.mock('../../src/ui/api-client.js', () => ({
   loadCatalog: vi.fn(),
   loadGameDetail: vi.fn(),
+  loadSimilarGames: vi.fn(() => Promise.resolve({ kind: 'unscored' as const })),
 }))
 
 const catalog: CatalogResponse = {

@@ -9,14 +9,20 @@ updates:
       time: '09:00'
       timezone: America/Los_Angeles
     open-pull-requests-limit: 5
-    reviewers:
-      - chris-tea-in
     labels:
       - dependencies
     commit-message:
       prefix: chore
       include: scope
     groups:
+      # React and React DOM must move together; React rejects mismatched versions at runtime.
+      # Dependabot assigns each dependency to the first matching group, so this group comes first.
+      react:
+        patterns:
+          - react
+          - react-dom
+          - '@types/react'
+          - '@types/react-dom'
       development-dependencies:
         dependency-type: development
         update-types:
@@ -33,8 +39,6 @@ updates:
       time: '09:30'
       timezone: America/Los_Angeles
     open-pull-requests-limit: 5
-    reviewers:
-      - chris-tea-in
     labels:
       - dependencies
       - github-actions

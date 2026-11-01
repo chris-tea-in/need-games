@@ -6,9 +6,11 @@ import {
   assertMissingCsrfLogoutResponse,
   assertProductionSteamSignInMode,
   assertProductionSmokeOrigin,
+  assertScoredGameDetailResponse,
+  assertSimilarGamesResponse,
   readOnlySmokeTest,
   requestProductionJson,
-} from '../scripts/release-production.mjs'
+} from '../scripts/release-production.mts'
 
 const productionOrigin = 'https://myplayprint.e9k.workers.dev'
 
@@ -164,7 +166,27 @@ describe('production smoke boundary', () => {
         )
       }
       if (url.pathname === '/api/games/counter-strike-2')
-        return Promise.resolve(response(url, 200, {}))
+        return Promise.resolve(
+          response(url, 200, {
+            game: { authoritativeScore: { macro: 60, meso: 70, micro: 80, snapshotVersion: 2 } },
+          }),
+        )
+      if (url.pathname === '/api/games/counter-strike-2/similar') {
+        return Promise.resolve(
+          response(url, 200, {
+            similarGames: [
+              { authoritativeScore: { macro: 80, meso: 60, micro: 80 }, slug: 'marvel-rivals' },
+            ],
+          }),
+        )
+      }
+      if (url.pathname === '/api/games/destiny-2') {
+        return Promise.resolve(
+          response(url, 200, {
+            game: { authoritativeScore: { macro: 70, meso: 50, micro: 60, snapshotVersion: 2 } },
+          }),
+        )
+      }
       if (url.pathname === '/api/session') {
         return Promise.resolve(
           response(url, 200, {
@@ -232,5 +254,28 @@ describe('production smoke boundary', () => {
       }),
     ).not.toThrow()
     expect(() => assertMissingCsrfLogoutResponse(204, undefined)).toThrow(/logout/i)
+  })
+
+  test('requires scores from the latest owner snapshot and ranked similar games', () => {
+    expect(() =>
+      assertScoredGameDetailResponse(200, {
+        game: { authoritativeScore: { macro: 1, meso: 2, micro: 3, snapshotVersion: 2 } },
+      }),
+    ).not.toThrow()
+    expect(() =>
+      assertScoredGameDetailResponse(200, {
+        game: { authoritativeScore: { macro: 1, meso: 2, micro: 3, snapshotVersion: 1 } },
+      }),
+    ).toThrow(/snapshot v2/i)
+    expect(() =>
+      assertScoredGameDetailResponse(200, { game: { authoritativeScore: null } }),
+    ).toThrow(/authoritative score/i)
+    expect(() =>
+      assertSimilarGamesResponse(200, {
+        similarGames: [{ authoritativeScore: { macro: 1, meso: 2, micro: 3 }, slug: 'a' }],
+      }),
+    ).not.toThrow()
+    expect(() => assertSimilarGamesResponse(200, { similarGames: [] })).toThrow(/similar games/i)
+    expect(() => assertSimilarGamesResponse(404, undefined)).toThrow(/similar games/i)
   })
 })

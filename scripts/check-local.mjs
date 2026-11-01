@@ -61,9 +61,9 @@ function viteCommand(label, args) {
 const defaultCommands = [
   pnpmCommand('Format check', ['format:check']),
   pnpmCommand('Lint', ['lint']),
+  pnpmCommand('Tracked release configuration', ['release:check']),
   pnpmCommand('Type check', ['typecheck']),
   pnpmCommand('Generated catalog artifacts', ['catalog:check']),
-  pnpmCommand('Generated MiMMa seed artifact', ['mimma-seed:check']),
   pnpmCommand('Generated owner-authoritative record', ['authoritative-record:check']),
   pnpmCommand('Coverage tests', ['test:coverage']),
   pnpmCommand('Production build', ['build']),
@@ -162,6 +162,7 @@ async function assertJsonResponse(url, expectedStatus, expectedErrorCode) {
   if (expectedErrorCode !== undefined && body.error?.code !== expectedErrorCode) {
     throw new Error(`${url} did not return ${expectedErrorCode}.`)
   }
+  return body
 }
 
 /** @param {import('node:child_process').ChildProcess} child @param {number} timeoutMilliseconds */
@@ -213,8 +214,19 @@ async function runWorkerSmokeTest() {
   try {
     await waitForWorker(baseUrl)
     await assertJsonResponse(`${baseUrl}/api/catalog`, 200)
-    await assertJsonResponse(`${baseUrl}/api/games/counter-strike-2`, 200)
-    await assertJsonResponse(`${baseUrl}/api/games/counter-strike-2/similar`, 404, 'unscored_game')
+    const detail = await assertJsonResponse(`${baseUrl}/api/games/counter-strike-2`, 200)
+    if (typeof detail.game?.authoritativeScore?.micro !== 'number') {
+      throw new Error('The local game detail did not include an authoritative score.')
+    }
+    const similar = await assertJsonResponse(`${baseUrl}/api/games/counter-strike-2/similar`, 200)
+    if (!Array.isArray(similar.similarGames) || similar.similarGames.length === 0) {
+      throw new Error('The local similar-games response did not rank any games.')
+    }
+    // Owner snapshot v2 scored Destiny 2, so it proves the latest snapshot is served.
+    const newlyScored = await assertJsonResponse(`${baseUrl}/api/games/destiny-2`, 200)
+    if (newlyScored.game?.authoritativeScore?.snapshotVersion !== 2) {
+      throw new Error('The local game detail is not served from owner snapshot v2.')
+    }
     await assertJsonResponse(`${baseUrl}/api/games/not-a-game`, 404, 'game_not_found')
 
     const apiNavigationResponse = await fetchWithTimeout(`${baseUrl}/api/not-a-route`, {

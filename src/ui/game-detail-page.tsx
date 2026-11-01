@@ -1,75 +1,204 @@
 import type { ReactNode } from 'react'
 
-import type { GameDetail } from '../shared/catalog-contract.js'
+import type { GameDetail, SimilarGame } from '../shared/catalog-contract.js'
+import { BoxArt, HeroArt } from './box-art.js'
+import { formatCount, formatDateTime } from './format.js'
+import { MimmaGraph, ProfileStrip, profileSummary } from './mimma-graph.js'
+import { Icon, SiteFooter, SiteHeader } from './site-chrome.js'
+
+const REVIEW_SCOPE_LABELS: Readonly<Record<GameDetail['review']['scope'], string>> = {
+  'All Reviews: English Reviews': 'English reviews, all time',
+}
+
+export type SimilarGamesView =
+  { kind: 'loading' } | { kind: 'error' } | { games: readonly SimilarGame[]; kind: 'data' }
 
 interface GameDetailPageProps {
   authControl?: ReactNode
   game: GameDetail
+  /** Shown under the profile, after the graph. */
+  scoreDetails?: ReactNode
+  /** Replaces the snapshot footnote, for example in the local research preview. */
+  scoreFootnote?: string | null
+  /** Omit for unscored games; similar games need an authoritative score. */
+  similarGames?: SimilarGamesView
 }
 
-function formatReviewCount(count: number): string {
-  return new Intl.NumberFormat().format(count)
+interface ScorePanelProps {
+  details?: ReactNode
+  footnote?: string | null
+  game: GameDetail
 }
 
-function formatFetchedAt(timestamp: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp))
-}
-
-export function GameDetailPage({ authControl, game }: GameDetailPageProps) {
-  return (
-    <main className="detail-page">
-      <a className="back-link" href="/">
-        Back to catalog
-      </a>
-      <article className="dashboard-grid detail-layout">
-        <header className="page-header game-identity">
-          <div className="page-header-top">
-            <div className="page-header-copy">
-              <p className="eyebrow">Steam App {game.steamAppId}</p>
-              <h1>{game.title}</h1>
-            </div>
-            {authControl}
-          </div>
-          <ul className="tag-list" aria-label={`${game.title} tags`}>
-            {game.tags.map((tag) => (
-              <li key={tag}>{tag}</li>
-            ))}
-          </ul>
-        </header>
-
-        <section className="card game-content" aria-labelledby="game-summary-heading">
-          <p className="badge review-category">{game.review.category}</p>
-          <p className="review-count">
-            {formatReviewCount(game.review.count)} Steam reviews <span>· {game.review.scope}</span>
-          </p>
-          <h2 id="game-summary-heading">About this game</h2>
-          <p className="game-description">{game.shortDescription}</p>
-          <dl className="provenance-list">
-            <div>
-              <dt>Catalog source</dt>
-              <dd>
-                <a href={game.provenance.storePageUrl}>Steam store page</a>
-              </dd>
-            </div>
-            <div>
-              <dt>Steam metadata fetched</dt>
-              <dd>{formatFetchedAt(game.provenance.fetchedAt)}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <aside className="card unscored-panel" aria-labelledby="score-status-heading">
-          <p className="eyebrow">Catalog status</p>
+function ScorePanel({ details, footnote, game }: ScorePanelProps) {
+  if (game.authoritativeScore === null) {
+    return (
+      <section className="spec-panel spec-panel--unscored" aria-labelledby="score-status-heading">
+        <header className="spec-panel-header">
           <h2 id="score-status-heading">Score unavailable</h2>
+          <span>MiMMa profile</span>
+        </header>
+        <div className="spec-panel-body">
+          <p className="stamp">Not yet scored</p>
           <p>
-            This game has no authoritative MiMMa score in the closed beta. Scoring and similar-game
-            features will appear only after source data is available.
+            This game has no authoritative MiMMa score yet, so similar games are not available for
+            it.
           </p>
-        </aside>
-      </article>
-    </main>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="spec-panel" aria-labelledby="score-status-heading">
+      <header className="spec-panel-header">
+        <h2 id="score-status-heading">Gameplay profile</h2>
+        <span>MiMMa, 0 to 100</span>
+      </header>
+      <div className="spec-panel-body">
+        <MimmaGraph score={game.authoritativeScore} size="expanded" />
+        {details}
+      </div>
+      <p className="spec-panel-footnote">
+        {footnote ?? `Owner-authoritative snapshot v${game.authoritativeScore.snapshotVersion}`}
+      </p>
+    </section>
+  )
+}
+
+function SimilarGamesSection({ game, view }: { game: GameDetail; view: SimilarGamesView }) {
+  let content: ReactNode
+  if (view.kind === 'loading') {
+    content = (
+      <p className="shelf-status" role="status">
+        Finding similar games…
+      </p>
+    )
+  } else if (view.kind === 'error') {
+    content = <p className="shelf-status">Similar games are unavailable right now.</p>
+  } else if (view.games.length === 0) {
+    content = (
+      <p className="shelf-status">
+        No scored game in the catalog plays close enough to {game.title} yet.
+      </p>
+    )
+  } else {
+    const reference = game.authoritativeScore ?? undefined
+    content = (
+      <ol className="shelf shelf--similar">
+        {view.games.map((similar, index) => (
+          <li className="game-card game-card--similar" key={similar.id}>
+            <span className="similar-rank" aria-hidden="true">
+              {index + 1}
+            </span>
+            <BoxArt steamAppId={similar.steamAppId} title={similar.title} />
+            <ProfileStrip reference={reference} score={similar.authoritativeScore} />
+            <h3>
+              <a href={`/games/${similar.slug}`}>{similar.title}</a>
+            </h3>
+            <p className="similar-scores">{profileSummary(similar.authoritativeScore)}</p>
+            {similar.sharedTags.length > 0 ? (
+              <p className="similar-tags">Shares {similar.sharedTags.join(', ')}</p>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    )
+  }
+
+  return (
+    <section className="similar-games" aria-labelledby="similar-games-heading">
+      <header className="similar-games-header">
+        <h2 id="similar-games-heading">Plays like {game.title}</h2>
+        <p>
+          Scored games with a MiMMa profile close to this one. Shared Steam tags decide the order
+          between near matches. The <span className="reference-mark">orange tick</span> on each
+          strip is {game.title}.
+        </p>
+      </header>
+      {content}
+    </section>
+  )
+}
+
+export function GameDetailPage({
+  authControl,
+  game,
+  scoreDetails,
+  scoreFootnote,
+  similarGames,
+}: GameDetailPageProps) {
+  return (
+    <>
+      <SiteHeader authControl={authControl} />
+      <main className="detail-page">
+        <HeroArt steamAppId={game.steamAppId} />
+        <article className="detail-layout">
+          <div className="detail-box">
+            <a className="back-link" href="/">
+              <Icon name="arrow-left" />
+              Back to catalog
+            </a>
+            <div className="detail-box-front">
+              <BoxArt priority steamAppId={game.steamAppId} title={game.title} />
+            </div>
+            <a className="store-link" href={game.provenance.storePageUrl}>
+              View on Steam
+              <Icon name="arrow-up-right" />
+            </a>
+          </div>
+
+          <div className="detail-main">
+            <header className="game-identity">
+              <h1>{game.title}</h1>
+              <p className="review-count">
+                <span className="review-category">{game.review.category}</span>{' '}
+                <span>{formatCount(game.review.count)} Steam reviews</span>
+              </p>
+              <ul className="tag-list" aria-label={`${game.title} tags`}>
+                {game.tags.map((tag) => (
+                  <li key={tag}>{tag}</li>
+                ))}
+              </ul>
+            </header>
+
+            <section className="game-about" aria-labelledby="game-summary-heading">
+              <h2 id="game-summary-heading" className="visually-hidden">
+                About this game
+              </h2>
+              <p className="game-description">{game.shortDescription}</p>
+            </section>
+
+            <ScorePanel details={scoreDetails} footnote={scoreFootnote} game={game} />
+          </div>
+        </article>
+
+        {game.authoritativeScore !== null && similarGames !== undefined ? (
+          <SimilarGamesSection game={game} view={similarGames} />
+        ) : null}
+
+        <dl className="fine-print">
+          <div>
+            <dt>Steam App</dt>
+            <dd>{game.steamAppId}</dd>
+          </div>
+          <div>
+            <dt>Catalog source</dt>
+            <dd>
+              <a href={game.provenance.storePageUrl}>Steam store page</a>
+            </dd>
+          </div>
+          <div>
+            <dt>Steam metadata fetched</dt>
+            <dd>{formatDateTime(game.provenance.fetchedAt)}</dd>
+          </div>
+          <div>
+            <dt>Reviews counted</dt>
+            <dd>{REVIEW_SCOPE_LABELS[game.review.scope]}</dd>
+          </div>
+        </dl>
+      </main>
+      <SiteFooter />
+    </>
   )
 }

@@ -1,10 +1,12 @@
-import type { DatasetVersioned } from '../shared/catalog-contract.js'
+import { CATALOG_SCHEMA_VERSION, type DatasetVersioned } from '../shared/catalog-contract.js'
+import { AUTH_ROUTES } from '../shared/session-contract.js'
+import { isValidSlug, unavailableVersion } from './catalog-lookup.js'
 import { apiErrorResponse, headResponse } from './http.js'
 import { getCatalogReleaseMetadata } from './repositories/catalog-release.js'
 import { catalogResponse, parseCatalogQuery } from './routes/catalog.js'
 import { gameResponse } from './routes/games.js'
 import { authUnavailableResponse, routeAuthRequest } from './routes/auth.js'
-import { gameExists, isValidSlug, unavailableVersion } from './routes/similar-games.js'
+import { similarGamesResponse } from './routes/similar-games.js'
 
 const apiPrefix = '/api'
 const allowedMethods = new Set(['GET', 'HEAD'])
@@ -15,13 +17,10 @@ function isApiRequest(pathname: string): boolean {
   return pathname === apiPrefix || pathname.startsWith(`${apiPrefix}/`)
 }
 
+const authPaths: ReadonlySet<string> = new Set(Object.values(AUTH_ROUTES))
+
 function isAuthRequest(pathname: string): boolean {
-  return (
-    pathname === '/api/auth/steam/start' ||
-    pathname === '/api/auth/steam/callback' ||
-    pathname === '/api/auth/logout' ||
-    pathname === '/api/session'
-  )
+  return authPaths.has(pathname)
 }
 
 function requestRoute(pathname: string): string {
@@ -31,11 +30,11 @@ function requestRoute(pathname: string): string {
 function metadataVersion(
   metadata: { datasetVersion: string; schemaVersion: number } | null,
 ): DatasetVersioned {
-  if (metadata === null || metadata.schemaVersion !== 1) {
+  if (metadata === null || metadata.schemaVersion !== CATALOG_SCHEMA_VERSION) {
     return unavailableVersion()
   }
 
-  return { datasetVersion: metadata.datasetVersion, schemaVersion: 1 }
+  return { datasetVersion: metadata.datasetVersion, schemaVersion: CATALOG_SCHEMA_VERSION }
 }
 
 function errorResponse(
@@ -83,16 +82,20 @@ async function routeApiRequest(request: Request, env: Env, url: URL): Promise<Re
     if (!isValidSlug(slug)) {
       return errorResponse(version, 'invalid_query', 'Game slug is invalid.', 400)
     }
-    if (!(await gameExists(env.NEED_GAMES_DB, slug))) {
+    const result = await similarGamesResponse(env.NEED_GAMES_DB, version, slug)
+    if (result === 'game_not_found') {
       return errorResponse(version, 'game_not_found', notFoundMessage, 404)
     }
+    if (result === 'unscored_game') {
+      return errorResponse(
+        version,
+        'unscored_game',
+        'Similar games are unavailable until this game has an authoritative score.',
+        404,
+      )
+    }
 
-    return errorResponse(
-      version,
-      'unscored_game',
-      'Similar games are unavailable until this game has an authoritative score.',
-      404,
-    )
+    return result
   }
 
   const gameMatch = /^\/api\/games\/([^/]+)$/.exec(path)

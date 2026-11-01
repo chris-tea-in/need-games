@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { Icon } from '../site-chrome.js'
 import type { SessionState } from './use-session.js'
 
 const FOCUSABLE_ELEMENT_SELECTOR =
@@ -37,25 +38,25 @@ function AuthModal({ onAuthenticate, onClose, onDialogRef, signInPending }: Auth
         aria-describedby="auth-modal-description"
         aria-labelledby="auth-modal-title"
         aria-modal="true"
-        className="auth-modal card"
+        className="auth-modal"
         onClick={(event) => event.stopPropagation()}
         ref={onDialogRef}
         role="dialog"
       >
         <div className="auth-modal-header">
-          <h2 id="auth-modal-title">Authenticate with Steam</h2>
+          <h2 id="auth-modal-title">Sign in with Steam</h2>
           <button
             aria-label="Close authentication dialog"
             className="auth-modal-close"
             onClick={onClose}
             type="button"
           >
-            ×
+            <Icon name="close" />
           </button>
         </div>
         <p id="auth-modal-description">
-          Use your Steam account to authenticate securely with Need Games. Steam keeps your
-          credentials on its own site.
+          You sign in on Steam's own site, so Need Games never sees your password. During the closed
+          beta, signing in does not unlock anything yet.
         </p>
         <button
           className="auth-steam-action"
@@ -63,7 +64,7 @@ function AuthModal({ onAuthenticate, onClose, onDialogRef, signInPending }: Auth
           onClick={onAuthenticate}
           type="button"
         >
-          {signInPending ? 'Opening Steam…' : 'Authenticate on Steam'}
+          {signInPending ? 'Opening Steam…' : 'Continue to Steam'}
         </button>
       </div>
     </div>
@@ -187,7 +188,7 @@ export function AuthControl({
           }}
           type="button"
         >
-          Authenticate with Steam
+          Sign in with Steam
         </button>
         {modalOpen
           ? createPortal(
@@ -227,7 +228,7 @@ export function AuthControl({
         type="button"
       >
         <span aria-hidden="true" className="auth-verified-check">
-          ✓
+          <Icon name="check" />
         </span>
         {state.profile.lookupStatus === 'verified' ? state.profile.displayName : 'Steam account'}
       </button>

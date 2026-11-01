@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, test } from 'vitest'
 
+import { productionMigrations } from '../scripts/release-manifest.mts'
+
 interface PackageManifest {
   engines?: {
     node?: string
@@ -67,8 +69,8 @@ describe('repository package contract', () => {
       'typecheck:worker': 'node scripts/check-worker-types.mjs',
       'check:local': 'node scripts/check-local.mjs',
       'catalog:check': 'node scripts/generate-catalog-artifacts.mts',
-      'mimma-seed:check': 'node scripts/generate-authoritative-mimma-seed.mts',
-      'authoritative-record:check': 'node scripts/generate-owner-authoritative-mimma.mts',
+      'authoritative-record:check':
+        'node scripts/generate-owner-authoritative-mimma.mts && node scripts/generate-owner-authoritative-mimma-v2.mts',
       'release:check': 'node scripts/assert-release-d1-id.mts',
       'release:production': 'node scripts/release-production.mts',
       predeploy: 'pnpm release:check',
@@ -143,7 +145,9 @@ describe('repository automation contract', () => {
     expect(releaseScript).toContain("['status', '--porcelain']")
     expect(releaseScript).toContain('check:local')
     expect(releaseScript).toContain('release:check')
-    expect(releaseScript).toContain('create-production-wrangler-config.mts')
+    expect(releaseScript).toContain(
+      "nodeScriptCommand('scripts/create-production-wrangler-config.mts')",
+    )
     expect(releaseScript).toContain('CLOUDFLARE_ENV')
     expect(releaseScript).toContain('CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH')
     expect(releaseScript).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV')
@@ -154,7 +158,7 @@ describe('repository automation contract', () => {
     expect(releaseScript).toContain('createProductionRollbackBaseline')
     expect(releaseScript).toContain('Rollback baseline saved in ignored operator state')
     expect(releaseScript).toContain("'d1', 'info'")
-    expect(releaseScript).toContain('verify-production-d1.mjs')
+    expect(releaseScript).toContain('verify-production-d1.mts')
     expect(releaseScript).not.toMatch(/'d1',\s*'migrations'/)
     expect(releaseScript).toContain("['deploy', '--config', generatedWorkerConfigPath]")
     expect(releaseScript).not.toContain("'deploy', '--env', 'production'")
@@ -163,24 +167,16 @@ describe('repository automation contract', () => {
       'CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=.wrangler.production.jsonc',
     )
     expect(contributing).toContain('CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false')
-    expect(contributing).toContain('contains no `.dev.vars`, `.env`, Worker output')
-    expect(contributing).toMatch(
-      /exactly `0001_schema\.sql`,\s+`0002_seed_beta_catalog\.sql`, `0003_authoritative_mimma_seed\.sql`, `0004_identity_sessions\.sql`, and\s+`0005_owner_authoritative_mimma_v1\.sql`/,
-    )
+    for (const { name } of productionMigrations) {
+      expect(contributing).toContain(`\`${name}\``)
+    }
     expect(contributing).toContain(
-      'wrangler d1 execute need-games-production --remote --file migrations/0005_owner_authoritative_mimma_v1.sql --config .wrangler.production.jsonc',
+      'wrangler d1 execute need-games-production --remote --file migrations/0007_owner_authoritative_mimma_v2.sql --config .wrangler.production.jsonc',
     )
-    expect(contributing).toMatch(/The release command does not apply\s+migrations/)
-    expect(contributing).toMatch(/compound triggers/i)
-    expect(contributing).toMatch(/Time Travel bookmark/i)
-    expect(contributing).toMatch(/SQL export/i)
-    expect(contributing).toMatch(/atomic/i)
-    expect(contributing).toMatch(/migration history/i)
-    expect(contributing).toMatch(/permanent invariants/i)
-    expect(contributing).toMatch(
-      /first production deployment has no recoverable\s+pre-deploy baseline/i,
-    )
-    expect(contributing).toMatch(/rollback\s+baseline/i)
+    expect(contributing).toContain('scripts/release-manifest.mts')
+    expect(contributing).toContain('## Owner-run production release boundary')
+    expect(contributing).toContain('### Owner-gated D1 authority migration procedure')
+    expect(contributing).toContain('.wrangler/production-release/')
     expect(contributing).toContain('https://myplayprint.e9k.workers.dev')
     expect(contributing).toContain("$env:PRODUCTION_ORIGIN = 'https://myplayprint.e9k.workers.dev'")
     expect(releaseScript).toContain('/api/catalog')
@@ -193,7 +189,9 @@ describe('repository automation contract', () => {
 
     const localChecks = releaseScript.indexOf('check:local')
     const trackedGuard = releaseScript.indexOf('release:check')
-    const config = releaseScript.indexOf('create-production-wrangler-config.mts')
+    const config = releaseScript.indexOf(
+      "nodeScriptCommand('scripts/create-production-wrangler-config.mts')",
+    )
     const productionBuild = releaseScript.indexOf('Build production Vite Worker output')
     const assetBoundary = releaseScript.lastIndexOf(
       'const assetBoundary = await assertProductionAssetBoundary',
@@ -216,8 +214,8 @@ describe('repository automation contract', () => {
     expect(rollbackBaseline).toBeGreaterThan(verification)
     expect(deployment).toBeGreaterThan(rollbackBaseline)
     expect(smoke).toBeGreaterThan(deployment)
-    expect(contributing).toContain('Initial Steam sign-in enablement')
-    expect(contributing).toContain('Steam sign-in kill switch')
+    expect(contributing).toContain('### Initial Steam sign-in enablement')
+    expect(contributing).toContain('### Steam sign-in kill switch')
   })
 
   test('keeps the generated production config ignored', () => {
@@ -239,6 +237,47 @@ describe('repository automation contract', () => {
       /package-ecosystem: github-actions[\s\S]*directories:\s*\n\s+- \/\s*\n\s+- \/\.github\/actions\/setup/,
     )
     expect(dependabotConfig.match(/interval: weekly/g)).toHaveLength(2)
+  })
+
+  test('updates React and React DOM together in the first Dependabot group', () => {
+    const dependabotConfig = readAutomationFile(dependabotUrl)
+    const groups = dependabotConfig.slice(dependabotConfig.indexOf('groups:'))
+
+    expect(groups).toMatch(/groups:[\s\S]*?^ {6}react:\s*\n\s+patterns:/m)
+    expect(groups.indexOf('react:')).toBeLessThan(groups.indexOf('development-dependencies:'))
+    for (const name of ['react', 'react-dom', "'@types/react'", "'@types/react-dom'"]) {
+      expect(groups.split('\n')).toContain(`          - ${name}`)
+    }
+  })
+
+  test('requests owner review through CODEOWNERS instead of Dependabot reviewers', () => {
+    expect(readAutomationFile(dependabotUrl)).not.toContain('reviewers:')
+    expect(readAutomationFile(new URL('../.github/CODEOWNERS', import.meta.url))).toMatch(
+      /^\* @chris-tea-in$/m,
+    )
+  })
+
+  test('declares the sign-in rate limiter for local and production, which do not inherit bindings', () => {
+    const config = readAutomationFile(new URL('../wrangler.jsonc', import.meta.url))
+
+    expect(config.match(/"name": "AUTH_START_RATE_LIMITER"/g)).toHaveLength(2)
+    expect(
+      config.indexOf('"name": "AUTH_START_RATE_LIMITER"', config.indexOf('"production"')),
+    ).toBeGreaterThan(-1)
+  })
+
+  test('serves a favicon and description instead of falling back to the app shell', () => {
+    const indexHtml = readAutomationFile(new URL('../index.html', import.meta.url))
+
+    expect(indexHtml).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml" />')
+    expect(indexHtml).toContain('name="description"')
+    expect(existsSync(new URL('../public/favicon.svg', import.meta.url))).toBe(true)
+    const icon = readFileSync(new URL('../public/favicon.ico', import.meta.url))
+    expect([...icon.subarray(0, 4)]).toEqual([0, 0, 1, 0])
+  })
+
+  test('checks generated Worker types in CI', () => {
+    expect(readAutomationFile(ciWorkflowUrl)).toContain('run: pnpm typecheck:worker')
   })
 
   test('runs protected validation for pull requests and main', () => {
@@ -273,16 +312,16 @@ describe('repository automation contract', () => {
     const workflow = readAutomationFile(ciWorkflowUrl)
 
     expect(workflow).toContain('pnpm catalog:check')
-    expect(workflow).toContain('pnpm mimma-seed:check')
+    expect(workflow).not.toContain('pnpm mimma-seed:check')
     expect(workflow).toContain('pnpm authoritative-record:check')
     expect(workflow).toContain('pnpm test:worker')
   })
 
-  test('runs the owner-authoritative artifact check after the seed check in CI', () => {
+  test('runs the owner-authoritative artifact check after the catalog check in CI', () => {
     const workflow = readAutomationFile(ciWorkflowUrl)
-    expect(workflow.indexOf('pnpm mimma-seed:check')).toBeGreaterThan(-1)
+    expect(workflow.indexOf('pnpm catalog:check')).toBeGreaterThan(-1)
     expect(workflow.indexOf('pnpm authoritative-record:check')).toBeGreaterThan(
-      workflow.indexOf('pnpm mimma-seed:check'),
+      workflow.indexOf('pnpm catalog:check'),
     )
   })
 

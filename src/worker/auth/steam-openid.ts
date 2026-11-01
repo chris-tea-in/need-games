@@ -33,12 +33,8 @@ export interface SteamNonceReplayGuard {
 export interface SteamOpenIdValidationOptions {
   /** Trusted production origin, including scheme and host but no path. */
   expectedOrigin?: string
-  /** Alias used by callers that name this value after its deployment role. */
-  productionOrigin?: string
   /** The callback URL that Steam was expected to return to. */
   callbackUrl?: string | URL
-  /** Alias for callbackUrl when the URL comes directly from the request. */
-  actualCallbackUrl?: string | URL
   /** Optional exact callback URL stored by the login transaction. */
   expectedReturnTo?: string | URL
   now?: number | Date
@@ -47,9 +43,7 @@ export interface SteamOpenIdValidationOptions {
   maxFieldCount?: number
   maxValueLength?: number
   fetcher?: typeof fetch
-  fetch?: typeof fetch
   replayGuard?: SteamNonceReplayGuard | Set<string>
-  nonceReplayGuard?: SteamNonceReplayGuard | Set<string>
 }
 
 export interface SteamAssertion {
@@ -184,7 +178,7 @@ function parseCallbackUrl(value: string | URL): URL {
 }
 
 function callbackReference(input: SteamAssertionInput, options: SteamOpenIdValidationOptions): URL {
-  const configured = options.callbackUrl ?? options.actualCallbackUrl
+  const configured = options.callbackUrl
   if (configured !== undefined) {
     return parseCallbackUrl(configured)
   }
@@ -504,7 +498,7 @@ export async function validateSteamAssertion(
   }
 
   const fields = collectFields(input, maxFieldCount, maxValueLength)
-  const expectedOriginValue = options.expectedOrigin ?? options.productionOrigin
+  const expectedOriginValue = options.expectedOrigin
   if (expectedOriginValue === undefined) {
     throw invalidAssertion('A trusted production origin is required.')
   }
@@ -550,12 +544,10 @@ export async function validateSteamAssertion(
     options.nonceFutureSkewSeconds ?? DEFAULT_NONCE_FUTURE_SKEW_SECONDS,
   )
 
-  const guard = replayGuard(options.replayGuard ?? options.nonceReplayGuard)
+  const guard = replayGuard(options.replayGuard)
   await checkSeenNonce(guard, responseNonce)
-  await confirmWithSteam(fields, options.fetcher ?? options.fetch ?? globalThis.fetch)
+  await confirmWithSteam(fields, options.fetcher ?? globalThis.fetch)
   await storeNonce(guard, responseNonce)
 
   return { steamId, responseNonce, returnTo }
 }
-
-export const validateSteamOpenIdAssertion = validateSteamAssertion

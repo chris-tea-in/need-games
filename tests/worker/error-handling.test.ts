@@ -2,6 +2,8 @@ import { describe, expect, test, vi } from 'vitest'
 
 import worker from '../../src/worker/index.js'
 
+const rateLimiter = { limit: vi.fn(() => Promise.resolve({ success: true })) } as RateLimit
+
 describe('Worker API error handling', () => {
   test('rejects unsupported methods before reading D1 metadata', async () => {
     const prepare = vi.fn(() => {
@@ -16,7 +18,7 @@ describe('Worker API error handling', () => {
       new Request('https://need-games.test/api/catalog', {
         method: 'POST',
       }) as unknown as Parameters<typeof worker.fetch>[0],
-      { ASSETS: assets, NEED_GAMES_DB: database },
+      { ASSETS: assets, AUTH_START_RATE_LIMITER: rateLimiter, NEED_GAMES_DB: database },
     )
 
     expect(response.status).toBe(405)
@@ -42,7 +44,7 @@ describe('Worker API error handling', () => {
         new Request(
           'https://need-games.test/api/catalog?search=private-title',
         ) as unknown as Parameters<typeof worker.fetch>[0],
-        { ASSETS: assets, NEED_GAMES_DB: database },
+        { ASSETS: assets, AUTH_START_RATE_LIMITER: rateLimiter, NEED_GAMES_DB: database },
       )
 
       expect(response.status).toBe(503)

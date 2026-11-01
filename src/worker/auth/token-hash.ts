@@ -56,8 +56,6 @@ export async function hashToken(token: string): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
-export const hashTokenHex = hashToken
-
 /** Compare strings without returning early for a length or byte mismatch. */
 export function constantTimeEqual(left: string, right: string): boolean {
   const leftBytes = encoder.encode(left)
@@ -71,8 +69,6 @@ export function constantTimeEqual(left: string, right: string): boolean {
 
   return difference === 0
 }
-
-export const timingSafeEqual = constantTimeEqual
 
 /** Derive the browser-facing CSRF value from the stored session hash. */
 export async function deriveCsrfToken(

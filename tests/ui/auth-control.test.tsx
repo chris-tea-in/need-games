@@ -61,8 +61,8 @@ describe('AuthControl', () => {
 
     const dialog = document.querySelector('[role="dialog"]')
     expect(dialog).not.toBeNull()
-    expect(dialog?.textContent).toContain('Authenticate with Steam')
-    expect(dialog?.textContent).toContain('Authenticate on Steam')
+    expect(dialog?.textContent).toContain('Sign in with Steam')
+    expect(dialog?.textContent).toContain('Continue to Steam')
     expect(beginSignIn).not.toHaveBeenCalled()
     expect(container.hasAttribute('inert')).toBe(true)
   })
@@ -145,7 +145,7 @@ describe('AuthControl', () => {
 
     const accountButton = container.querySelector('button') as HTMLButtonElement
     expect(accountButton.textContent).toContain('Steam User')
-    expect(accountButton.textContent).toContain('✓')
+    expect(accountButton.querySelector('.auth-verified-check svg')).not.toBeNull()
 
     act(() => accountButton.click())
     const signOut = container.querySelector('[role="menuitem"]') as HTMLButtonElement
